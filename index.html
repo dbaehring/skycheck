@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Content Security Policy (für Produktion aktivieren, wenn auf eigenem Server gehostet)
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.opentopomap.org https://a.tile.opentopomap.org https://b.tile.opentopomap.org https://c.tile.opentopomap.org; connect-src 'self' https://api.open-meteo.com;">
+    -->
+
+    <!-- === SkyCheck Meta-Tags === -->
+    <title>SkyCheck | Sicherer fliegen mit der Wetterampel</title>
+    <meta name="description" content="SkyCheck - Professionelle Gleitschirm-Wetteranalyse in 60 Sekunden. Thermik, Wind, Wolkenbasis auf einen Blick.">
+    <meta name="keywords" content="Gleitschirm, Paragliding, Wetter, Meteo, Thermik, Flugwetter, SkyCheck">
+    <meta name="author" content="SkyCheck">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="SkyCheck - Paragliding Meteo">
+    <meta property="og:description" content="Sicherer fliegen mit der Wetterampel">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="./img/logo.svg">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="./img/logo.svg">
+    <link rel="apple-touch-icon" href="./img/logo.svg">
+
+    <!-- External Resources -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div>
+                <h1>SkyCheck</h1>
+                <p class="subtitle">Sicherer fliegen mit der Wetterampel</p>
+            </div>
+            <div class="theme-toggle">
+                <span class="theme-toggle-label">Design</span>
+                <div class="theme-switch" id="themeToggle" title="Hell/Dunkel umschalten"></div>
+            </div>
+        </header>
+        <div class="main-layout">
+            <div class="map-section">
+                <div class="map-header">
+                    <h2>Startplatz wählen</h2>
+                    <div class="map-header-right">
+                        <div class="coords-display" id="coordsDisplay">- klicke auf die Karte -</div>
+                        <button class="btn-icon" id="gpsBtn" title="Mein Standort" aria-label="GPS-Standort ermitteln">📍</button>
+                        <button class="btn-icon" id="shareBtn" title="Link teilen" aria-label="Standort-Link teilen" disabled>🔗</button>
+                    </div>
+                </div>
+                <div id="map"></div>
+                <div class="favorites-section hidden" id="favoritesSection">
+                    <div class="favorites-label">⭐ Meine Favoriten</div>
+                    <div class="favorites-buttons" id="favoritesButtons"></div>
+                </div>
+                <button class="add-favorite-btn" id="addFavoriteBtn" disabled>+ Aktuellen Standort als Favorit speichern</button>
+            </div>
+            <div class="results-section">
+                <div class="initial-state" id="initialState">
+                    <div class="initial-state-icon">🗺️</div>
+                    <h3>Wähle einen Standort</h3>
+                    <p>Klicke auf die Karte oder nutze GPS.</p>
+                </div>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Wetterdaten werden abgerufen...</p>
+                </div>
+                <div id="resultsContainer" style="display: none;">
+                    <div class="location-card">
+                        <span class="location-name" id="locationName">-</span>
+                        <div class="location-details" id="locationDetails">-</div>
+                        <div class="model-info"><span>Modell:</span><strong id="modelName">ICON-D2/EU</strong></div>
+                        <div id="modelWarning" class="model-warning" style="display: none;">⚠️ Außerhalb ICON-Abdeckung - globales Modell (weniger genau)</div>
+                        <div class="forecast-confidence" id="forecastConfidence">
+                            <span>📊 Prognose-Sicherheit:</span>
+                            <span class="stars high" id="confidenceStars">⭐⭐⭐</span>
+                            <span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Wettermodelle werden mit zunehmendem Vorhersagezeitraum ungenauer. Heute: hoch, Morgen: mittel, Übermorgen: gering. Am Flugtag nochmals prüfen!</span></span>
+                        </div>
+                        <div class="sun-times">
+                            <div class="sun-time"><span>☀️ Aufgang:</span><span class="sun-time-value" id="sunrise">-</span></div>
+                            <div class="sun-time"><span>🌙 Untergang:</span><span class="sun-time-value" id="sunset">-</span></div>
+                            <div class="sun-time"><span>⏱️ Tageslicht:</span><span class="sun-time-value" id="daylight">-</span></div>
+                        </div>
+                        <div class="best-window" id="bestWindow">
+                            <span class="best-window-icon">⭐</span>
+                            <span class="best-window-text">Bestes Zeitfenster:</span>
+                            <span class="best-window-time" id="bestWindowTime">-</span>
+                        </div>
+                        <div class="update-info" id="updateInfo">
+                            <span>Daten von:</span>
+                            <span class="update-info-time" id="updateTime">-</span>
+                            <button class="refresh-btn" id="refreshBtn" title="Daten aktualisieren">↻ Neu laden</button>
+                        </div>
+                        <div class="forecast-change" id="forecastChange">
+                            <div class="forecast-change-title">📈 Änderung seit letztem Laden:</div>
+                            <div class="forecast-change-items" id="forecastChangeItems"></div>
+                        </div>
+                    </div>
+                    <nav class="day-comparison" id="dayComparison" role="navigation" aria-label="Tagesauswahl">
+                        <h3>📅 Tag wählen</h3>
+                        <div class="day-comparison-grid" id="dayComparisonGrid" role="tablist"></div>
+                    </nav>
+                    <div class="timeline-card" role="region" aria-label="Stündlicher Tagesverlauf"><h3>Tagesverlauf (6-20 Uhr)</h3><div class="timeline" id="timeline" role="listbox" aria-label="Stunden auswählen"></div></div>
+                    <div class="assessment-card" role="status" aria-live="polite" aria-label="Aktuelle Flugbedingungen">
+                        <div class="weather-current" id="weatherCurrent">
+                            <span class="weather-icon-text" id="weatherDesc" aria-label="Aktuelles Wetter">-</span>
+                            <span class="weather-temp" id="currentTemp" aria-label="Temperatur">-</span>
+                        </div>
+                        <div class="assessment-status" id="assessmentStatus" role="alert"><span id="statusIcon" aria-hidden="true">○</span><span id="statusText">-</span></div>
+                        <div class="reason-summary" id="reasonSummary"><div class="reason-summary-text" id="reasonText"></div></div>
+                    </div>
+                    <!-- PHASE 2: Beginner Badge -->
+                    <div class="beginner-badge" id="beginnerBadge" style="display: none;"></div>
+                    <!-- PHASE 2: Risk Explanation -->
+                    <div class="risk-explanation" id="riskExplanation" style="display: none;"></div>
+                    <div class="killer-warnings" id="killerWarnings">
+                        <div class="killer-warnings-header"><span style="font-size: 1.5rem;">🚨</span><span class="killer-warnings-title">STOPP-Kriterien</span></div>
+                        <div class="killer-warnings-subtitle">Bei diesen Bedingungen NICHT fliegen:</div>
+                        <div id="killerList"></div>
+                    </div>
+                    <div class="warnings" id="warnings"><h3>⚠️ Weitere Hinweise</h3><div id="warningsList"></div></div>
+
+                    <div class="params-controls">
+                        <button class="params-control-btn" id="expandAllBtn">📂 Alle aufklappen</button>
+                        <button class="params-control-btn" id="collapseAllBtn">📁 Alle zuklappen</button>
+                    </div>
+
+                    <div class="params-grid parameter-grid" role="region" aria-label="Wetterparameter">
+                        <div class="param-card full-width collapsed" data-card="wind" role="region" aria-label="Windparameter">
+                            <div class="param-header"><span class="param-title">💨 Wind nach Höhe<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Wind in verschiedenen Höhen. Großer Unterschied (Gradient) = Turbulenz beim Aufsteigen. Höhenwind >55 km/h = Föhngefahr!</span></span></span><span class="param-status" id="windStatus"></span><span class="toggle-icon">▼</span></div>
+                            <div class="param-body">
+                                <div class="wind-table">
+                                    <div class="wind-table-header"><span>Höhe</span><span>Geschw.</span><span>Richtung</span></div>
+                                    <div class="wind-table-row"><span class="wind-height">Boden (10m)</span><span class="param-value" id="windSurface">-</span><span class="param-value" id="windDirSurface">-</span></div>
+                                    <div class="wind-table-row"><span class="wind-height">Böen</span><span class="param-value" id="windGusts">-</span><span class="wind-height">-</span></div>
+                                    <div class="wind-table-row"><span class="wind-height">Böigkeit<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Differenz zwischen Böen und Grundwind. Große Unterschiede = unruhige, schwer einschätzbare Bedingungen.</span></span></span><span class="param-value" id="gustSpread">-</span><span class="wind-height">-</span></div>
+                                    <div class="wind-table-row"><span class="wind-height">850 hPa (~1500m)</span><span class="param-value" id="wind850">-</span><span class="param-value" id="windDir850">-</span></div>
+                                    <div class="wind-table-row"><span class="wind-height">800 hPa (~2000m)</span><span class="param-value" id="wind800">-</span><span class="param-value" id="windDir800">-</span></div>
+                                    <div class="wind-table-row"><span class="wind-height">700 hPa (~3000m)</span><span class="param-value" id="wind700">-</span><span class="param-value" id="windDir700">-</span></div>
+                                    <div class="wind-table-row wind-gradient-row"><span class="wind-height">Gradient (Boden-1500m)</span><span class="param-value" id="windGradient">-</span><span class="wind-height">-</span></div>
+                                    <div class="wind-table-row wind-gradient-row"><span class="wind-height">Gradient (Boden-3000m)</span><span class="param-value" id="windGradient3000">-</span><span class="wind-height">-</span></div>
+                                </div>
+                                <div class="windrose-toggle" id="windroseToggle">
+                                    <span>🧭</span><span id="windroseToggleText">Windrose anzeigen</span>
+                                </div>
+                                <div class="windrose-wrapper" id="windroseWrapper">
+                                    <div class="windrose-container">
+                                        <div class="windrose">
+                                            <div class="windrose-compass"></div>
+                                            <div class="windrose-directions">
+                                                <span class="wr-n">N</span>
+                                                <span class="wr-s">S</span>
+                                                <span class="wr-e">O</span>
+                                                <span class="wr-w">W</span>
+                                            </div>
+                                            <div class="wind-arrow surface" id="windArrowSurface"></div>
+                                            <div class="wind-arrow h850" id="windArrow850"></div>
+                                            <div class="wind-arrow h700" id="windArrow700"></div>
+                                            <div class="windrose-center"></div>
+                                        </div>
+                                        <div class="windrose-legend">
+                                            <div class="windrose-legend-item"><span class="windrose-legend-color surface"></span><span>Boden</span><span id="windroseSurface">-</span></div>
+                                            <div class="windrose-legend-item"><span class="windrose-legend-color h850"></span><span>1500m</span><span id="windrose850">-</span></div>
+                                            <div class="windrose-legend-item"><span class="windrose-legend-color h700"></span><span>3000m</span><span id="windrose700">-</span></div>
+                                            <div class="windrose-shear-warning" id="windroseShearWarning">⚠️ Richtungsscherung erkannt!</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="param-card collapsed" data-card="thermik" role="region" aria-label="Thermikparameter">
+                            <div class="param-header"><span class="param-title">🌡️ Thermik<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Spread = Temp minus Taupunkt. Ideal 5-15°C. Zu klein (&lt;3°C) = Nebel. CAPE >1000 = Gewittergefahr!</span></span></span><span class="param-status" id="thermikStatus"></span><span class="toggle-icon">▼</span></div>
+                            <div class="param-body">
+                                <div class="param-row"><span class="param-label">Temperatur</span><span class="param-value" id="temp2m">-</span></div>
+                                <div class="param-row"><span class="param-label">Taupunkt</span><span class="param-value" id="dewpoint">-</span></div>
+                                <div class="param-row"><span class="param-label">Spread<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Differenz Temperatur - Taupunkt. Zeigt wie feucht die Luft ist.</span></span></span><span class="param-value" id="spread">-</span></div>
+                                <div class="param-row"><span class="param-label">CAPE<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Energie für Konvektion (J/kg). >1000 = hohe Gewittergefahr!</span></span></span><span class="param-value" id="cape">-</span></div>
+                                <div class="param-row"><span class="param-label">Lifted Index<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Stabilitätsindex. Negativ = labil = kräftige Thermik. &lt;-4 = Gewitter!</span></span></span><span class="param-value" id="liftedIndex">-</span></div>
+                            </div>
+                        </div>
+                        <div class="param-card height-card collapsed" id="heightCard" data-card="height">
+                        <div class="param-header" id="heightCardToggle">
+                            <span class="param-title">📏 Höhen-Info<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Wichtige Höhenangaben: Wolkenbasis, maximale Thermik (Grenzschicht), Nullgradgrenze</span></span></span>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div class="height-summary">
+                            <span class="height-summary-item">☁️ Wolkenbasis: <span class="height-summary-value" id="cloudBaseSummary">-</span></span>
+                            <span class="height-summary-item">🌡️ Max. Thermik: <span class="height-summary-value" id="boundaryLayerSummary">-</span></span>
+                            <span class="height-summary-item">❄️ 0°C: <span class="height-summary-value" id="freezingLevelSummary">-</span></span>
+                            <span class="height-summary-item">📍 Station: <span class="height-summary-value" id="stationElevationSummary">-</span></span>
+                        </div>
+                        <div class="param-body">
+                            <div class="height-info-grid">
+                                <div class="height-info-item">
+                                    <div class="height-info-label">☁️ Wolkenbasis (berechnet)</div>
+                                    <div class="height-info-value" id="cloudBase">-</div>
+                                </div>
+                                <div class="height-info-item">
+                                    <div class="height-info-label">🌡️ Max. Thermik (Grenzschicht)</div>
+                                    <div class="height-info-value" id="boundaryLayer">-</div>
+                                </div>
+                                <div class="height-info-item">
+                                    <div class="height-info-label">❄️ Nullgradgrenze</div>
+                                    <div class="height-info-value" id="freezingLevel">-</div>
+                                </div>
+                                <div class="height-info-item">
+                                    <div class="height-info-label">📍 Stationshöhe</div>
+                                    <div class="height-info-value" id="stationElevation">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                        <div class="param-card collapsed" data-card="clouds" role="region" aria-label="Wolken und Sicht">
+                            <div class="param-header"><span class="param-title">☁️ Wolken & Sicht<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Tiefe Wolken (&lt;2000m) sind kritisch - dämpfen Thermik und können Start eindecken.</span></span></span><span class="param-status" id="cloudStatus"></span><span class="toggle-icon">▼</span></div>
+                            <div class="param-body">
+                                <div class="param-row"><span class="param-label">Gesamt</span><span class="param-value" id="cloudTotal">-</span></div>
+                                <div class="param-row"><span class="param-label">Tief (&lt;2km)</span><span class="param-value" id="cloudLow">-</span></div>
+                                <div class="param-row"><span class="param-label">Mittel</span><span class="param-value" id="cloudMid">-</span></div>
+                                <div class="param-row"><span class="param-label">Hoch</span><span class="param-value" id="cloudHigh">-</span></div>
+                                <div class="param-row"><span class="param-label">Sicht</span><span class="param-value" id="visibility">-</span></div>
+                            </div>
+                        </div>
+                        <div class="param-card collapsed" data-card="precip" role="region" aria-label="Niederschlag">
+                            <div class="param-header"><span class="param-title">🌧️ Niederschlag<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Jeder Niederschlag ist problematisch - nasser Schirm hat schlechtere Flugeigenschaften!</span></span></span><span class="param-status" id="precipStatus"></span><span class="toggle-icon">▼</span></div>
+                            <div class="param-body">
+                                <div class="param-row"><span class="param-label">Menge (gesamt)</span><span class="param-value" id="precip">-</span></div>
+                                <div class="param-row"><span class="param-label">Schauer (konvektiv)<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Konvektiver Niederschlag aus Quellwolken/Gewittern - oft lokal und heftig!</span></span></span><span class="param-value" id="convPrecip">-</span></div>
+                                <div class="param-row"><span class="param-label">Wahrscheinl.</span><span class="param-value" id="precipProb">-</span></div>
+                                <div class="param-row"><span class="param-label">Gewitterrisiko</span><span class="param-value" id="thunderRisk">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer class="sky-footer">
+            <div class="footer-content">
+                <p class="footer-text">
+                    SkyCheck v9.0 | Daten: <a href="https://open-meteo.com/" target="_blank" class="footer-link">Open-Meteo.com</a> (ICON-D2/EU)
+                </p>
+                <p class="footer-disclaimer">
+                    <small>SkyCheck ersetzt keine professionelle Wetterberatung. Piloten sind selbst verantwortlich für ihre Flugentscheidungen.</small>
+                </p>
+            </div>
+        </footer>
+        <section class="explanation-section">
+            <button class="explanation-toggle" id="explanationToggle"><span>ℹ️ So funktioniert SkyCheck</span><span class="toggle-icon" id="toggleIcon">▼</span></button>
+            <div class="explanation-content" id="explanationContent">
+                <div class="killer-section" id="killerExplainSection">
+                    <h3>☠️ Die 5 Killer - Immer prüfen!</h3>
+                    <div class="killer-grid">
+                        <div class="killer-item"><span class="killer-number">1</span><span class="killer-text"><strong>Gewitter / CB</strong><br>CAPE &gt;1000 J/kg</span></div>
+                        <div class="killer-item"><span class="killer-number">2</span><span class="killer-text"><strong>Föhn / Höhenwind</strong><br>700 hPa &gt;30 km/h</span></div>
+                        <div class="killer-item"><span class="killer-number">3</span><span class="killer-text"><strong>Windscherung</strong><br>Gradient &gt;18 km/h</span></div>
+                        <div class="killer-item"><span class="killer-number">4</span><span class="killer-text"><strong>Nebel / Sicht</strong><br>Sicht &lt;5 km</span></div>
+                        <div class="killer-item"><span class="killer-number">5</span><span class="killer-text"><strong>Eigene Verfassung</strong><br>Müde, Druck, Zweifel?</span></div>
+                    </div>
+                </div>
+                <div class="explanation-intro" id="explanationIntro">
+                    <h3>Überblick</h3>
+                    <p>SkyCheck analysiert automatisch die wichtigsten Wetterparameter für sicheres Gleitschirmfliegen.
+                    Die Daten stammen von <a href="https://open-meteo.com/" target="_blank">Open-Meteo</a>.</p>
+                    <div class="traffic-light">
+                        <span class="light green">GRÜN = Go</span>
+                        <span class="light yellow">GELB = Prüfen</span>
+                        <span class="light red">ROT = No-Go</span>
+                    </div>
+
+                    <h4 style="margin-top: 1rem;">🌐 Wettermodelle (nach Priorität)</h4>
+                    <table style="width: 100%; font-size: 0.85rem; margin-top: 0.5rem;">
+                        <tr><th>Region</th><th>Modell</th><th>Auflösung</th><th>Vorhersage</th></tr>
+                        <tr><td>Mitteleuropa (D, A, CH)</td><td><strong>ICON-D2</strong></td><td>2.2 km</td><td>48h</td></tr>
+                        <tr><td>Europa</td><td><strong>ICON-EU</strong></td><td>7 km</td><td>5 Tage</td></tr>
+                        <tr><td>Weltweit</td><td><strong>ECMWF / GFS</strong></td><td>25-50 km</td><td>7-16 Tage</td></tr>
+                    </table>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Das jeweils beste verfügbare Modell wird automatisch gewählt. Höhere Auflösung = genauere lokale Vorhersage.</p>
+                </div>
+
+                <div class="explanation-card" style="margin-bottom: 1rem; background: var(--green-bg); border: 1px solid var(--green);">
+                    <h4>⭐ Anfängerfreundliche Bedingungen</h4>
+                    <p style="font-size: 0.85rem; margin-bottom: 0.5rem;">Bei grüner Ampel UND diesen Werten erscheint das "Anfänger-freundlich"-Badge:</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">⚠️ <strong>Hinweis:</strong> Diese Einschätzung basiert nur auf Modelldaten. Lokale Einflüsse (Talwindsysteme, Lee-Effekte, Thermikauslöser) müssen vor Ort selbst bewertet werden!</p>
+                    <table>
+                        <tr><th>Parameter</th><th>Schwelle</th><th>Warum?</th></tr>
+                        <tr><td>Bodenwind</td><td>&lt; 10 km/h</td><td>Entspanntes Aufziehen</td></tr>
+                        <tr><td>Böendifferenz</td><td>&lt; 5 km/h</td><td>Ruhige, laminare Luft</td></tr>
+                        <tr><td>Höhenwind (1500m)</td><td>&lt; 15 km/h</td><td>Keine Lee-Gefahr</td></tr>
+                        <tr><td>Höhenwind (2000m)</td><td>&lt; 18 km/h</td><td>Ruhige Höhenluft</td></tr>
+                        <tr><td>Höhenwind (3000m)</td><td>&lt; 20 km/h</td><td>Kein Föhn-Risiko</td></tr>
+                        <tr><td>Windgradient</td><td>&lt; 8 km/h</td><td>Sanfter Übergang</td></tr>
+                        <tr><td>CAPE</td><td>&lt; 200 J/kg</td><td>Sanfte Thermik</td></tr>
+                        <tr><td>Sicht</td><td>&gt; 15 km</td><td>Gute Orientierung</td></tr>
+                        <tr><td>Spread</td><td>≥ 5°C</td><td>Keine Nebelgefahr</td></tr>
+                    </table>
+                </div>
+
+                <div class="explanation-card" style="margin-bottom: 1rem;">
+                    <h4>📅 Tagesauswahl-Ampel</h4>
+                    <p style="font-size: 0.85rem; margin-bottom: 0.5rem;">Die Ampel bei der Tagesauswahl zeigt die Flugchancen des Tages:</p>
+                    <table>
+                        <tr><th>Status</th><th>Bedeutung</th></tr>
+                        <tr><td style="color: var(--green); font-weight: bold;">GO</td><td>≥ 3 Stunden grünes Zeitfenster vorhanden</td></tr>
+                        <tr><td style="color: var(--yellow); font-weight: bold;">VORSICHT</td><td>1-2 Stunden grün ODER keine roten Stunden</td></tr>
+                        <tr><td style="color: var(--red); font-weight: bold;">NO-GO</td><td>Kein grünes Zeitfenster UND rote Stunden vorhanden</td></tr>
+                    </table>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Der beste Tag wird mit goldenem Rahmen markiert (längstes grünes Zeitfenster).</p>
+                </div>
+                <div class="explanation-grid">
+                    <div class="explanation-card">
+                        <h4>💨 Wind</h4>
+                        <table>
+                            <tr><th>Parameter</th><th>Grün</th><th>Gelb</th><th>Rot</th></tr>
+                            <tr><td>Bodenwind (10m)</td><td>&lt;12</td><td>12-18</td><td>&gt;18 km/h</td></tr>
+                            <tr><td>Böen</td><td>&lt;15</td><td>15-25</td><td>&gt;25 km/h</td></tr>
+                            <tr><td>Böigkeit (Böen-Differenz)</td><td>&lt;8</td><td>8-15</td><td>&gt;15 km/h</td></tr>
+                            <tr><td>850 hPa (~1500m)</td><td>&lt;18</td><td>18-28</td><td>&gt;28 km/h</td></tr>
+                            <tr><td>800 hPa (~2000m)</td><td>&lt;22</td><td>22-30</td><td>&gt;30 km/h</td></tr>
+                            <tr><td>700 hPa (~3000m)</td><td>&lt;25</td><td>25-30</td><td>&gt;30 km/h</td></tr>
+                            <tr><td>Gradient Boden↔1500m</td><td>&lt;10</td><td>10-18</td><td>&gt;18 km/h</td></tr>
+                            <tr><td>Gradient Boden↔3000m</td><td>&lt;15</td><td>15-25</td><td>&gt;25 km/h</td></tr>
+                        </table>
+                    </div>
+                    <div class="explanation-card">
+                        <h4>🌡️ Thermik & Stabilität</h4>
+                        <table>
+                            <tr><th>Parameter</th><th>Grün</th><th>Gelb</th><th>Rot</th></tr>
+                            <tr><td>Spread (T - Taupunkt)</td><td>5-15°C</td><td>3-5°C / 15-20°C</td><td>&lt;3°C</td></tr>
+                            <tr><td>CAPE</td><td>&lt;300</td><td>300-1000</td><td>&gt;1000 J/kg</td></tr>
+                            <tr><td>Lifted Index</td><td>&gt;-2</td><td>-2 bis -4</td><td>&lt;-4</td></tr>
+                        </table>
+                        <p class="explanation-note">Spread = Temperatur minus Taupunkt. Zu niedrig = Nebelgefahr, zu hoch = sehr trockene Luft.</p>
+                    </div>
+                    <div class="explanation-card">
+                        <h4>☁️ Wolken & Sicht</h4>
+                        <table>
+                            <tr><th>Parameter</th><th>Grün</th><th>Gelb</th><th>Rot</th></tr>
+                            <tr><td>Tiefe Wolken (&lt;2km)</td><td>&lt;30%</td><td>30-60%</td><td>&gt;60%</td></tr>
+                            <tr><td>Gesamtbewölkung</td><td>&lt;50%</td><td>50-75%</td><td>&gt;75%</td></tr>
+                            <tr><td>Sichtweite</td><td>&gt;10 km</td><td>5-10 km</td><td>&lt;5 km</td></tr>
+                        </table>
+                    </div>
+                    <div class="explanation-card">
+                        <h4>🌧️ Niederschlag</h4>
+                        <table>
+                            <tr><th>Parameter</th><th>Grün</th><th>Gelb</th><th>Rot</th></tr>
+                            <tr><td>Niederschlagsmenge</td><td>&lt;0.1 mm</td><td>0.1-1 mm</td><td>&gt;1 mm</td></tr>
+                            <tr><td>Schauer (konvektiv)</td><td>&lt;0.1 mm</td><td>0.1-0.5 mm</td><td>&gt;0.5 mm</td></tr>
+                            <tr><td>Wahrscheinlichkeit</td><td>&lt;30%</td><td>≥30%</td><td>-</td></tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="explanation-footer" id="explanationFooter">
+                    <h3>📌 Wichtige Hinweise</h3>
+                    <ul>
+                        <li><strong>Stunden-Ampel:</strong> Die Bewertung zeigt immer den schlechtesten Einzelwert aller Parameter.</li>
+                        <li><strong>Bestes Zeitfenster:</strong> Längste zusammenhängende grüne Phase (6-20 Uhr), markiert mit ⭐.</li>
+                        <li><strong>Trend-Pfeile:</strong> ↑ = Wert steigt (meist schlechter), ↓ = Wert sinkt, → = stabil.</li>
+                        <li><strong>Böigkeit:</strong> Differenz zwischen Böen und Grundwind. &gt;8 km/h = Gelb, &gt;15 km/h = Rot (unruhige Luft).</li>
+                        <li><strong>Prognose-Sicherheit:</strong> Heute ⭐⭐⭐ (hoch), Morgen ⭐⭐ (mittel), Übermorgen ⭐ (gering).</li>
+                        <li><strong>Lokale Verhältnisse:</strong> Diese App ersetzt nicht den Check vor Ort! Windsack, Wolken und Bauchgefühl beachten.</li>
+                    </ul>
+                    <p class="final-note">🪂 <em>Im Zweifel: Nicht starten! Der Berg ist morgen noch da.</em></p>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="modal-overlay" id="favoriteModal" role="dialog" aria-modal="true" aria-labelledby="favoriteModalTitle">
+        <div class="modal">
+            <h3 id="favoriteModalTitle">⭐ Favorit speichern</h3>
+            <input type="text" id="favoriteNameInput" placeholder="Name eingeben..." aria-label="Name des Favoriten" />
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" id="cancelFavBtn">Abbrechen</button>
+                <button class="modal-btn primary" id="saveFavBtn">Speichern</button>
+            </div>
+            <button class="modal-close" id="closeFavModal" aria-label="Dialog schließen" style="position: absolute; top: 0.5rem; right: 0.5rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">×</button>
+        </div>
+    </div>
+    <!-- Bestätigungs-Dialog für Favoriten löschen -->
+    <div class="modal-overlay" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+        <div class="modal">
+            <h3 id="confirmModalTitle">🗑️ Favorit löschen?</h3>
+            <p id="confirmModalText">Möchtest du diesen Favoriten wirklich löschen?</p>
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" id="confirmCancelBtn">Abbrechen</button>
+                <button class="modal-btn primary" id="confirmOkBtn" style="background: var(--red);">Löschen</button>
+            </div>
+        </div>
+    </div>
+    <div class="share-toast" id="shareToast">🔗 Link kopiert!</div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
