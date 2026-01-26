@@ -1,0 +1,16 @@
+# macOS Systemdateien (Der Klassiker)
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Backup-Dateien
+*.bak
+*.swp
+
+# Falls du später mal mit Node.js arbeitest
+node_modules/
+npm-debug.log*
+
+# Editor-Einstellungen
+.vscode/
+.idea/
