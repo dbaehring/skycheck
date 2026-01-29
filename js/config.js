@@ -14,7 +14,14 @@ export const APP_INFO = {
     year: 2025
 };
 
-// Drucklevel-Konfiguration (750hPa entfernt - nicht zuverlässig)
+// === API Konfiguration ===
+export const API_CONFIG = {
+    baseUrl: 'https://api.open-meteo.com/v1/forecast',
+    elevationUrl: 'https://api.open-meteo.com/v1/elevation',
+    timeout: 15000  // Max. Wartezeit in ms
+};
+
+// Drucklevel-Konfiguration
 export const PRESSURE_LEVELS = {
     ground: {
         hPa: 1000,
@@ -58,6 +65,15 @@ export const LIMITS = {
         gustFactorMinWind: { green: 15, yellow: 20 }  // Min. Böenstärke für Faktor-Warnung
     },
     spread: { min: 3, optimalMin: 5, optimalMax: 15, max: 20 },
+    // Nebel-Erkennung (intelligente Kombination statt nur Spread)
+    fog: {
+        spreadSevere: 1.0,       // Kritisch wenn Spread < 1°C (fast gesättigt)
+        spreadWarning: 3.0,      // Warnung wenn Spread < 3°C
+        windThreshold: 5,        // Unter 5 km/h kann sich Bodennebel halten
+        windDisperse: 12,        // Ab 12 km/h wird Nebel meist aufgelöst
+        visibilitySevere: 1500,  // ROT: VFR-Minimum unterschritten
+        visibilityWarning: 5000  // GELB: Eingeschränkte Sicht
+    },
     cape: { green: 300, yellow: 1000 },
     liftedIndex: { green: -2, yellow: -4 },  // Negativer = labiler
     clouds: {
@@ -116,4 +132,20 @@ export const STORAGE_KEYS = {
     WINDROSE: 'gleitschirm-meteo-windrose',
     HEIGHT: 'gleitschirm-meteo-height',
     LAST_WEATHER: 'gleitschirm-meteo-last-weather'
+};
+
+// UI-Konstanten
+export const UI_CONFIG = {
+    mobileBreakpoint: 500,           // px - Ab hier Mobile-Layout
+    toastDuration: 3000,             // ms - Toast-Anzeigedauer
+    errorResetDelay: 8000,           // ms - Fehleranzeige zurücksetzen
+    mapInvalidateDelay: 100,         // ms - Leaflet invalidateSize Verzögerung
+    inputFeedbackDuration: 2000      // ms - Input-Validierungsfeedback
+};
+
+// Meteorologische Konstanten
+export const METEO_CONSTANTS = {
+    cloudBaseMultiplier: 125,        // Spread × 125m = Wolkenbasis über Grund
+    freezingLevelWarning: 2000,      // m - Warnung wenn Nullgradgrenze < 2000m
+    boundaryLayerWarning: 1000       // m - Warnung wenn Grenzschicht < 1000m
 };

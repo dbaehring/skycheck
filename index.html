@@ -242,7 +242,7 @@
         <footer class="sky-footer">
             <div class="footer-content">
                 <p class="footer-text">
-                    SkyCheck v9.0 | Daten: <a href="https://open-meteo.com/" target="_blank" class="footer-link">Open-Meteo.com</a> (ICON-D2/EU)
+                    SkyCheck v9.0 | Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="footer-link">Open-Meteo.com</a> (ICON-D2/EU)
                 </p>
                 <p class="footer-disclaimer">
                     <small>SkyCheck ersetzt keine professionelle Wetterberatung. Piloten sind selbst verantwortlich für ihre Flugentscheidungen.</small>
@@ -253,19 +253,19 @@
             <button class="explanation-toggle" id="explanationToggle"><span>ℹ️ So funktioniert SkyCheck</span><span class="toggle-icon" id="toggleIcon">▼</span></button>
             <div class="explanation-content" id="explanationContent">
                 <div class="killer-section" id="killerExplainSection">
-                    <h3>☠️ Die 5 Killer - Immer prüfen!</h3>
+                    <h3>🚨 Die 5 STOPP-Kriterien - Immer prüfen!</h3>
                     <div class="killer-grid">
                         <div class="killer-item"><span class="killer-number">1</span><span class="killer-text"><strong>Gewitter / CB</strong><br>CAPE &gt;1000 J/kg</span></div>
                         <div class="killer-item"><span class="killer-number">2</span><span class="killer-text"><strong>Föhn / Höhenwind</strong><br>700 hPa &gt;30 km/h</span></div>
                         <div class="killer-item"><span class="killer-number">3</span><span class="killer-text"><strong>Windscherung</strong><br>Gradient &gt;18 km/h</span></div>
-                        <div class="killer-item"><span class="killer-number">4</span><span class="killer-text"><strong>Nebel / Sicht</strong><br>Sicht &lt;5 km</span></div>
+                        <div class="killer-item"><span class="killer-number">4</span><span class="killer-text"><strong>Nebel / Sicht</strong><br>Sicht &lt;1.5 km oder Spread &lt;1°C</span></div>
                         <div class="killer-item"><span class="killer-number">5</span><span class="killer-text"><strong>Eigene Verfassung</strong><br>Müde, Druck, Zweifel?</span></div>
                     </div>
                 </div>
                 <div class="explanation-intro" id="explanationIntro">
                     <h3>Überblick</h3>
                     <p>SkyCheck analysiert automatisch die wichtigsten Wetterparameter für sicheres Gleitschirmfliegen.
-                    Die Daten stammen von <a href="https://open-meteo.com/" target="_blank">Open-Meteo</a>.</p>
+                    Die Daten stammen von <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>.</p>
                     <div class="traffic-light">
                         <span class="light green">GRÜN = Go</span>
                         <span class="light yellow">GELB = Prüfen</span>
@@ -330,19 +330,25 @@
                         <h4>🌡️ Thermik & Stabilität</h4>
                         <table>
                             <tr><th>Parameter</th><th>Grün</th><th>Gelb</th><th>Rot</th></tr>
-                            <tr><td>Spread (T - Taupunkt)</td><td>5-15°C</td><td>3-5°C / 15-20°C</td><td>&lt;3°C</td></tr>
                             <tr><td>CAPE</td><td>&lt;300</td><td>300-1000</td><td>&gt;1000 J/kg</td></tr>
                             <tr><td>Lifted Index</td><td>&gt;-2</td><td>-2 bis -4</td><td>&lt;-4</td></tr>
                         </table>
-                        <p class="explanation-note">Spread = Temperatur minus Taupunkt. Zu niedrig = Nebelgefahr, zu hoch = sehr trockene Luft.</p>
                     </div>
                     <div class="explanation-card">
-                        <h4>☁️ Wolken & Sicht</h4>
+                        <h4>🌫️ Nebel & Sicht</h4>
+                        <table>
+                            <tr><th>Bedingung</th><th>Grün</th><th>Gelb</th><th>Rot</th></tr>
+                            <tr><td>Sichtweite</td><td>&gt;5 km</td><td>1.5-5 km</td><td>&lt;1.5 km</td></tr>
+                            <tr><td>Spread + wenig Wind</td><td>&gt;3°C</td><td>1-3°C</td><td>&lt;1°C</td></tr>
+                        </table>
+                        <p class="explanation-note">🆕 <strong>Intelligente Nebel-Erkennung:</strong> Spread allein reicht nicht – SkyCheck kombiniert Spread, Wind und Sichtweite. Bei Wind &gt;12 km/h bildet sich selten Bodennebel. Bei Gelb: Webcams prüfen!</p>
+                    </div>
+                    <div class="explanation-card">
+                        <h4>☁️ Wolken</h4>
                         <table>
                             <tr><th>Parameter</th><th>Grün</th><th>Gelb</th><th>Rot</th></tr>
                             <tr><td>Tiefe Wolken (&lt;2km)</td><td>&lt;30%</td><td>30-60%</td><td>&gt;60%</td></tr>
                             <tr><td>Gesamtbewölkung</td><td>&lt;50%</td><td>50-75%</td><td>&gt;75%</td></tr>
-                            <tr><td>Sichtweite</td><td>&gt;10 km</td><td>5-10 km</td><td>&lt;5 km</td></tr>
                         </table>
                     </div>
                     <div class="explanation-card">

@@ -5,8 +5,8 @@
  */
 
 import { state } from './state.js';
-import { LIMITS, BEGINNER_LIMITS } from './config.js';
-import { isInIconD2Coverage, isInIconEUCoverage, isInIconCoverage, getGustFactor, isInAlpineRegion, escapeHtml } from './utils.js';
+import { LIMITS, BEGINNER_LIMITS, API_CONFIG, UI_CONFIG, METEO_CONSTANTS } from './config.js';
+import { isInIconD2Coverage, isInIconEUCoverage, getGustFactor, isInAlpineRegion, escapeHtml } from './utils.js';
 
 /**
  * Validates weather data and handles missing values
@@ -68,7 +68,7 @@ export async function fetchWeatherData() {
             models: modelChoice
         });
 
-        // v9: Höhenwinde (750hPa entfernt - nicht zuverlässig verfügbar)
+        // Höhenwinde auf verschiedenen Druckniveaus
         const pressureParams = new URLSearchParams({
             latitude: lat,
             longitude: lon,
@@ -79,19 +79,36 @@ export async function fetchWeatherData() {
             models: modelChoice
         });
 
-        // API-Timeout: Max 15 Sekunden warten
+        // API-Timeout (konfigurierbar via API_CONFIG)
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
 
-        let d1, d2;
+        let d1, d2 = null;
         try {
-            const [r1, r2] = await Promise.all([
-                fetch('https://api.open-meteo.com/v1/forecast?' + params, { signal: controller.signal }),
-                fetch('https://api.open-meteo.com/v1/forecast?' + pressureParams, { signal: controller.signal })
+            // Promise.allSettled für graceful degradation:
+            // Hauptdaten sind kritisch, Höhenwinde sind optional
+            const [mainResult, pressureResult] = await Promise.allSettled([
+                fetch(API_CONFIG.baseUrl + '?' + params, { signal: controller.signal }),
+                fetch(API_CONFIG.baseUrl + '?' + pressureParams, { signal: controller.signal })
             ]);
             clearTimeout(timeoutId);
-            d1 = await r1.json();
-            d2 = await r2.json();
+
+            // Hauptdaten MÜSSEN erfolgreich sein
+            if (mainResult.status === 'rejected') {
+                throw mainResult.reason;
+            }
+            d1 = await mainResult.value.json();
+
+            // Höhenwinde sind optional - App funktioniert auch ohne
+            if (pressureResult.status === 'fulfilled') {
+                try {
+                    d2 = await pressureResult.value.json();
+                } catch (e) {
+                    console.warn('Höhenwinde-Daten konnten nicht geparst werden:', e);
+                }
+            } else {
+                console.warn('Höhenwinde-Fetch fehlgeschlagen:', pressureResult.reason);
+            }
         } catch (fetchError) {
             clearTimeout(timeoutId);
             if (fetchError.name === 'AbortError') {
@@ -100,13 +117,13 @@ export async function fetchWeatherData() {
             throw fetchError;
         }
 
-        // Prüfe auf API-Fehler
-        if (d1.error || d2.error) {
-            throw new Error(d1.reason || d2.reason || 'API-Fehler');
+        // Prüfe auf API-Fehler (nur Hauptdaten kritisch)
+        if (d1.error) {
+            throw new Error(d1.reason || 'API-Fehler');
         }
 
-        // Daten zusammenführen (750hPa entfernt)
-        if (d2.hourly) {
+        // Daten zusammenführen (nur wenn Höhenwinde verfügbar)
+        if (d2?.hourly && !d2.error) {
             d1.hourly.wind_speed_850hPa = d2.hourly.wind_speed_850hPa;
             d1.hourly.wind_speed_800hPa = d2.hourly.wind_speed_800hPa;
             d1.hourly.wind_speed_700hPa = d2.hourly.wind_speed_700hPa;
@@ -114,6 +131,9 @@ export async function fetchWeatherData() {
             d1.hourly.wind_direction_800hPa = d2.hourly.wind_direction_800hPa;
             d1.hourly.wind_direction_700hPa = d2.hourly.wind_direction_700hPa;
             d1.hourly.boundary_layer_height = d2.hourly.boundary_layer_height;
+        } else if (!d2?.hourly) {
+            // Höhenwinde nicht verfügbar - Warnung in Konsole
+            console.warn('⚠️ Höhenwinde nicht verfügbar - Gradient-Bewertung eingeschränkt');
         }
 
         state.hourlyData = d1.hourly;
@@ -166,7 +186,7 @@ export async function fetchWeatherData() {
 
         // FIX: Leaflet-Karte nach Layout-Änderung aktualisieren (verhindert graue Flächen)
         if (state.map) {
-            setTimeout(() => state.map.invalidateSize(), 100);
+            setTimeout(() => state.map.invalidateSize(), UI_CONFIG.mapInvalidateDelay);
         }
 
     } catch(e) {
@@ -209,14 +229,14 @@ export async function fetchWeatherData() {
             <p style="color: var(--red);">${errorDetail}</p>
             <p style="margin-top: 0.5rem;">${errorHint}</p>
         `;
-        // Nach 8 Sekunden zurücksetzen
+        // Nach Timeout zurücksetzen
         setTimeout(() => {
             initialState.innerHTML = `
                 <div class="initial-state-icon">🗺️</div>
                 <h3>Wähle einen Standort</h3>
                 <p>Klicke auf die Karte oder nutze GPS.</p>
             `;
-        }, 8000);
+        }, UI_CONFIG.errorResetDelay);
     }
 }
 
@@ -234,7 +254,33 @@ export async function refreshData() {
 }
 
 /**
- * Stunden-Score berechnen (3=go, 2=caution, 1=nogo)
+ * Intelligente Nebel-Risiko-Erkennung
+ * Kombiniert Spread, Wind und Sichtweite für zuverlässigere Vorhersage
+ * @returns {'severe'|'likely'|'possible'|'unlikely'} Nebel-Risiko-Level
+ */
+export function getFogRisk(spread, windSpeed, visibility) {
+    // SEVERE: Echte "Waschküche" - fast gesättigt + windstill + schlechte Sicht
+    // Oder: Sichtweite unter VFR-Minimum
+    if (visibility < LIMITS.fog.visibilitySevere) return 'severe';
+    if (spread <= LIMITS.fog.spreadSevere && windSpeed < LIMITS.fog.windThreshold) return 'severe';
+
+    // LIKELY: Hohe Nebelwahrscheinlichkeit - feucht + wenig Wind + mäßige Sicht
+    if (spread <= 2.0 && windSpeed < LIMITS.fog.windDisperse && visibility < LIMITS.fog.visibilityWarning) return 'likely';
+
+    // POSSIBLE: Nebelrisiko besteht - hohe Feuchtigkeit ODER eingeschränkte Sicht
+    // Aber: Bei Wind > 12 km/h bildet sich selten Bodennebel
+    if (visibility < LIMITS.fog.visibilityWarning) return 'possible';
+    if (spread < LIMITS.fog.spreadWarning && windSpeed < LIMITS.fog.windDisperse) return 'possible';
+
+    // UNLIKELY: Gute Sicht und/oder ausreichend trocken
+    return 'unlikely';
+}
+
+/**
+ * Gesamt-Score für eine Stunde berechnen
+ * Kombiniert Wind, Thermik, Wolken und Niederschlag
+ * @param {number} i - Index in state.hourlyData
+ * @returns {1|2|3} Score: 1=nogo (rot), 2=caution (gelb), 3=go (grün)
  */
 export function getHourScore(i) {
     const h = state.hourlyData;
@@ -247,9 +293,8 @@ export function getHourScore(i) {
     const w800 = h.wind_speed_800hPa?.[i] || 0;
     const w700 = h.wind_speed_700hPa?.[i] || 0;
     const grad = Math.abs(w850 - ws);
-    const grad3000 = Math.abs(w700 - ws);  // FIX: Gradient zu Boden, nicht zu 850hPa
-    const gustSpread = wg - ws;  // NEU: Böigkeits-Differenz
-    const gustFactor = getGustFactor(ws, wg);
+    const grad3000 = Math.abs(w700 - ws);
+    const gustSpread = wg - ws;
 
     // Thermik-Parameter
     const temp = h.temperature_2m?.[i];
@@ -268,27 +313,31 @@ export function getHourScore(i) {
     const precipProb = h.precipitation_probability?.[i] || 0;
     const showers = h.showers?.[i] || 0;
 
+    // Nebel-Risiko (intelligente Kombination statt nur Spread)
+    const fogRisk = getFogRisk(spread, ws, vis);
+
     // === NO-GO Kriterien (Score 1) ===
-    // Wind (inkl. neue gustSpread-Prüfung)
+    // Wind
     if (ws > LIMITS.wind.surface.yellow || wg > LIMITS.wind.gusts.yellow ||
         gustSpread > LIMITS.wind.gustSpread.yellow ||
         w850 > LIMITS.wind.w850.yellow || w800 > LIMITS.wind.w800.yellow || w700 > LIMITS.wind.w700.yellow ||
         grad > LIMITS.wind.gradient.yellow || grad3000 > LIMITS.wind.gradient3000.yellow) return 1;
-    // Thermik
-    if (spread < LIMITS.spread.min || cape > LIMITS.cape.yellow || li < LIMITS.liftedIndex.yellow) return 1;
-    // Wolken/Sicht
-    if (cloudLow > LIMITS.clouds.low.yellow || vis < LIMITS.visibility.yellow) return 1;
+    // Thermik (CAPE/LI unverändert, aber Spread nur noch bei echtem Nebel-Risiko)
+    if (fogRisk === 'severe' || cape > LIMITS.cape.yellow || li < LIMITS.liftedIndex.yellow) return 1;
+    // Wolken (tiefe Wolken bleiben kritisch)
+    if (cloudLow > LIMITS.clouds.low.yellow) return 1;
     // Niederschlag
     if (precip > LIMITS.precip.yellow || showers > LIMITS.showers.yellow) return 1;
 
     // === VORSICHT Kriterien (Score 2) ===
-    // Wind (inkl. neue gustSpread-Prüfung)
+    // Wind
     if (ws > LIMITS.wind.surface.green || wg > LIMITS.wind.gusts.green ||
         gustSpread > LIMITS.wind.gustSpread.green ||
         w850 > LIMITS.wind.w850.green || w800 > LIMITS.wind.w800.green || w700 > LIMITS.wind.w700.green ||
         grad > LIMITS.wind.gradient.green || grad3000 > LIMITS.wind.gradient3000.green) return 2;
-    // Thermik
-    if (spread < LIMITS.spread.optimalMin || spread > LIMITS.spread.max || cape > LIMITS.cape.green || li < LIMITS.liftedIndex.green) return 2;
+    // Thermik/Nebel
+    if (fogRisk === 'likely' || fogRisk === 'possible' ||
+        spread > LIMITS.spread.max || cape > LIMITS.cape.green || li < LIMITS.liftedIndex.green) return 2;
     // Wolken/Sicht
     if (cloudTotal > LIMITS.clouds.total.yellow || cloudLow > LIMITS.clouds.low.green || vis < LIMITS.visibility.green) return 2;
     // Niederschlag
@@ -299,11 +348,16 @@ export function getHourScore(i) {
 }
 
 /**
- * v8 NEU: Wolkenbasis berechnen aus Spread × 125m + Stationshöhe
+ * Wolkenbasis berechnen aus Spread × Faktor + Stationshöhe
+ * Faustformel: Pro 1°C Spread steigt die Wolkenbasis um ~125m
+ * @param {number} temp - Temperatur in °C
+ * @param {number} dewpoint - Taupunkt in °C
+ * @param {number} elevation - Stationshöhe in m
+ * @returns {number} Geschätzte Wolkenbasis in m ü.M.
  */
 export function calculateCloudBase(temp, dewpoint, elevation) {
     const spread = temp - dewpoint;
-    return Math.round(spread * 125 + elevation);
+    return Math.round(spread * METEO_CONSTANTS.cloudBaseMultiplier + elevation);
 }
 
 /**
@@ -510,6 +564,14 @@ export function calculateBeginnerSafety(i) {
 
 /**
  * Wind bewerten (Score 1-3)
+ * @param {number} ws - Bodenwind in km/h
+ * @param {number} wg - Böen in km/h
+ * @param {number} w850 - Wind auf 850hPa (~1500m) in km/h
+ * @param {number} w800 - Wind auf 800hPa (~2000m) in km/h
+ * @param {number} w700 - Wind auf 700hPa (~3000m) in km/h
+ * @param {number} grad - Gradient Boden-1500m in km/h
+ * @param {number} grad3000 - Gradient Boden-3000m in km/h
+ * @returns {1|2|3} Score: 1=nogo, 2=caution, 3=go
  */
 export function evaluateWind(ws, wg, w850, w800, w700, grad, grad3000) {
     const gustFactor = getGustFactor(ws, wg);
@@ -528,27 +590,59 @@ export function evaluateWind(ws, wg, w850, w800, w700, grad, grad3000) {
 }
 
 /**
- * Thermik bewerten (Score 1-3)
+ * Thermik/Stabilität bewerten (Score 1-3)
+ * Hinweis: Spread-Bewertung nur für Thermik-Qualität, Nebel über getFogRisk()
+ * @param {number|null} spread - Temperatur minus Taupunkt in °C
+ * @param {number} cape - Convective Available Potential Energy in J/kg
+ * @param {number} li - Lifted Index (negativer = labiler)
+ * @returns {1|2|3} Score: 1=nogo, 2=caution, 3=go
  */
 export function evaluateThermik(spread, cape, li) {
-    if (spread !== null && spread < LIMITS.spread.min) return 1;
+    // CAPE und Lifted Index bewerten (unverändert)
     if (cape > LIMITS.cape.yellow || li < LIMITS.liftedIndex.yellow) return 1;
-    if (spread !== null && (spread < LIMITS.spread.optimalMin || spread > LIMITS.spread.max)) return 2;
     if (cape > LIMITS.cape.green || li < LIMITS.liftedIndex.green) return 2;
+    // Spread nur noch für Thermik-Qualität (sehr trocken = schlechte Thermik)
+    if (spread !== null && spread > LIMITS.spread.max) return 2;
     return 3;
 }
 
 /**
  * Wolken/Sicht bewerten (Score 1-3)
+ * Nutzt intelligente Nebel-Erkennung wenn spread und windSpeed verfügbar
+ * @param {number} cloudTotal - Gesamtbewölkung in %
+ * @param {number} cloudLow - Tiefe Bewölkung (<2km) in %
+ * @param {number} visibility - Sichtweite in Metern
+ * @param {number|null} [spread=null] - Spread für Nebel-Erkennung
+ * @param {number|null} [windSpeed=null] - Bodenwind für Nebel-Erkennung
+ * @returns {1|2|3} Score: 1=nogo, 2=caution, 3=go
  */
-export function evaluateClouds(cloudTotal, cloudLow, visibility) {
-    if (cloudLow > LIMITS.clouds.low.yellow || visibility < LIMITS.visibility.yellow) return 1;
+export function evaluateClouds(cloudTotal, cloudLow, visibility, spread = null, windSpeed = null) {
+    // Tiefe Wolken sind immer kritisch (thermikdämpfend)
+    if (cloudLow > LIMITS.clouds.low.yellow) return 1;
+
+    // Intelligente Nebel-Erkennung wenn alle Parameter verfügbar
+    if (spread !== null && windSpeed !== null) {
+        const fogRisk = getFogRisk(spread, windSpeed, visibility);
+        if (fogRisk === 'severe') return 1;
+        if (fogRisk === 'likely' || fogRisk === 'possible') return 2;
+    } else {
+        // Fallback: Nur Sichtweite bewerten
+        if (visibility < LIMITS.fog.visibilitySevere) return 1;
+        if (visibility < LIMITS.fog.visibilityWarning) return 2;
+    }
+
+    // Restliche Wolken-Bewertung
     if (cloudTotal > LIMITS.clouds.total.yellow || cloudLow > LIMITS.clouds.low.green || visibility < LIMITS.visibility.green) return 2;
     return 3;
 }
 
 /**
  * Niederschlag bewerten (Score 1-3)
+ * @param {number} precip - Niederschlagsmenge in mm
+ * @param {number} precipProb - Niederschlagswahrscheinlichkeit in %
+ * @param {number} cape - CAPE für Gewitterrisiko
+ * @param {number} [showers=0] - Konvektiver Niederschlag (Schauer) in mm
+ * @returns {1|2|3} Score: 1=nogo, 2=caution, 3=go
  */
 export function evaluatePrecip(precip, precipProb, cape, showers = 0) {
     if (precip > LIMITS.precip.yellow || cape > LIMITS.cape.yellow || showers > LIMITS.showers.yellow) return 1;
@@ -566,9 +660,13 @@ export function getRiskExplanation(i, score) {
     const w850 = validateValue(h.wind_speed_850hPa?.[i], 0);
     const w700 = validateValue(h.wind_speed_700hPa?.[i], 0);
     const cape = validateValue(h.cape?.[i], 0);
-    const vis = validateValue(h.visibility[i], 10000);
+    const vis = validateValue(h.visibility?.[i], 10000);
+    const temp = validateValue(h.temperature_2m?.[i], null);
+    const dew = validateValue(h.dew_point_2m?.[i], null);
+    const spread = (temp !== null && dew !== null) ? temp - dew : 10;
     const grad = Math.abs(w850 - ws);
     const gustDiff = wg - ws;
+    const fogRisk = getFogRisk(spread, ws, vis);
 
     // Wind-Risiken (Schwellenwerte aus LIMITS)
     if (ws > LIMITS.wind.surface.yellow) {
@@ -675,24 +773,47 @@ export function getRiskExplanation(i, score) {
         });
     }
 
-    // Sicht-Risiken (Schwellenwerte aus LIMITS)
-    if (vis < LIMITS.visibility.yellow) {
+    // Nebel/Sicht-Risiken (intelligente Kombination aus Spread, Wind, Sichtweite)
+    if (fogRisk === 'severe') {
+        // Echte Nebelgefahr oder sehr schlechte Sicht
+        if (vis < LIMITS.fog.visibilitySevere) {
+            risks.push({
+                severity: 'high',
+                category: 'visibility',
+                icon: '🌫️',
+                title: 'Kritisch schlechte Sicht',
+                description: `Nur ${(vis/1000).toFixed(1)} km Sicht – VFR-Minimum unterschritten`,
+                advice: 'Nicht starten! Orientierung und Landeplatzerkennung unmöglich'
+            });
+        } else {
+            risks.push({
+                severity: 'high',
+                category: 'fog',
+                icon: '🌫️',
+                title: 'Hohe Nebelgefahr',
+                description: `Spread nur ${spread.toFixed(1)}°C bei ${Math.round(ws)} km/h Wind – Klassische Nebelbedingungen`,
+                advice: 'Luft nahezu gesättigt, Bodennebel sehr wahrscheinlich'
+            });
+        }
+    } else if (fogRisk === 'likely') {
         risks.push({
-            severity: 'high',
-            category: 'visibility',
-            icon: '🌫️',
-            title: 'Sehr schlechte Sicht',
-            description: `Nur ${(vis/1000).toFixed(1)} km Sicht – Orientierung stark erschwert`,
-            advice: 'Landeplatz muss sicher erkennbar sein, evtl. nicht starten'
+            severity: 'medium',
+            category: 'fog',
+            icon: '🌁',
+            title: 'Nebel wahrscheinlich',
+            description: `Spread ${spread.toFixed(1)}°C, Sicht ${(vis/1000).toFixed(1)} km – Feucht und dunstig`,
+            advice: 'Webcams prüfen! Lokale Verhältnisse können besser sein (Inversion)'
         });
-    } else if (vis < LIMITS.visibility.green) {
+    } else if (fogRisk === 'possible') {
         risks.push({
             severity: 'medium',
             category: 'visibility',
-            icon: '🌁',
-            title: 'Eingeschränkte Sicht',
-            description: `${(vis/1000).toFixed(1)} km Sicht – Reduzierte Fernsicht`,
-            advice: 'Gelände gut kennen, früh orientieren'
+            icon: '🌥️',
+            title: 'Sichteinschränkung möglich',
+            description: spread < LIMITS.fog.spreadWarning
+                ? `Hohe Luftfeuchtigkeit (Spread ${spread.toFixed(1)}°C) – Dunst oder tiefe Basis möglich`
+                : `Sicht ${(vis/1000).toFixed(1)} km – Reduzierte Fernsicht`,
+            advice: 'Wetter vor Ort checken, früh orientieren'
         });
     }
 

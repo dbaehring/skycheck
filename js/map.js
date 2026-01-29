@@ -4,6 +4,7 @@
  */
 
 import { state } from './state.js';
+import { API_CONFIG, UI_CONFIG } from './config.js';
 
 // Callback für Wetter-Laden (wird von main.js gesetzt)
 let onLocationSelected = null;
@@ -23,7 +24,7 @@ export function initMap() {
         center: [47.3, 11.0],
         zoom: 8,
         zoomControl: false,
-        tap: true,            // Touch-Tap für Standortwahl
+        // tap: true entfernt - verursacht auf modernen Browsern Doppelklick-Probleme
         dragging: true,       // Karte bewegbar
         touchZoom: true,      // Pinch-Zoom erlaubt
         scrollWheelZoom: true,
@@ -35,7 +36,7 @@ export function initMap() {
 
     L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
         maxZoom: 17,
-        attribution: 'Kartendaten: © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, <a href="http://viewfinderpanoramas.org">SRTM</a> | Kartendarstellung: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+        attribution: 'Kartendaten: © <a href="https://openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>-Mitwirkende, <a href="http://viewfinderpanoramas.org" target="_blank" rel="noopener noreferrer">SRTM</a> | Kartendarstellung: © <a href="https://opentopomap.org" target="_blank" rel="noopener noreferrer">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener noreferrer">CC-BY-SA</a>)'
     }).addTo(state.map);
     state.map.on('click', async (e) => await handleMapClick(e.latlng.lat, e.latlng.lng));
 }
@@ -112,7 +113,7 @@ export function flyTo(lat, lon, zoom = 11) {
  */
 export async function getElevation(lat, lon) {
     try {
-        const r = await fetch('https://api.open-meteo.com/v1/elevation?latitude=' + lat + '&longitude=' + lon);
+        const r = await fetch(API_CONFIG.elevationUrl + '?latitude=' + lat + '&longitude=' + lon);
         const d = await r.json();
         return d.elevation?.[0] || 0;
     } catch(e) {
@@ -165,7 +166,7 @@ function showToast(message) {
     setTimeout(() => {
         toast.classList.remove('visible');
         toast.textContent = '🔗 Link kopiert!'; // Reset
-    }, 3000);
+    }, UI_CONFIG.toastDuration);
 }
 
 /**
@@ -190,7 +191,7 @@ export function shareLocation() {
     navigator.clipboard.writeText(window.location.href).then(() => {
         const t = document.getElementById('shareToast');
         t.classList.add('visible');
-        setTimeout(() => t.classList.remove('visible'), 2000);
+        setTimeout(() => t.classList.remove('visible'), UI_CONFIG.toastDuration);
     });
 }
 

@@ -4,7 +4,7 @@
  */
 
 import { state } from './state.js';
-import { STORAGE_KEYS, LIMITS } from './config.js';
+import { STORAGE_KEYS, LIMITS, UI_CONFIG } from './config.js';
 import { isInIconEUCoverage, escapeHtml } from './utils.js';
 import { selectLocation } from './map.js';
 
@@ -12,12 +12,56 @@ import { selectLocation } from './map.js';
 const API_DELAY = 200;
 
 /**
- * Favoriten aus localStorage laden
+ * Validiert ein Favoriten-Objekt
+ * @param {*} fav - Zu validierendes Objekt
+ * @returns {boolean} true wenn gültig
+ */
+function isValidFavorite(fav) {
+    return fav &&
+           typeof fav === 'object' &&
+           typeof fav.lat === 'number' && isFinite(fav.lat) && fav.lat >= -90 && fav.lat <= 90 &&
+           typeof fav.lon === 'number' && isFinite(fav.lon) && fav.lon >= -180 && fav.lon <= 180 &&
+           typeof fav.name === 'string' && fav.name.length > 0 && fav.name.length <= 100 &&
+           (fav.elevation === undefined || (typeof fav.elevation === 'number' && isFinite(fav.elevation)));
+}
+
+/**
+ * Favoriten aus localStorage laden (mit Schema-Validierung)
  */
 export function loadFavorites() {
     try {
-        state.favorites = JSON.parse(localStorage.getItem(STORAGE_KEYS.FAVORITES) || '[]');
+        const raw = localStorage.getItem(STORAGE_KEYS.FAVORITES);
+        if (!raw) {
+            state.favorites = [];
+            return;
+        }
+
+        const parsed = JSON.parse(raw);
+
+        // Muss ein Array sein
+        if (!Array.isArray(parsed)) {
+            console.warn('Favoriten-Daten ungültig (kein Array), wird zurückgesetzt');
+            state.favorites = [];
+            return;
+        }
+
+        // Nur gültige Favoriten behalten
+        const validFavorites = parsed.filter(fav => {
+            const valid = isValidFavorite(fav);
+            if (!valid) {
+                console.warn('Ungültiger Favorit entfernt:', fav);
+            }
+            return valid;
+        });
+
+        // Wenn Favoriten entfernt wurden, Storage aktualisieren
+        if (validFavorites.length !== parsed.length) {
+            localStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(validFavorites));
+        }
+
+        state.favorites = validFavorites;
     } catch(e) {
+        console.error('Fehler beim Laden der Favoriten:', e);
         state.favorites = [];
     }
 }
@@ -53,8 +97,12 @@ export function renderFavorites() {
     fetchAllFavoriteWeather();
 }
 
+// Flag um Event-Delegation nur einmal zu registrieren
+let favoritesListenerRegistered = false;
+
 /**
  * Nur UI aktualisieren, ohne erneuten Wetter-Fetch
+ * Verwendet Event-Delegation statt individueller Listener (Performance-Optimierung)
  */
 export function renderFavoritesUI() {
     const container = document.getElementById('favoritesButtons');
@@ -79,24 +127,31 @@ export function renderFavoritesUI() {
         </button>`;
     }).join('');
 
-    // Event-Listener für Favoriten-Buttons
-    container.querySelectorAll('.favorite-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            // Nicht auslösen wenn Delete geklickt wurde
-            if (e.target.classList.contains('delete-fav')) return;
-            const idx = parseInt(btn.dataset.favIdx);
-            selectFavorite(idx);
-        });
-    });
+    // Event-Delegation: Listener nur einmal am Container registrieren
+    if (!favoritesListenerRegistered) {
+        container.addEventListener('click', handleFavoriteClick);
+        favoritesListenerRegistered = true;
+    }
+}
 
-    // Event-Listener für Delete-Buttons
-    container.querySelectorAll('.delete-fav').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const idx = parseInt(btn.dataset.deleteIdx);
-            deleteFavorite(idx);
-        });
-    });
+/**
+ * Event-Handler für Favoriten-Klicks (Event-Delegation)
+ */
+function handleFavoriteClick(e) {
+    // Delete-Button geklickt
+    if (e.target.classList.contains('delete-fav')) {
+        e.stopPropagation();
+        const idx = parseInt(e.target.dataset.deleteIdx);
+        if (!isNaN(idx)) deleteFavorite(idx);
+        return;
+    }
+
+    // Favoriten-Button geklickt
+    const btn = e.target.closest('.favorite-btn');
+    if (btn) {
+        const idx = parseInt(btn.dataset.favIdx);
+        if (!isNaN(idx)) selectFavorite(idx);
+    }
 }
 
 /**
@@ -176,7 +231,7 @@ export function saveFavorite() {
         setTimeout(() => {
             input.style.borderColor = '';
             input.placeholder = 'Name eingeben...';
-        }, 2000);
+        }, UI_CONFIG.inputFeedbackDuration);
         return;
     }
 

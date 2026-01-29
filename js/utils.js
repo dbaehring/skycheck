@@ -90,13 +90,6 @@ export function isInIconEUCoverage(lat, lon) {
 }
 
 /**
- * Legacy-Funktion für Rückwärtskompatibilität
- */
-export function isInIconCoverage(lat, lon) {
-    return isInIconEUCoverage(lat, lon);
-}
-
-/**
  * PHASE 3 Aufgabe 2: Prüfe ob Standort in Alpennähe ist (für Föhn-Check)
  */
 export function isInAlpineRegion(lat, lon) {
