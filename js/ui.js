@@ -806,3 +806,160 @@ export function renderRiskExplanation(risks) {
         </p>
     `;
 }
+
+// === Parameter-Filter Funktionen ===
+
+/**
+ * Lädt den Parameter-Filter aus localStorage
+ */
+export function loadParamFilter() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEYS.PARAM_FILTER);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            state.paramFilter = {
+                wind: parsed.wind !== false,
+                thermik: parsed.thermik !== false,
+                clouds: parsed.clouds !== false,
+                precip: parsed.precip !== false
+            };
+        }
+    } catch (e) {
+        console.warn('Fehler beim Laden des Parameter-Filters:', e);
+    }
+    updateFilterUI();
+    // Verzögert ausführen, damit DOM bereit ist
+    setTimeout(updateFilterOptionStyles, 0);
+}
+
+/**
+ * Aktualisiert die Checkbox-Option Styles (für Browser ohne :has() Support)
+ */
+function updateFilterOptionStyles() {
+    const options = document.querySelectorAll('.param-filter-option');
+    options.forEach(option => {
+        const checkbox = option.querySelector('input[type="checkbox"]');
+        if (checkbox) {
+            option.classList.toggle('checked', checkbox.checked);
+            option.classList.toggle('unchecked', !checkbox.checked);
+        }
+    });
+}
+
+/**
+ * Speichert den Parameter-Filter in localStorage
+ */
+function saveParamFilter() {
+    try {
+        localStorage.setItem(STORAGE_KEYS.PARAM_FILTER, JSON.stringify(state.paramFilter));
+    } catch (e) {
+        console.warn('Fehler beim Speichern des Parameter-Filters:', e);
+    }
+}
+
+/**
+ * Aktualisiert die Filter-UI basierend auf dem State
+ */
+function updateFilterUI() {
+    const filterWind = document.getElementById('filterWind');
+    const filterThermik = document.getElementById('filterThermik');
+    const filterClouds = document.getElementById('filterClouds');
+    const filterPrecip = document.getElementById('filterPrecip');
+    const summary = document.getElementById('paramFilterSummary');
+    const card = document.querySelector('.param-filter-card');
+
+    if (filterWind) filterWind.checked = state.paramFilter.wind;
+    if (filterThermik) filterThermik.checked = state.paramFilter.thermik;
+    if (filterClouds) filterClouds.checked = state.paramFilter.clouds;
+    if (filterPrecip) filterPrecip.checked = state.paramFilter.precip;
+
+    // Summary aktualisieren
+    const activeFilters = [];
+    if (state.paramFilter.wind) activeFilters.push('Wind');
+    if (state.paramFilter.thermik) activeFilters.push('Thermik');
+    if (state.paramFilter.clouds) activeFilters.push('Sicht');
+    if (state.paramFilter.precip) activeFilters.push('Niederschlag');
+
+    const allActive = activeFilters.length === 4;
+    const noneActive = activeFilters.length === 0;
+
+    if (summary) {
+        if (allActive) {
+            summary.textContent = 'Alle Parameter';
+            summary.classList.remove('filtered');
+        } else if (noneActive) {
+            summary.textContent = 'Keine ausgewählt';
+            summary.classList.add('filtered');
+        } else {
+            summary.textContent = activeFilters.join(', ');
+            summary.classList.add('filtered');
+        }
+    }
+
+    // Karte hervorheben wenn gefiltert
+    if (card) {
+        card.classList.toggle('has-filter', !allActive);
+    }
+}
+
+/**
+ * Handler für Filter-Änderungen
+ */
+export function handleFilterChange() {
+    const filterWind = document.getElementById('filterWind');
+    const filterThermik = document.getElementById('filterThermik');
+    const filterClouds = document.getElementById('filterClouds');
+    const filterPrecip = document.getElementById('filterPrecip');
+
+    state.paramFilter.wind = filterWind?.checked ?? true;
+    state.paramFilter.thermik = filterThermik?.checked ?? true;
+    state.paramFilter.clouds = filterClouds?.checked ?? true;
+    state.paramFilter.precip = filterPrecip?.checked ?? true;
+
+    saveParamFilter();
+    updateFilterUI();
+    updateFilterOptionStyles();
+
+    // Anzeige aktualisieren wenn Daten vorhanden
+    if (state.hourlyData && state.selectedHourIndex !== null && state.forecastDays?.length > 0) {
+        updateDisplay(state.selectedHourIndex);
+        if (state.forecastDays[state.selectedDay]) {
+            buildTimeline(state.forecastDays[state.selectedDay].date);
+            buildDayComparison();
+        }
+    }
+}
+
+/**
+ * Setzt alle Filter zurück (alle aktivieren)
+ */
+export function resetParamFilter() {
+    state.paramFilter = {
+        wind: true,
+        thermik: true,
+        clouds: true,
+        precip: true
+    };
+    saveParamFilter();
+    updateFilterUI();
+    updateFilterOptionStyles();
+
+    // Anzeige aktualisieren wenn Daten vorhanden
+    if (state.hourlyData && state.selectedHourIndex !== null && state.forecastDays?.length > 0) {
+        updateDisplay(state.selectedHourIndex);
+        if (state.forecastDays[state.selectedDay]) {
+            buildTimeline(state.forecastDays[state.selectedDay].date);
+            buildDayComparison();
+        }
+    }
+}
+
+/**
+ * Toggle für Filter-Panel
+ */
+export function toggleParamFilter() {
+    const card = document.querySelector('.param-filter-card');
+    if (card) {
+        card.classList.toggle('expanded');
+    }
+}

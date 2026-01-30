@@ -286,6 +286,9 @@ export function getHourScore(i) {
     const h = state.hourlyData;
     if (!h) return 1;
 
+    // Parameter-Filter aus State (standardmäßig alle aktiv)
+    const filter = state.paramFilter || { wind: true, thermik: true, clouds: true, precip: true };
+
     // Wind-Parameter
     const ws = h.wind_speed_10m[i] || 0;
     const wg = h.wind_gusts_10m[i] || 0;
@@ -317,31 +320,47 @@ export function getHourScore(i) {
     const fogRisk = getFogRisk(spread, ws, vis);
 
     // === NO-GO Kriterien (Score 1) ===
-    // Wind
-    if (ws > LIMITS.wind.surface.yellow || wg > LIMITS.wind.gusts.yellow ||
-        gustSpread > LIMITS.wind.gustSpread.yellow ||
-        w850 > LIMITS.wind.w850.yellow || w800 > LIMITS.wind.w800.yellow || w700 > LIMITS.wind.w700.yellow ||
-        grad > LIMITS.wind.gradient.yellow || grad3000 > LIMITS.wind.gradient3000.yellow) return 1;
-    // Thermik (CAPE/LI unverändert, aber Spread nur noch bei echtem Nebel-Risiko)
-    if (fogRisk === 'severe' || cape > LIMITS.cape.yellow || li < LIMITS.liftedIndex.yellow) return 1;
-    // Wolken (tiefe Wolken bleiben kritisch)
-    if (cloudLow > LIMITS.clouds.low.yellow) return 1;
-    // Niederschlag
-    if (precip > LIMITS.precip.yellow || showers > LIMITS.showers.yellow) return 1;
+    // Wind (nur wenn Filter aktiv)
+    if (filter.wind) {
+        if (ws > LIMITS.wind.surface.yellow || wg > LIMITS.wind.gusts.yellow ||
+            gustSpread > LIMITS.wind.gustSpread.yellow ||
+            w850 > LIMITS.wind.w850.yellow || w800 > LIMITS.wind.w800.yellow || w700 > LIMITS.wind.w700.yellow ||
+            grad > LIMITS.wind.gradient.yellow || grad3000 > LIMITS.wind.gradient3000.yellow) return 1;
+    }
+    // Thermik (nur wenn Filter aktiv)
+    if (filter.thermik) {
+        if (fogRisk === 'severe' || cape > LIMITS.cape.yellow || li < LIMITS.liftedIndex.yellow) return 1;
+    }
+    // Wolken (nur wenn Filter aktiv)
+    if (filter.clouds) {
+        if (cloudLow > LIMITS.clouds.low.yellow) return 1;
+    }
+    // Niederschlag (nur wenn Filter aktiv)
+    if (filter.precip) {
+        if (precip > LIMITS.precip.yellow || showers > LIMITS.showers.yellow) return 1;
+    }
 
     // === VORSICHT Kriterien (Score 2) ===
-    // Wind
-    if (ws > LIMITS.wind.surface.green || wg > LIMITS.wind.gusts.green ||
-        gustSpread > LIMITS.wind.gustSpread.green ||
-        w850 > LIMITS.wind.w850.green || w800 > LIMITS.wind.w800.green || w700 > LIMITS.wind.w700.green ||
-        grad > LIMITS.wind.gradient.green || grad3000 > LIMITS.wind.gradient3000.green) return 2;
-    // Thermik/Nebel
-    if (fogRisk === 'likely' || fogRisk === 'possible' ||
-        spread > LIMITS.spread.max || cape > LIMITS.cape.green || li < LIMITS.liftedIndex.green) return 2;
-    // Wolken/Sicht
-    if (cloudTotal > LIMITS.clouds.total.yellow || cloudLow > LIMITS.clouds.low.green || vis < LIMITS.visibility.green) return 2;
-    // Niederschlag
-    if (precip > LIMITS.precip.green || precipProb > LIMITS.precipProb.yellow || showers > LIMITS.showers.green) return 2;
+    // Wind (nur wenn Filter aktiv)
+    if (filter.wind) {
+        if (ws > LIMITS.wind.surface.green || wg > LIMITS.wind.gusts.green ||
+            gustSpread > LIMITS.wind.gustSpread.green ||
+            w850 > LIMITS.wind.w850.green || w800 > LIMITS.wind.w800.green || w700 > LIMITS.wind.w700.green ||
+            grad > LIMITS.wind.gradient.green || grad3000 > LIMITS.wind.gradient3000.green) return 2;
+    }
+    // Thermik/Nebel (nur wenn Filter aktiv)
+    if (filter.thermik) {
+        if (fogRisk === 'likely' || fogRisk === 'possible' ||
+            spread > LIMITS.spread.max || cape > LIMITS.cape.green || li < LIMITS.liftedIndex.green) return 2;
+    }
+    // Wolken/Sicht (nur wenn Filter aktiv)
+    if (filter.clouds) {
+        if (cloudTotal > LIMITS.clouds.total.yellow || cloudLow > LIMITS.clouds.low.green || vis < LIMITS.visibility.green) return 2;
+    }
+    // Niederschlag (nur wenn Filter aktiv)
+    if (filter.precip) {
+        if (precip > LIMITS.precip.green || precipProb > LIMITS.precipProb.yellow || showers > LIMITS.showers.green) return 2;
+    }
 
     // === Alles OK (Score 3) ===
     return 3;

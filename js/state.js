@@ -15,5 +15,12 @@ export const state = {
     favorites: [],
     lastUpdate: null,
     favoriteWeatherCache: {},
-    activeKillers: []
+    activeKillers: [],
+    // Parameter-Filter für Ampel-Bewertung (alle standardmäßig aktiv)
+    paramFilter: {
+        wind: true,
+        thermik: true,
+        clouds: true,
+        precip: true
+    }
 };

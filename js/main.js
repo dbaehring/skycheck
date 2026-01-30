@@ -55,7 +55,11 @@ import {
     toggleHeightCard,
     loadHeightCardState,
     toggleExplanation,
-    showQuickExplanation
+    showQuickExplanation,
+    loadParamFilter,
+    handleFilterChange,
+    resetParamFilter,
+    toggleParamFilter
 } from './ui.js';
 
 /**
@@ -84,6 +88,7 @@ async function initApp() {
         // 6. UI-Zustände aus localStorage laden
         loadWindroseState();
         loadHeightCardState();
+        loadParamFilter();
 
         // 7. URL-Parameter prüfen
         const params = checkURLParams();
@@ -284,6 +289,27 @@ function registerEventListeners() {
             closeFavoriteModal();
         }
     });
+
+    // Parameter-Filter Toggle
+    const paramFilterToggle = document.getElementById('paramFilterToggle');
+    if (paramFilterToggle) {
+        paramFilterToggle.addEventListener('click', toggleParamFilter);
+    }
+
+    // Parameter-Filter Checkboxen
+    const filterCheckboxes = ['filterWind', 'filterThermik', 'filterClouds', 'filterPrecip'];
+    filterCheckboxes.forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) {
+            checkbox.addEventListener('change', handleFilterChange);
+        }
+    });
+
+    // Parameter-Filter Reset
+    const paramFilterReset = document.getElementById('paramFilterReset');
+    if (paramFilterReset) {
+        paramFilterReset.addEventListener('click', resetParamFilter);
+    }
 
 }
 

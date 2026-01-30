@@ -131,7 +131,16 @@ export const STORAGE_KEYS = {
     THEME: 'gleitschirm-meteo-theme',
     WINDROSE: 'gleitschirm-meteo-windrose',
     HEIGHT: 'gleitschirm-meteo-height',
-    LAST_WEATHER: 'gleitschirm-meteo-last-weather'
+    LAST_WEATHER: 'gleitschirm-meteo-last-weather',
+    PARAM_FILTER: 'gleitschirm-meteo-param-filter'
+};
+
+// Parameter-Filter Konfiguration
+export const PARAM_FILTER_CONFIG = {
+    wind: { label: 'Wind', icon: '💨', default: true },
+    thermik: { label: 'Thermik', icon: '🌡️', default: true },
+    clouds: { label: 'Sicht', icon: '☁️', default: true },
+    precip: { label: 'Niederschlag', icon: '🌧️', default: true }
 };
 
 // UI-Konstanten

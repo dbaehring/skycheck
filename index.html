@@ -106,6 +106,39 @@
                         <h3>📅 Tag wählen</h3>
                         <div class="day-comparison-grid" id="dayComparisonGrid" role="tablist"></div>
                     </nav>
+                    <div class="param-filter-card" role="region" aria-label="Parameter-Filter">
+                        <div class="param-filter-header" id="paramFilterToggle">
+                            <span class="param-filter-title">🎯 Ampel-Filter</span>
+                            <span class="param-filter-summary" id="paramFilterSummary">Alle Parameter</span>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div class="param-filter-body" id="paramFilterBody">
+                            <p class="param-filter-hint">Wähle, welche Parameter für die Ampel-Bewertung berücksichtigt werden:</p>
+                            <div class="param-filter-options">
+                                <label class="param-filter-option">
+                                    <input type="checkbox" id="filterWind" checked>
+                                    <span class="param-filter-icon">💨</span>
+                                    <span class="param-filter-label">Wind</span>
+                                </label>
+                                <label class="param-filter-option">
+                                    <input type="checkbox" id="filterThermik" checked>
+                                    <span class="param-filter-icon">🌡️</span>
+                                    <span class="param-filter-label">Thermik</span>
+                                </label>
+                                <label class="param-filter-option">
+                                    <input type="checkbox" id="filterClouds" checked>
+                                    <span class="param-filter-icon">☁️</span>
+                                    <span class="param-filter-label">Sicht</span>
+                                </label>
+                                <label class="param-filter-option">
+                                    <input type="checkbox" id="filterPrecip" checked>
+                                    <span class="param-filter-icon">🌧️</span>
+                                    <span class="param-filter-label">Niederschlag</span>
+                                </label>
+                            </div>
+                            <button class="param-filter-reset" id="paramFilterReset">Alle aktivieren</button>
+                        </div>
+                    </div>
                     <div class="timeline-card" role="region" aria-label="Stündlicher Tagesverlauf"><h3>Tagesverlauf (6-20 Uhr)</h3><div class="timeline" id="timeline" role="listbox" aria-label="Stunden auswählen"></div></div>
                     <div class="assessment-card" role="status" aria-live="polite" aria-label="Aktuelle Flugbedingungen">
                         <div class="weather-current" id="weatherCurrent">

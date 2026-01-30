@@ -835,3 +835,132 @@ footer a { color: var(--accent); text-decoration: none; }
     font-size: 0.75rem;
     margin: var(--spacing-sm) 0 0;
 }
+
+/* === Parameter-Filter für Ampel-Bewertung === */
+.param-filter-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+}
+.param-filter-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.param-filter-header:hover {
+    background: var(--bg-card-hover);
+}
+.param-filter-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+.param-filter-summary {
+    flex: 1;
+    text-align: right;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+.param-filter-summary.filtered {
+    color: var(--accent);
+    font-weight: 500;
+}
+.param-filter-header .toggle-icon {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    transition: transform 0.3s;
+}
+.param-filter-card.expanded .param-filter-header .toggle-icon {
+    transform: rotate(180deg);
+}
+.param-filter-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease-out, padding 0.35s ease-out;
+    padding: 0 1rem;
+}
+.param-filter-card.expanded .param-filter-body {
+    max-height: 250px;
+    padding: 0 1rem 1rem;
+}
+.param-filter-hint {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+}
+.param-filter-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+@media (min-width: 500px) {
+    .param-filter-options {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+.param-filter-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--bg-dark);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+.param-filter-option:hover {
+    border-color: var(--accent);
+}
+.param-filter-option:has(input:checked),
+.param-filter-option.checked {
+    border-color: var(--green);
+    background: var(--green-bg);
+}
+.param-filter-option:has(input:not(:checked)),
+.param-filter-option.unchecked {
+    opacity: 0.6;
+    border-style: dashed;
+}
+.param-filter-option input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--green);
+    cursor: pointer;
+}
+.param-filter-icon {
+    font-size: 1.1rem;
+}
+.param-filter-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.param-filter-reset {
+    display: block;
+    width: 100%;
+    margin-top: 0.75rem;
+    padding: 0.5rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.param-filter-reset:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+/* Filter-Warnung wenn nicht alle aktiv */
+.param-filter-card.has-filter {
+    border-color: var(--accent);
+}
+.param-filter-card.has-filter .param-filter-header {
+    background: var(--accent-glow);
+}
