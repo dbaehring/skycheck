@@ -1120,31 +1120,39 @@ export function renderWindDiagram(dayStr) {
             cell.className = 'wind-cell';
 
             if (idx === -1) {
-                // Keine Daten für diese Stunde
-                cell.innerHTML = '<span class="wind-arrow calm">-</span>';
+                // Keine Daten für diese Stunde (Zeitpunkt nicht im Datensatz)
+                cell.innerHTML = '<span class="wind-no-data">—</span>';
+                cell.setAttribute('data-tooltip', 'Keine Daten');
                 grid.appendChild(cell);
                 return;
             }
 
-            const speed = h[level.speedKey]?.[idx] ?? 0;
-            const dir = h[level.dirKey]?.[idx] ?? 0;
+            // Prüfe ob Daten wirklich vorhanden sind
+            const speedData = h[level.speedKey]?.[idx];
+            const dirData = h[level.dirKey]?.[idx];
+            const hasData = speedData !== null && speedData !== undefined && !isNaN(speedData);
+
+            if (!hasData) {
+                // Höhenwinde nicht verfügbar für diesen Zeitpunkt
+                cell.innerHTML = '<span class="wind-no-data">—</span>';
+                cell.setAttribute('data-tooltip', 'Nicht verfügbar');
+                cell.classList.add('no-data');
+                grid.appendChild(cell);
+                return;
+            }
+
+            const speed = speedData;
+            const dir = dirData ?? 0;
             const colorClass = getWindArrowColor(speed, level.key);
+            const dirText = getWindDir(dir);
 
             // Tooltip mit Details
-            const dirText = getWindDir(dir);
             cell.setAttribute('data-tooltip', `${Math.round(speed)} km/h ${dirText}`);
 
             // Markiere ausgewählte Stunde
             if (idx === state.selectedHourIndex) {
                 cell.classList.add('selected');
             }
-
-            // Wind-Pfeil erstellen
-            const arrow = document.createElement('div');
-            arrow.className = `wind-arrow ${colorClass}`;
-            // Pfeil zeigt in Windrichtung (woher der Wind kommt)
-            // Meteorologisch: 0° = Nord, im Uhrzeigersinn
-            arrow.style.transform = `rotate(${dir}deg)`;
 
             // Klick-Handler um Stunde auszuwählen
             cell.dataset.hourIdx = idx;
@@ -1153,7 +1161,21 @@ export function renderWindDiagram(dayStr) {
                 selectHour(idx);
             });
 
-            cell.appendChild(arrow);
+            // Bei sehr schwachem Wind: Kreis statt Pfeil
+            if (speed < 3) {
+                const calm = document.createElement('div');
+                calm.className = 'wind-calm';
+                calm.innerHTML = '○';
+                cell.appendChild(calm);
+            } else {
+                // Wind-Pfeil erstellen
+                const arrow = document.createElement('div');
+                arrow.className = `wind-arrow ${colorClass}`;
+                // Pfeil zeigt in Windrichtung (woher der Wind kommt)
+                arrow.style.transform = `rotate(${dir}deg)`;
+                cell.appendChild(arrow);
+            }
+
             grid.appendChild(cell);
         });
     });
