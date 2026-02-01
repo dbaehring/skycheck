@@ -1124,6 +1124,14 @@ footer a { color: var(--accent); text-decoration: none; }
 .about-tab-content a {
     color: var(--accent);
 }
+.about-ref-hint {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: var(--bg-dark);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
 .about-traffic-lights {
     display: flex;
     flex-direction: column;

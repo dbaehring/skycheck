@@ -330,7 +330,7 @@
             </div>
         </footer>
         <section class="explanation-section">
-            <button class="explanation-toggle" id="explanationToggle"><span>ℹ️ So funktioniert SkyCheck</span><span class="toggle-icon" id="toggleIcon">▼</span></button>
+            <button class="explanation-toggle" id="explanationToggle"><span>📖 Parameter-Referenz</span><span class="toggle-icon" id="toggleIcon">▼</span></button>
             <div class="explanation-content" id="explanationContent">
                 <div class="killer-section" id="killerExplainSection">
                     <h3>🚨 Die 5 STOPP-Kriterien - Immer prüfen!</h3>
@@ -343,16 +343,15 @@
                     </div>
                 </div>
                 <div class="explanation-intro" id="explanationIntro">
-                    <h3>Überblick</h3>
-                    <p>SkyCheck analysiert automatisch die wichtigsten Wetterparameter für sicheres Gleitschirmfliegen.
-                    Die Daten stammen von <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>.</p>
+                    <h3>Ampel-Schwellwerte</h3>
+                    <p>Hier findest du die genauen Grenzwerte für die Ampel-Bewertung.</p>
                     <div class="traffic-light">
                         <span class="light green">GRÜN = Go</span>
                         <span class="light yellow">GELB = Prüfen</span>
                         <span class="light red">ROT = No-Go</span>
                     </div>
 
-                    <h4 style="margin-top: 1rem;">🌐 Wettermodelle (nach Priorität)</h4>
+                    <h4 style="margin-top: 1rem;">🌐 Wettermodelle</h4>
                     <table style="width: 100%; font-size: 0.85rem; margin-top: 0.5rem;">
                         <tr><th>Region</th><th>Modell</th><th>Auflösung</th><th>Vorhersage</th></tr>
                         <tr><td>Mitteleuropa (D, A, CH)</td><td><strong>ICON-D2</strong></td><td>2.2 km</td><td>48h</td></tr>
@@ -497,14 +496,10 @@
             <div class="about-content">
                 <div class="about-tab-content active" id="tab-about">
                     <p><strong>SkyCheck</strong> analysiert automatisch die wichtigsten Wetterparameter für sicheres Gleitschirmfliegen und zeigt dir auf einen Blick, ob die Bedingungen zum Fliegen geeignet sind.</p>
-                    <h4>Das Ampel-System</h4>
-                    <div class="about-traffic-lights">
-                        <div class="about-light green"><span class="light-dot"></span> GO - Gute Bedingungen</div>
-                        <div class="about-light yellow"><span class="light-dot"></span> VORSICHT - Erhöhte Aufmerksamkeit</div>
-                        <div class="about-light red"><span class="light-dot"></span> NO-GO - Nicht fliegbar</div>
-                    </div>
+                    <p>Das <strong>Ampel-System</strong> (Grün/Gelb/Rot) bewertet jede Stunde basierend auf Wind, Thermik, Wolken und Niederschlag.</p>
                     <h4>Datenquelle</h4>
                     <p>Die Wetterdaten stammen von <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo.com</a> und nutzen je nach Region das hochaufgelöste ICON-D2 (2.2km) oder ICON-EU (7km) Modell.</p>
+                    <p class="about-ref-hint">💡 Detaillierte Schwellwerte findest du in der <strong>Parameter-Referenz</strong> am Seitenende.</p>
                 </div>
                 <div class="about-tab-content" id="tab-features">
                     <ul class="about-feature-list">
