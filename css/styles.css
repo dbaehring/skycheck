@@ -348,8 +348,34 @@ h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: line
 .trend.up { color: var(--red); }
 .trend.down { color: var(--green); }
 .trend.stable { color: var(--text-muted); }
-.share-toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: var(--text-primary); color: var(--bg-dark); padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s; z-index: 1000; }
-.share-toast.visible { opacity: 1; }
+/* Toast Notifications */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text-primary);
+    color: var(--bg-card);
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 2000;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    max-width: 90%;
+    text-align: center;
+}
+.toast.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+.toast.success { background: var(--green); color: white; }
+.toast.warning { background: var(--yellow); color: #1a1a1a; }
+.toast.error { background: var(--red); color: white; }
 .assessment-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; text-align: center; }
 .weather-current { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 1.25rem; font-size: 1.1rem; }
 .weather-icon-text { color: var(--text-primary); }
@@ -2060,6 +2086,43 @@ footer a { color: var(--accent); text-decoration: none; }
     .wind-profile-x-axis .x-label:nth-child(even) {
         visibility: hidden;
     }
+}
+
+/* === Pull-to-Refresh === */
+.pull-refresh-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    transform: translateY(-50px);
+    opacity: 0;
+    transition: transform 0.2s, opacity 0.2s;
+    z-index: 10;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+.pull-refresh-indicator.ready {
+    color: var(--accent);
+}
+.pull-refresh-indicator.ready .pull-refresh-icon {
+    transform: rotate(180deg);
+}
+.pull-refresh-indicator.refreshing .pull-refresh-icon {
+    animation: spin 1s linear infinite;
+}
+.pull-refresh-icon {
+    font-size: 1.2rem;
+    transition: transform 0.2s;
+}
+.results-section {
+    position: relative;
 }
 
 /* === Landscape Optimierung === */

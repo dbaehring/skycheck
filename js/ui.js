@@ -1464,6 +1464,102 @@ export function initTouchTooltips() {
     }, { passive: false });
 }
 
+// === Toast Notifications ===
+let toastTimeout = null;
+
+/**
+ * Zeigt eine Toast-Benachrichtigung
+ * @param {string} message - Nachricht
+ * @param {string} type - 'success', 'warning', 'error' oder '' für neutral
+ * @param {number} duration - Anzeigedauer in ms (default 3000)
+ */
+export function showToast(message, type = '', duration = 3000) {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+
+    // Vorherigen Timeout abbrechen
+    if (toastTimeout) {
+        clearTimeout(toastTimeout);
+    }
+
+    // Typ-Klassen zurücksetzen
+    toast.classList.remove('success', 'warning', 'error', 'visible');
+
+    // Nachricht setzen und anzeigen
+    toast.textContent = message;
+    if (type) toast.classList.add(type);
+
+    // Kurze Verzögerung für CSS-Transition
+    requestAnimationFrame(() => {
+        toast.classList.add('visible');
+    });
+
+    // Nach Dauer ausblenden
+    toastTimeout = setTimeout(() => {
+        toast.classList.remove('visible');
+    }, duration);
+}
+
+// === Pull-to-Refresh ===
+let pullStartY = 0;
+let isPulling = false;
+let pullRefreshCallback = null;
+
+export function initPullToRefresh(onRefresh) {
+    pullRefreshCallback = onRefresh;
+    const container = document.querySelector('.results-section');
+    if (!container || !('ontouchstart' in window)) return;
+
+    const indicator = document.createElement('div');
+    indicator.className = 'pull-refresh-indicator';
+    indicator.innerHTML = '<span class="pull-refresh-icon">↓</span><span class="pull-refresh-text">Ziehen zum Aktualisieren</span>';
+    container.insertBefore(indicator, container.firstChild);
+
+    container.addEventListener('touchstart', (e) => {
+        if (container.scrollTop === 0) {
+            pullStartY = e.touches[0].clientY;
+            isPulling = true;
+        }
+    }, { passive: true });
+
+    container.addEventListener('touchmove', (e) => {
+        if (!isPulling) return;
+        const pullDistance = e.touches[0].clientY - pullStartY;
+
+        if (pullDistance > 0 && pullDistance < 150) {
+            indicator.style.transform = `translateY(${Math.min(pullDistance - 50, 20)}px)`;
+            indicator.style.opacity = Math.min(pullDistance / 80, 1);
+
+            if (pullDistance > 80) {
+                indicator.classList.add('ready');
+                indicator.querySelector('.pull-refresh-text').textContent = 'Loslassen zum Aktualisieren';
+            } else {
+                indicator.classList.remove('ready');
+                indicator.querySelector('.pull-refresh-text').textContent = 'Ziehen zum Aktualisieren';
+            }
+        }
+    }, { passive: true });
+
+    container.addEventListener('touchend', () => {
+        if (!isPulling) return;
+        isPulling = false;
+
+        if (indicator.classList.contains('ready') && pullRefreshCallback) {
+            indicator.classList.add('refreshing');
+            indicator.querySelector('.pull-refresh-text').textContent = 'Aktualisiere...';
+            pullRefreshCallback().finally(() => {
+                indicator.classList.remove('refreshing', 'ready');
+                indicator.style.transform = '';
+                indicator.style.opacity = '0';
+            });
+        } else {
+            indicator.classList.remove('ready');
+            indicator.style.transform = '';
+            indicator.style.opacity = '0';
+        }
+    }, { passive: true });
+}
+
 // === Phase 7: Wind-Höhenprofil Diagramm ===
 
 /**

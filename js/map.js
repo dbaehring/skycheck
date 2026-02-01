@@ -5,6 +5,7 @@
 
 import { state } from './state.js';
 import { API_CONFIG, UI_CONFIG } from './config.js';
+import { showToast } from './ui.js';
 
 // Callback für Wetter-Laden (wird von main.js gesetzt)
 let onLocationSelected = null;
@@ -156,18 +157,6 @@ export function getGPSLocation() {
     );
 }
 
-/**
- * Toast-Nachricht anzeigen (statt alert)
- */
-function showToast(message) {
-    const toast = document.getElementById('shareToast');
-    toast.textContent = message;
-    toast.classList.add('visible');
-    setTimeout(() => {
-        toast.classList.remove('visible');
-        toast.textContent = '🔗 Link kopiert!'; // Reset
-    }, UI_CONFIG.toastDuration);
-}
 
 /**
  * URL mit Koordinaten aktualisieren
@@ -189,9 +178,9 @@ export function updateURL() {
  */
 export function shareLocation() {
     navigator.clipboard.writeText(window.location.href).then(() => {
-        const t = document.getElementById('shareToast');
-        t.classList.add('visible');
-        setTimeout(() => t.classList.remove('visible'), UI_CONFIG.toastDuration);
+        showToast('🔗 Link kopiert!', 'success');
+    }).catch(() => {
+        showToast('Fehler beim Kopieren', 'error');
     });
 }
 

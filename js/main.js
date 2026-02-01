@@ -72,6 +72,7 @@ import {
     renderWindDiagram,
     toggleWindDiagram,
     loadWindDiagramState,
+    initPullToRefresh,
     // Expertenmodus
     loadExpertMode,
     toggleExpertMode,
@@ -117,10 +118,13 @@ async function initApp() {
         // 7. Touch-Tooltips initialisieren
         initTouchTooltips();
 
-        // 8. App-Version global verfügbar machen (für About-Modal)
+        // 8. Pull-to-Refresh initialisieren
+        initPullToRefresh(refreshData);
+
+        // 9. App-Version global verfügbar machen (für About-Modal)
         window.APP_VERSION = APP_INFO.version;
 
-        // 9. URL-Parameter prüfen
+        // 10. URL-Parameter prüfen
         const params = checkURLParams();
         if (!isNaN(params.lat) && !isNaN(params.lon)) {
             await handleMapClick(params.lat, params.lon, params.name);
