@@ -417,3 +417,72 @@ async function fetchQuickWeather(lat, lon, cacheKey) {
         // Rendering wird vom Batch-Handler übernommen
     }
 }
+
+/**
+ * Öffnet das Vergleichs-Modal
+ */
+export function openCompareModal() {
+    const modal = document.getElementById('compareModal');
+    if (!modal || state.favorites.length === 0) return;
+
+    renderCompareGrid();
+    modal.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Schließt das Vergleichs-Modal
+ */
+export function closeCompareModal() {
+    const modal = document.getElementById('compareModal');
+    if (modal) {
+        modal.classList.remove('visible');
+        document.body.style.overflow = '';
+    }
+}
+
+/**
+ * Rendert das Vergleichs-Grid
+ */
+function renderCompareGrid() {
+    const grid = document.getElementById('compareGrid');
+    if (!grid) return;
+
+    const statusLabels = {
+        go: 'GO',
+        caution: 'VORSICHT',
+        nogo: 'NO-GO',
+        loading: 'Lädt...'
+    };
+
+    grid.innerHTML = state.favorites.map((f, idx) => {
+        const key = f.lat.toFixed(4) + ',' + f.lon.toFixed(4);
+        const cached = state.favoriteWeatherCache[key];
+        const status = cached?.status || 'loading';
+        const info = cached?.info || 'Lade Wetterdaten...';
+        const safeName = escapeHtml(f.name);
+        const safeInfo = escapeHtml(info);
+
+        return `
+            <div class="compare-card ${status}" data-fav-idx="${idx}">
+                <div class="compare-card-header">
+                    <span class="compare-card-status ${status}"></span>
+                    <span class="compare-card-name">${safeName}</span>
+                </div>
+                <div class="compare-card-info">${safeInfo}</div>
+                <span class="compare-card-label ${status}">${statusLabels[status]}</span>
+            </div>
+        `;
+    }).join('');
+
+    // Click-Handler für Karten
+    grid.querySelectorAll('.compare-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const idx = parseInt(card.dataset.favIdx);
+            if (!isNaN(idx)) {
+                closeCompareModal();
+                selectFavorite(idx);
+            }
+        });
+    });
+}

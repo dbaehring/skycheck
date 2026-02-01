@@ -49,6 +49,30 @@
     --accent: #60a5fa; --accent-glow: rgba(96, 165, 250, 0.3); --grid-color: rgba(148, 163, 184, 0.04);
 }
 
+/* High Contrast Mode */
+[data-contrast="high"] {
+    --text-primary: #000000;
+    --text-secondary: #1a1a1a;
+    --text-muted: #333333;
+    --border: #666666;
+    --green: #006400;
+    --yellow: #cc8400;
+    --red: #cc0000;
+    --accent: #0044cc;
+}
+[data-theme="dark"][data-contrast="high"] {
+    --text-primary: #ffffff;
+    --text-secondary: #e0e0e0;
+    --text-muted: #b0b0b0;
+    --border: #888888;
+    --green: #00ff00;
+    --yellow: #ffff00;
+    --red: #ff4444;
+    --accent: #66b3ff;
+    --bg-card: #000000;
+    --bg-dark: #0a0a0a;
+}
+
 /* Styling für fehlende Daten */
 .no-data {
     color: #999;
@@ -120,6 +144,29 @@ h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: line
 .theme-switch::before { content: ''; position: absolute; left: 4px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: var(--accent); border-radius: 50%; transition: all 0.3s; }
 [data-theme="dark"] .theme-switch::before { left: calc(100% - 24px); }
 .theme-switch:hover { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.contrast-toggle {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.contrast-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+[data-contrast="high"] .contrast-toggle {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
 .main-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
 /* FIX: Explizite Grid-Platzierung verhindert "Springen" beim Laden */
 .main-layout > .map-section { grid-column: 1; grid-row: 1; }
@@ -160,12 +207,105 @@ h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: line
 .favorite-btn:hover { background: var(--yellow); color: white; }
 .favorite-btn .delete-fav { font-size: 0.7rem; opacity: 0.7; margin-left: 0.25rem; }
 .favorite-btn .delete-fav:hover { opacity: 1; }
-.favorite-btn .fav-status { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.favorite-btn .fav-status { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; position: relative; }
 .favorite-btn .fav-status.loading { background: var(--text-muted); animation: pulse 1s infinite; }
-.favorite-btn .fav-status.go { background: var(--green); box-shadow: 0 0 6px var(--green); }
-.favorite-btn .fav-status.caution { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
-.favorite-btn .fav-status.nogo { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.favorite-btn .fav-status.go { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.favorite-btn .fav-status.caution { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+.favorite-btn .fav-status.nogo { background: var(--red); box-shadow: 0 0 8px var(--red); animation: pulse-warning 1.5s infinite; }
+@keyframes pulse-warning { 0%, 100% { box-shadow: 0 0 8px var(--red); } 50% { box-shadow: 0 0 14px var(--red); } }
 @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+/* Favorites Header mit Compare Button */
+.favorites-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.25rem;
+    margin-bottom: 0.5rem;
+}
+.favorites-compare-btn {
+    padding: 0.3rem 0.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.favorites-compare-btn:hover {
+    border-color: var(--accent);
+    background: var(--bg-card-hover);
+}
+
+/* Compare Modal */
+.compare-modal {
+    max-width: 700px;
+    width: 95%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+.compare-modal h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+}
+.compare-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+}
+.compare-card {
+    background: var(--bg-dark);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+.compare-card:hover {
+    border-color: var(--accent);
+}
+.compare-card.go { border-color: var(--green); }
+.compare-card.caution { border-color: var(--yellow); }
+.compare-card.nogo { border-color: var(--red); }
+.compare-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.compare-card-status {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.compare-card-status.go { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.compare-card-status.caution { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+.compare-card-status.nogo { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.compare-card-status.loading { background: var(--text-muted); }
+.compare-card-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.compare-card-info {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.compare-card-label {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+}
+.compare-card-label.go { background: var(--green-bg); color: var(--green); }
+.compare-card-label.caution { background: var(--yellow-bg); color: var(--yellow); }
+.compare-card-label.nogo { background: var(--red-bg); color: var(--red); }
 .favorite-btn .fav-quick-info { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--bg-card); border: 1px solid var(--border); padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.7rem; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.2s; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); pointer-events: none; }
 .favorite-btn .fav-quick-info::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: var(--border); }
 .favorite-btn:hover .fav-quick-info { opacity: 1; visibility: visible; }
@@ -1919,5 +2059,75 @@ footer a { color: var(--accent); text-decoration: none; }
 @media (max-width: 400px) {
     .wind-profile-x-axis .x-label:nth-child(even) {
         visibility: hidden;
+    }
+}
+
+/* === Landscape Optimierung === */
+@media (orientation: landscape) and (max-height: 500px) {
+    /* Kompakterer Header */
+    header {
+        padding: 0.5rem 1rem;
+    }
+    header h1 {
+        font-size: 1.1rem;
+    }
+    .subtitle {
+        display: none;
+    }
+
+    /* Zweispalten-Layout für Content */
+    .container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        max-width: 100%;
+        padding: 0 0.75rem;
+    }
+    .map-section {
+        grid-column: 1;
+        height: calc(100vh - 80px);
+    }
+    .results-section {
+        grid-column: 2;
+        max-height: calc(100vh - 80px);
+        overflow-y: auto;
+    }
+
+    /* Kompaktere Cards */
+    .assessment-card {
+        padding: 0.75rem;
+    }
+    .assessment-status {
+        padding: 0.5rem 1rem;
+    }
+    .day-comparison {
+        padding: 0.5rem;
+    }
+    .day-comparison-card {
+        padding: 0.5rem;
+    }
+
+    /* Timeline horizontal scrollbar immer sichtbar */
+    .timeline {
+        padding-bottom: 0.5rem;
+    }
+
+    /* Modals anpassen */
+    .modal {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    .about-modal, .expert-modal, .compare-modal {
+        max-height: 90vh;
+    }
+}
+
+/* Extra breite Landscape-Screens (Tablets) */
+@media (orientation: landscape) and (min-width: 800px) and (max-height: 600px) {
+    .container {
+        grid-template-columns: 350px 1fr;
+    }
+    .parameter-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }

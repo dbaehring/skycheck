@@ -684,6 +684,25 @@ export function toggleTheme() {
     setTheme(current === 'light' ? 'dark' : 'light');
 }
 
+// High Contrast Mode
+export function loadContrastMode() {
+    const saved = localStorage.getItem('skycheck-contrast');
+    if (saved === 'high') {
+        document.documentElement.setAttribute('data-contrast', 'high');
+    }
+}
+
+export function toggleContrastMode() {
+    const current = document.documentElement.getAttribute('data-contrast');
+    if (current === 'high') {
+        document.documentElement.removeAttribute('data-contrast');
+        localStorage.removeItem('skycheck-contrast');
+    } else {
+        document.documentElement.setAttribute('data-contrast', 'high');
+        localStorage.setItem('skycheck-contrast', 'high');
+    }
+}
+
 // PHASE 2: Akkordeon-Funktionen
 export function toggleParamCard(card, event) {
     if (event && event.target && event.target.closest('.tooltip-container')) return;

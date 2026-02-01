@@ -27,7 +27,9 @@ import {
     closeFavoriteModal,
     saveFavorite,
     confirmDelete,
-    closeConfirmModal
+    closeConfirmModal,
+    openCompareModal,
+    closeCompareModal
 } from './favorites.js';
 
 // Weather-Modul
@@ -47,6 +49,8 @@ import {
     getPreferredTheme,
     setTheme,
     toggleTheme,
+    loadContrastMode,
+    toggleContrastMode,
     toggleParamCard,
     expandAllCards,
     collapseAllCards,
@@ -86,6 +90,7 @@ async function initApp() {
         // 1. Theme laden
         const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
         setTheme(savedTheme || getPreferredTheme());
+        loadContrastMode();
 
         // 2. Karte initialisieren
         initMap();
@@ -174,6 +179,12 @@ function registerEventListeners() {
         themeToggle.addEventListener('click', toggleTheme);
     }
 
+    // High Contrast Toggle
+    const contrastToggle = document.getElementById('contrastToggle');
+    if (contrastToggle) {
+        contrastToggle.addEventListener('click', toggleContrastMode);
+    }
+
     // Favoriten-Modal
     const closeFavModal = document.getElementById('closeFavModal');
     if (closeFavModal) {
@@ -216,6 +227,26 @@ function registerEventListeners() {
         confirmModal.addEventListener('click', (e) => {
             if (e.target === confirmModal) {
                 closeConfirmModal();
+            }
+        });
+    }
+
+    // Favoriten-Vergleich
+    const favCompareBtn = document.getElementById('favCompareBtn');
+    if (favCompareBtn) {
+        favCompareBtn.addEventListener('click', openCompareModal);
+    }
+
+    const closeCompareModalBtn = document.getElementById('closeCompareModal');
+    if (closeCompareModalBtn) {
+        closeCompareModalBtn.addEventListener('click', closeCompareModal);
+    }
+
+    const compareModal = document.getElementById('compareModal');
+    if (compareModal) {
+        compareModal.addEventListener('click', (e) => {
+            if (e.target === compareModal) {
+                closeCompareModal();
             }
         });
     }

@@ -58,6 +58,7 @@
                 <div class="theme-toggle">
                     <span class="theme-toggle-label">Design</span>
                     <div class="theme-switch" id="themeToggle" title="Hell/Dunkel umschalten"></div>
+                    <button class="contrast-toggle" id="contrastToggle" title="Hoher Kontrast">◐</button>
                 </div>
             </div>
         </header>
@@ -73,7 +74,10 @@
                 </div>
                 <div id="map"></div>
                 <div class="favorites-section hidden" id="favoritesSection">
-                    <div class="favorites-label">⭐ Meine Favoriten</div>
+                    <div class="favorites-header">
+                        <span class="favorites-label">⭐ Meine Favoriten</span>
+                        <button class="favorites-compare-btn" id="favCompareBtn" title="Alle Standorte vergleichen">📊</button>
+                    </div>
                     <div class="favorites-buttons" id="favoritesButtons"></div>
                 </div>
                 <button class="add-favorite-btn" id="addFavoriteBtn" disabled>+ Aktuellen Standort als Favorit speichern</button>
@@ -535,6 +539,16 @@
             <div class="about-footer">
                 <a href="mailto:danielbaehring@gmail.com" class="about-feedback-link">📧 Feedback senden</a>
                 <p class="about-credits">Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a></p>
+            </div>
+        </div>
+    </div>
+    <!-- Favorites Compare Modal -->
+    <div class="modal-overlay" id="compareModal" role="dialog" aria-modal="true">
+        <div class="modal compare-modal">
+            <button class="modal-close" id="closeCompareModal" aria-label="Schließen">×</button>
+            <h3>📊 Standort-Vergleich</h3>
+            <div class="compare-grid" id="compareGrid">
+                <!-- Wird dynamisch befüllt -->
             </div>
         </div>
     </div>
