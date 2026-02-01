@@ -7,7 +7,7 @@
 // === SkyCheck App Info ===
 export const APP_INFO = {
     name: 'SkyCheck',
-    version: '9.1.0',
+    version: '9.2.0',
     slogan: 'Sicherer fliegen mit der Wetterampel',
     description: 'Professionelle Gleitschirm-Wetteranalyse',
     author: 'SkyCheck Team',
@@ -134,7 +134,8 @@ export const STORAGE_KEYS = {
     WINDROSE: 'gleitschirm-meteo-windrose',
     HEIGHT: 'gleitschirm-meteo-height',
     LAST_WEATHER: 'gleitschirm-meteo-last-weather',
-    PARAM_FILTER: 'gleitschirm-meteo-param-filter'
+    PARAM_FILTER: 'gleitschirm-meteo-param-filter',
+    WIND_DIAGRAM: 'gleitschirm-meteo-wind-diagram'
 };
 
 // Cache-Konfiguration

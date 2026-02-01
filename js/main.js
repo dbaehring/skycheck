@@ -64,7 +64,10 @@ import {
     openAboutModal,
     closeAboutModal,
     switchAboutTab,
-    initTouchTooltips
+    initTouchTooltips,
+    renderWindDiagram,
+    toggleWindDiagram,
+    loadWindDiagramState
 } from './ui.js';
 
 /**
@@ -95,6 +98,7 @@ async function initApp() {
         loadWindroseState();
         loadHeightCardState();
         loadParamFilter();
+        loadWindDiagramState();
 
         // 7. Touch-Tooltips initialisieren
         initTouchTooltips();
@@ -354,6 +358,12 @@ function registerEventListeners() {
                 switchAboutTab(tab.dataset.tab);
             }
         });
+    }
+
+    // Wind-Diagramm Toggle
+    const windDiagramToggle = document.getElementById('windDiagramToggle');
+    if (windDiagramToggle) {
+        windDiagramToggle.addEventListener('click', toggleWindDiagram);
     }
 }
 

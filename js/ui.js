@@ -252,6 +252,12 @@ export function selectDay(idx) {
     updateForecastConfidence(idx);
     buildTimeline(state.forecastDays[idx].date);
 
+    // Wind-Diagramm aktualisieren wenn es geöffnet ist
+    const windDiagramCard = document.getElementById('windDiagramCard');
+    if (windDiagramCard?.classList.contains('expanded')) {
+        renderWindDiagram(state.forecastDays[idx].date);
+    }
+
     const now = new Date(), ch = now.getHours();
     let def = state.forecastDays[idx].indices.find(i => new Date(state.hourlyData.time[i]).getHours() === (idx === 0 ? ch : 12));
     if (!def) def = state.forecastDays[idx].indices.find(i => new Date(state.hourlyData.time[i]).getHours() === 12) || state.forecastDays[idx].indices[Math.floor(state.forecastDays[idx].indices.length / 2)];
@@ -317,6 +323,12 @@ export function selectHour(idx) {
     state.selectedHourIndex = idx;
     updateDisplay(idx);
     buildTimeline(state.forecastDays[state.selectedDay].date);
+
+    // Wind-Diagramm aktualisieren wenn es geöffnet ist (um ausgewählte Stunde zu markieren)
+    const windDiagramCard = document.getElementById('windDiagramCard');
+    if (windDiagramCard?.classList.contains('expanded')) {
+        renderWindDiagram(state.forecastDays[state.selectedDay].date);
+    }
 }
 
 /**
@@ -1043,4 +1055,144 @@ export function initTouchTooltips() {
             activeTooltip = null;
         }
     }, { passive: false });
+}
+
+// === Phase 7: Wind-Höhenprofil Diagramm ===
+
+/**
+ * Gibt die Farbklasse basierend auf Windgeschwindigkeit zurück
+ * @param {number} speed - Windgeschwindigkeit in km/h
+ * @param {string} level - Höhenlevel ('ground', '850', '800', '700')
+ * @returns {string} CSS-Klasse ('green', 'yellow', 'red', 'calm')
+ */
+function getWindArrowColor(speed, level) {
+    if (speed < 3) return 'calm';
+
+    // Unterschiedliche Grenzwerte je nach Höhe
+    const limits = {
+        ground: { green: 12, yellow: 18 },
+        '850': { green: 18, yellow: 28 },
+        '800': { green: 22, yellow: 30 },
+        '700': { green: 25, yellow: 30 }
+    };
+
+    const l = limits[level] || limits.ground;
+    if (speed <= l.green) return 'green';
+    if (speed <= l.yellow) return 'yellow';
+    return 'red';
+}
+
+/**
+ * Rendert das Wind-Höhenprofil für einen Tag
+ * @param {string} dayStr - Datum im Format 'YYYY-MM-DD'
+ */
+export function renderWindDiagram(dayStr) {
+    const grid = document.getElementById('windDiagramGrid');
+    const xAxis = document.getElementById('windDiagramXAxis');
+    if (!grid || !state.hourlyData) return;
+
+    grid.innerHTML = '';
+    xAxis.innerHTML = '';
+
+    const h = state.hourlyData;
+    const times = h.time;
+
+    // Höhenlevel von oben nach unten (700hPa = 3000m ist oben)
+    const levels = [
+        { key: '700', speedKey: 'wind_speed_700hPa', dirKey: 'wind_direction_700hPa', label: '3000m' },
+        { key: '800', speedKey: 'wind_speed_800hPa', dirKey: 'wind_direction_800hPa', label: '2000m' },
+        { key: '850', speedKey: 'wind_speed_850hPa', dirKey: 'wind_direction_850hPa', label: '1500m' },
+        { key: 'ground', speedKey: 'wind_speed_10m', dirKey: 'wind_direction_10m', label: 'Boden' }
+    ];
+
+    // Stunden von 6-20 Uhr (15 Stunden)
+    const hours = [];
+    for (let hour = 6; hour <= 20; hour++) {
+        const ts = dayStr + 'T' + hour.toString().padStart(2, '0') + ':00';
+        const idx = times.findIndex(t => t === ts);
+        hours.push({ hour, idx });
+    }
+
+    // Grid aufbauen (4 Zeilen × 15 Spalten)
+    levels.forEach(level => {
+        hours.forEach(({ hour, idx }) => {
+            const cell = document.createElement('div');
+            cell.className = 'wind-cell';
+
+            if (idx === -1) {
+                // Keine Daten für diese Stunde
+                cell.innerHTML = '<span class="wind-arrow calm">-</span>';
+                grid.appendChild(cell);
+                return;
+            }
+
+            const speed = h[level.speedKey]?.[idx] ?? 0;
+            const dir = h[level.dirKey]?.[idx] ?? 0;
+            const colorClass = getWindArrowColor(speed, level.key);
+
+            // Tooltip mit Details
+            const dirText = getWindDir(dir);
+            cell.setAttribute('data-tooltip', `${Math.round(speed)} km/h ${dirText}`);
+
+            // Markiere ausgewählte Stunde
+            if (idx === state.selectedHourIndex) {
+                cell.classList.add('selected');
+            }
+
+            // Wind-Pfeil erstellen
+            const arrow = document.createElement('div');
+            arrow.className = `wind-arrow ${colorClass}`;
+            // Pfeil zeigt in Windrichtung (woher der Wind kommt)
+            // Meteorologisch: 0° = Nord, im Uhrzeigersinn
+            arrow.style.transform = `rotate(${dir}deg)`;
+
+            // Klick-Handler um Stunde auszuwählen
+            cell.dataset.hourIdx = idx;
+            cell.style.cursor = 'pointer';
+            cell.addEventListener('click', () => {
+                selectHour(idx);
+            });
+
+            cell.appendChild(arrow);
+            grid.appendChild(cell);
+        });
+    });
+
+    // X-Achsen-Labels
+    hours.forEach(({ hour }) => {
+        const label = document.createElement('span');
+        label.className = 'x-label';
+        label.textContent = hour;
+        xAxis.appendChild(label);
+    });
+}
+
+/**
+ * Toggle Wind-Diagramm erweitern/zuklappen
+ */
+export function toggleWindDiagram() {
+    const card = document.getElementById('windDiagramCard');
+    if (card) {
+        const wasExpanded = card.classList.contains('expanded');
+        card.classList.toggle('expanded');
+
+        // Bei erstmaligem Öffnen: Diagramm rendern
+        if (!wasExpanded && state.forecastDays?.[state.selectedDay]) {
+            renderWindDiagram(state.forecastDays[state.selectedDay].date);
+        }
+
+        // Zustand speichern
+        localStorage.setItem(STORAGE_KEYS.WIND_DIAGRAM, card.classList.contains('expanded').toString());
+    }
+}
+
+/**
+ * Lädt den Zustand des Wind-Diagramms aus localStorage
+ */
+export function loadWindDiagramState() {
+    const card = document.getElementById('windDiagramCard');
+    if (card) {
+        const show = localStorage.getItem(STORAGE_KEYS.WIND_DIAGRAM) === 'true';
+        card.classList.toggle('expanded', show);
+    }
 }
