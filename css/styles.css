@@ -1420,75 +1420,58 @@ footer a { color: var(--accent); text-decoration: none; }
     }
 }
 
-/* === Phase 7: Wind-Höhenprofil Diagramm === */
-.wind-diagram-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 1rem;
-}
-.wind-diagram-header {
+/* === Phase 7: Wind-Höhenprofil (integriert in Wind-Card) === */
+.wind-profile-toggle {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.75rem;
     background: var(--bg-dark);
-    border-bottom: 1px solid var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
     cursor: pointer;
-    transition: background 0.2s;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    transition: all 0.2s;
 }
-.wind-diagram-header:hover {
-    background: var(--bg-card-hover);
+.wind-profile-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
 }
-.wind-diagram-header h3 {
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin: 0;
-    color: var(--text-primary);
+.wind-profile-toggle.active {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+    color: var(--accent);
 }
-.wind-diagram-hint {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    flex: 1;
-}
-.wind-diagram-header .toggle-icon {
-    color: var(--text-muted);
-    font-size: 0.75rem;
-    transition: transform 0.3s;
-}
-.wind-diagram-card.expanded .wind-diagram-header .toggle-icon {
-    transform: rotate(180deg);
-}
-.wind-diagram-body {
+.wind-profile-wrapper {
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.35s ease-out, padding 0.35s ease-out;
-    padding: 0 1rem;
+    transition: max-height 0.35s ease-out;
 }
-.wind-diagram-card.expanded .wind-diagram-body {
-    max-height: 400px;
-    padding: 1rem;
+.wind-profile-wrapper.visible {
+    max-height: 280px;
+    margin-top: 0.75rem;
 }
-.wind-diagram-container {
+.wind-profile-container {
     display: flex;
     gap: 0.5rem;
 }
-.wind-diagram-y-axis {
+.wind-profile-y-axis {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 0.5rem 0;
-    width: 50px;
+    padding: 0.25rem 0;
+    width: 45px;
     flex-shrink: 0;
 }
-.wind-diagram-y-axis .y-label {
-    font-size: 0.7rem;
+.wind-profile-y-axis .y-label {
+    font-size: 0.65rem;
     color: var(--text-muted);
     text-align: right;
     font-family: 'Space Mono', monospace;
 }
-.wind-diagram-grid {
+.wind-profile-grid {
     flex: 1;
     display: grid;
     grid-template-rows: repeat(4, 1fr);
@@ -1496,64 +1479,59 @@ footer a { color: var(--accent); text-decoration: none; }
     gap: 1px;
     background: var(--border);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 6px;
     overflow: hidden;
-    min-height: 160px;
+    min-height: 140px;
 }
-/* Alternierende Zeilenfarben für bessere Lesbarkeit */
+/* Alternierende Zeilenfarben */
 .wind-cell:nth-child(n+1):nth-child(-n+15) { background: var(--bg-card); }
 .wind-cell:nth-child(n+16):nth-child(-n+30) { background: var(--bg-dark); }
 .wind-cell:nth-child(n+31):nth-child(-n+45) { background: var(--bg-card); }
 .wind-cell:nth-child(n+46):nth-child(-n+60) { background: var(--bg-dark); }
-.wind-diagram-x-axis {
+.wind-profile-x-axis {
     display: flex;
     justify-content: space-between;
-    padding: 0.5rem 0 0;
-    margin-left: 54px;
+    padding: 0.35rem 0 0;
+    margin-left: 49px;
 }
-.wind-diagram-x-axis .x-label {
-    font-size: 0.65rem;
+.wind-profile-x-axis .x-label {
+    font-size: 0.6rem;
     color: var(--text-muted);
     font-family: 'Space Mono', monospace;
     text-align: center;
-    width: calc(100% / 15);
+    flex: 1;
 }
-.wind-diagram-legend {
+.wind-profile-legend {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0.75rem 0 0;
-    margin-left: 54px;
+    gap: 0.75rem;
+    padding: 0.5rem 0 0;
+    margin-left: 49px;
     flex-wrap: wrap;
 }
-.wind-diagram-legend .legend-title {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    font-weight: 600;
-}
-.wind-diagram-legend .legend-item {
+.wind-profile-legend .legend-item {
     display: flex;
     align-items: center;
-    gap: 0.3rem;
-    font-size: 0.7rem;
+    gap: 0.2rem;
+    font-size: 0.65rem;
     color: var(--text-secondary);
 }
-.wind-diagram-legend .legend-color {
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
+.wind-profile-legend .legend-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
 }
-.wind-diagram-legend .legend-color.green { background: var(--green); }
-.wind-diagram-legend .legend-color.yellow { background: var(--yellow); }
-.wind-diagram-legend .legend-color.red { background: var(--red); }
-.wind-diagram-legend .legend-symbol {
-    font-size: 0.85rem;
+.wind-profile-legend .legend-color.green { background: var(--green); }
+.wind-profile-legend .legend-color.yellow { background: var(--yellow); }
+.wind-profile-legend .legend-color.red { background: var(--red); }
+.wind-profile-legend .legend-symbol {
+    font-size: 0.75rem;
     font-weight: 600;
-    width: 16px;
+    width: 14px;
     text-align: center;
 }
-.wind-diagram-legend .legend-symbol.calm { color: var(--green); }
-.wind-diagram-legend .legend-symbol.nodata { color: var(--text-muted); opacity: 0.5; }
+.wind-profile-legend .legend-symbol.calm { color: var(--green); }
+.wind-profile-legend .legend-symbol.nodata { color: var(--text-muted); opacity: 0.5; }
 
 /* Wind Arrow Cell */
 .wind-cell {
@@ -1632,49 +1610,49 @@ footer a { color: var(--accent); text-decoration: none; }
     pointer-events: none;
 }
 
-/* Mobile Responsive */
+/* Wind-Profil Mobile Responsive */
 @media (max-width: 600px) {
-    .wind-diagram-y-axis {
-        width: 40px;
+    .wind-profile-y-axis {
+        width: 35px;
     }
-    .wind-diagram-y-axis .y-label {
-        font-size: 0.6rem;
-    }
-    .wind-diagram-x-axis {
-        margin-left: 44px;
-    }
-    .wind-diagram-x-axis .x-label {
+    .wind-profile-y-axis .y-label {
         font-size: 0.55rem;
     }
-    .wind-diagram-legend {
-        margin-left: 44px;
-        gap: 0.5rem;
+    .wind-profile-x-axis {
+        margin-left: 39px;
     }
-    .wind-diagram-legend .legend-title {
-        width: 100%;
-        margin-bottom: -0.25rem;
+    .wind-profile-x-axis .x-label {
+        font-size: 0.5rem;
+    }
+    .wind-profile-legend {
+        margin-left: 39px;
+        gap: 0.4rem;
     }
     .wind-arrow {
         width: 18px;
         height: 18px;
     }
     .wind-arrow::before {
-        height: 10px;
+        height: 12px;
+        width: 2px;
     }
     .wind-arrow::after {
-        border-left-width: 4px;
-        border-right-width: 4px;
-        border-bottom-width: 5px;
+        border-left-width: 5px;
+        border-right-width: 5px;
+        border-bottom-width: 6px;
     }
     .wind-cell {
         min-height: 28px;
     }
-    .wind-diagram-grid {
+    .wind-profile-grid {
         min-height: 120px;
+    }
+    .wind-profile-wrapper.visible {
+        max-height: 240px;
     }
 }
 @media (max-width: 400px) {
-    .wind-diagram-x-axis .x-label:nth-child(even) {
+    .wind-profile-x-axis .x-label:nth-child(even) {
         visibility: hidden;
     }
 }

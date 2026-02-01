@@ -252,9 +252,9 @@ export function selectDay(idx) {
     updateForecastConfidence(idx);
     buildTimeline(state.forecastDays[idx].date);
 
-    // Wind-Diagramm aktualisieren wenn es geöffnet ist
-    const windDiagramCard = document.getElementById('windDiagramCard');
-    if (windDiagramCard?.classList.contains('expanded')) {
+    // Wind-Profil aktualisieren wenn es geöffnet ist
+    const windProfileWrapper = document.getElementById('windProfileWrapper');
+    if (windProfileWrapper?.classList.contains('visible')) {
         renderWindDiagram(state.forecastDays[idx].date);
     }
 
@@ -324,9 +324,9 @@ export function selectHour(idx) {
     updateDisplay(idx);
     buildTimeline(state.forecastDays[state.selectedDay].date);
 
-    // Wind-Diagramm aktualisieren wenn es geöffnet ist (um ausgewählte Stunde zu markieren)
-    const windDiagramCard = document.getElementById('windDiagramCard');
-    if (windDiagramCard?.classList.contains('expanded')) {
+    // Wind-Profil aktualisieren wenn es geöffnet ist (um ausgewählte Stunde zu markieren)
+    const windProfileWrapper = document.getElementById('windProfileWrapper');
+    if (windProfileWrapper?.classList.contains('visible')) {
         renderWindDiagram(state.forecastDays[state.selectedDay].date);
     }
 }
@@ -1087,8 +1087,8 @@ function getWindArrowColor(speed, level) {
  * @param {string} dayStr - Datum im Format 'YYYY-MM-DD'
  */
 export function renderWindDiagram(dayStr) {
-    const grid = document.getElementById('windDiagramGrid');
-    const xAxis = document.getElementById('windDiagramXAxis');
+    const grid = document.getElementById('windProfileGrid');
+    const xAxis = document.getElementById('windProfileXAxis');
     if (!grid || !state.hourlyData) return;
 
     grid.innerHTML = '';
@@ -1190,31 +1190,35 @@ export function renderWindDiagram(dayStr) {
 }
 
 /**
- * Toggle Wind-Diagramm erweitern/zuklappen
+ * Toggle Wind-Profil erweitern/zuklappen
  */
 export function toggleWindDiagram() {
-    const card = document.getElementById('windDiagramCard');
-    if (card) {
-        const wasExpanded = card.classList.contains('expanded');
-        card.classList.toggle('expanded');
+    const wrapper = document.getElementById('windProfileWrapper');
+    const toggle = document.getElementById('windProfileToggle');
+    if (!wrapper || !toggle) return;
 
-        // Bei erstmaligem Öffnen: Diagramm rendern
-        if (!wasExpanded && state.forecastDays?.[state.selectedDay]) {
-            renderWindDiagram(state.forecastDays[state.selectedDay].date);
-        }
+    const show = !wrapper.classList.contains('visible');
+    wrapper.classList.toggle('visible', show);
+    toggle.classList.toggle('active', show);
 
-        // Zustand speichern
-        localStorage.setItem(STORAGE_KEYS.WIND_DIAGRAM, card.classList.contains('expanded').toString());
+    // Bei Öffnen: Diagramm rendern
+    if (show && state.forecastDays?.[state.selectedDay]) {
+        renderWindDiagram(state.forecastDays[state.selectedDay].date);
     }
+
+    // Zustand speichern
+    localStorage.setItem(STORAGE_KEYS.WIND_DIAGRAM, show.toString());
 }
 
 /**
- * Lädt den Zustand des Wind-Diagramms aus localStorage
+ * Lädt den Zustand des Wind-Profils aus localStorage
  */
 export function loadWindDiagramState() {
-    const card = document.getElementById('windDiagramCard');
-    if (card) {
+    const wrapper = document.getElementById('windProfileWrapper');
+    const toggle = document.getElementById('windProfileToggle');
+    if (wrapper && toggle) {
         const show = localStorage.getItem(STORAGE_KEYS.WIND_DIAGRAM) === 'true';
-        card.classList.toggle('expanded', show);
+        wrapper.classList.toggle('visible', show);
+        toggle.classList.toggle('active', show);
     }
 }

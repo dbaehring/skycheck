@@ -157,38 +157,6 @@
                         </div>
                     </div>
                     <div class="timeline-card" role="region" aria-label="Stündlicher Tagesverlauf"><h3>Tagesverlauf (6-20 Uhr)</h3><div class="timeline" id="timeline" role="listbox" aria-label="Stunden auswählen"></div></div>
-                    <!-- Phase 7: Winddiagramm -->
-                    <div class="wind-diagram-card" id="windDiagramCard" role="region" aria-label="Wind-Höhenprofil">
-                        <div class="wind-diagram-header" id="windDiagramToggle">
-                            <h3>📊 Wind-Höhenprofil</h3>
-                            <span class="wind-diagram-hint">Tagesverlauf nach Höhe</span>
-                            <span class="toggle-icon">▼</span>
-                        </div>
-                        <div class="wind-diagram-body" id="windDiagramBody">
-                            <div class="wind-diagram-container">
-                                <div class="wind-diagram-y-axis">
-                                    <span class="y-label" data-height="3000">3000m</span>
-                                    <span class="y-label" data-height="2000">2000m</span>
-                                    <span class="y-label" data-height="1500">1500m</span>
-                                    <span class="y-label" data-height="ground">Boden</span>
-                                </div>
-                                <div class="wind-diagram-grid" id="windDiagramGrid">
-                                    <!-- Wind arrows will be rendered here by JS -->
-                                </div>
-                            </div>
-                            <div class="wind-diagram-x-axis" id="windDiagramXAxis">
-                                <!-- Time labels (6-20) will be rendered by JS -->
-                            </div>
-                            <div class="wind-diagram-legend">
-                                <span class="legend-title">Legende:</span>
-                                <span class="legend-item"><span class="legend-symbol calm">○</span>Windstille</span>
-                                <span class="legend-item"><span class="legend-color green"></span>&lt;15 km/h</span>
-                                <span class="legend-item"><span class="legend-color yellow"></span>15-25 km/h</span>
-                                <span class="legend-item"><span class="legend-color red"></span>&gt;25 km/h</span>
-                                <span class="legend-item"><span class="legend-symbol nodata">—</span>Keine Daten</span>
-                            </div>
-                        </div>
-                    </div>
                     <div class="assessment-card" role="status" aria-live="polite" aria-label="Aktuelle Flugbedingungen">
                         <div class="weather-current" id="weatherCurrent">
                             <span class="weather-icon-text" id="weatherDesc" aria-label="Aktuelles Wetter">-</span>
@@ -252,6 +220,29 @@
                                             <div class="windrose-legend-item"><span class="windrose-legend-color h700"></span><span>3000m</span><span id="windrose700">-</span></div>
                                             <div class="windrose-shear-warning" id="windroseShearWarning">⚠️ Richtungsscherung erkannt!</div>
                                         </div>
+                                    </div>
+                                </div>
+                                <!-- Wind-Höhenprofil (Tagesverlauf) -->
+                                <div class="wind-profile-toggle" id="windProfileToggle">
+                                    <span>📊</span><span>Tagesverlauf anzeigen</span>
+                                </div>
+                                <div class="wind-profile-wrapper" id="windProfileWrapper">
+                                    <div class="wind-profile-container">
+                                        <div class="wind-profile-y-axis">
+                                            <span class="y-label">3000m</span>
+                                            <span class="y-label">2000m</span>
+                                            <span class="y-label">1500m</span>
+                                            <span class="y-label">Boden</span>
+                                        </div>
+                                        <div class="wind-profile-grid" id="windProfileGrid"></div>
+                                    </div>
+                                    <div class="wind-profile-x-axis" id="windProfileXAxis"></div>
+                                    <div class="wind-profile-legend">
+                                        <span class="legend-item"><span class="legend-symbol calm">○</span>Windstille</span>
+                                        <span class="legend-item"><span class="legend-color green"></span>&lt;15</span>
+                                        <span class="legend-item"><span class="legend-color yellow"></span>15-25</span>
+                                        <span class="legend-item"><span class="legend-color red"></span>&gt;25 km/h</span>
+                                        <span class="legend-item"><span class="legend-symbol nodata">—</span>k.D.</span>
                                     </div>
                                 </div>
                             </div>

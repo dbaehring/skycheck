@@ -360,10 +360,10 @@ function registerEventListeners() {
         });
     }
 
-    // Wind-Diagramm Toggle
-    const windDiagramToggle = document.getElementById('windDiagramToggle');
-    if (windDiagramToggle) {
-        windDiagramToggle.addEventListener('click', toggleWindDiagram);
+    // Wind-Profil Toggle
+    const windProfileToggle = document.getElementById('windProfileToggle');
+    if (windProfileToggle) {
+        windProfileToggle.addEventListener('click', toggleWindDiagram);
     }
 }
 
