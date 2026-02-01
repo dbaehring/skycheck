@@ -1060,11 +1060,50 @@ function updateExpertModeUI() {
     if (toggle) toggle.checked = state.expertMode;
     if (settingsBtn) settingsBtn.disabled = !state.expertMode;
     if (section) section.classList.toggle('active', state.expertMode);
+
     if (hint) {
-        hint.textContent = state.expertMode
-            ? (state.customLimits ? 'Eigene Grenzwerte aktiv' : 'Klicke "Anpassen" um Grenzwerte zu setzen')
-            : 'Eigene Grenzwerte für die Ampel-Bewertung definieren';
+        if (!state.expertMode) {
+            hint.textContent = 'Eigene Grenzwerte für die Ampel-Bewertung definieren';
+            hint.classList.remove('active');
+        } else if (state.customLimits) {
+            // Zähle geänderte Parameter
+            const changes = countCustomChanges();
+            hint.innerHTML = `<strong>✓ ${changes} Parameter angepasst</strong>`;
+            hint.classList.add('active');
+        } else {
+            hint.textContent = 'Klicke "Anpassen" um Grenzwerte zu setzen';
+            hint.classList.remove('active');
+        }
     }
+}
+
+/**
+ * Zählt wie viele Parameter vom Standard abweichen
+ */
+function countCustomChanges() {
+    if (!state.customLimits) return 0;
+    let count = 0;
+
+    // Wind
+    if (state.customLimits.wind?.surface?.yellow !== LIMITS.wind.surface.yellow) count++;
+    if (state.customLimits.wind?.gusts?.yellow !== LIMITS.wind.gusts.yellow) count++;
+    if (state.customLimits.wind?.gustSpread?.yellow !== LIMITS.wind.gustSpread.yellow) count++;
+    if (state.customLimits.wind?.gradient?.yellow !== LIMITS.wind.gradient.yellow) count++;
+    if (state.customLimits.wind?.w850?.yellow !== LIMITS.wind.w850.yellow) count++;
+    if (state.customLimits.wind?.w700?.yellow !== LIMITS.wind.w700.yellow) count++;
+
+    // Thermik
+    if (state.customLimits.cape?.yellow !== LIMITS.cape.yellow) count++;
+
+    // Wolken
+    if (state.customLimits.clouds?.low?.yellow !== LIMITS.clouds.low.yellow) count++;
+    if (state.customLimits.visibility?.green !== LIMITS.visibility.green) count++;
+
+    // Niederschlag
+    if (state.customLimits.precip?.yellow !== LIMITS.precip.yellow) count++;
+    if (state.customLimits.precipProb?.yellow !== LIMITS.precipProb.yellow) count++;
+
+    return count;
 }
 
 /**
@@ -1101,6 +1140,8 @@ function populateExpertForm() {
     // Wind
     setInputValue('expertWindSurface', currentLimits.wind?.surface?.yellow, LIMITS.wind.surface.yellow);
     setInputValue('expertWindGusts', currentLimits.wind?.gusts?.yellow, LIMITS.wind.gusts.yellow);
+    setInputValue('expertGustSpread', currentLimits.wind?.gustSpread?.yellow, LIMITS.wind.gustSpread.yellow);
+    setInputValue('expertGradient', currentLimits.wind?.gradient?.yellow, LIMITS.wind.gradient.yellow);
     setInputValue('expertWind850', currentLimits.wind?.w850?.yellow, LIMITS.wind.w850.yellow);
     setInputValue('expertWind700', currentLimits.wind?.w700?.yellow, LIMITS.wind.w700.yellow);
 
@@ -1110,6 +1151,10 @@ function populateExpertForm() {
     // Wolken/Sicht
     setInputValue('expertCloudLow', currentLimits.clouds?.low?.yellow, LIMITS.clouds.low.yellow);
     setInputValue('expertVisibility', currentLimits.visibility?.green, LIMITS.visibility.green);
+
+    // Niederschlag
+    setInputValue('expertPrecip', currentLimits.precip?.yellow, LIMITS.precip.yellow);
+    setInputValue('expertPrecipProb', currentLimits.precipProb?.yellow, LIMITS.precipProb.yellow);
 }
 
 function setInputValue(id, value, fallback) {
@@ -1121,21 +1166,80 @@ function setInputValue(id, value, fallback) {
 }
 
 /**
+ * Berechnet Grün-Schwelle aus Gelb-Schwelle (ca. 66%)
+ */
+function calcGreenThreshold(yellow, defaultGreen, defaultYellow) {
+    // Verhältnis aus Default beibehalten
+    const ratio = defaultGreen / defaultYellow;
+    return Math.round(yellow * ratio);
+}
+
+/**
  * Speichert die Expertenmodus-Einstellungen
  */
 export function saveExpertSettings() {
+    // Gelb-Schwellen aus Formular lesen
+    const windSurfaceYellow = getInputNumber('expertWindSurface', LIMITS.wind.surface.yellow);
+    const windGustsYellow = getInputNumber('expertWindGusts', LIMITS.wind.gusts.yellow);
+    const gustSpreadYellow = getInputNumber('expertGustSpread', LIMITS.wind.gustSpread.yellow);
+    const gradientYellow = getInputNumber('expertGradient', LIMITS.wind.gradient.yellow);
+    const w850Yellow = getInputNumber('expertWind850', LIMITS.wind.w850.yellow);
+    const w700Yellow = getInputNumber('expertWind700', LIMITS.wind.w700.yellow);
+    const capeYellow = getInputNumber('expertCape', LIMITS.cape.yellow);
+    const cloudLowYellow = getInputNumber('expertCloudLow', LIMITS.clouds.low.yellow);
+    const visibilityGreen = getInputNumber('expertVisibility', LIMITS.visibility.green);
+    const precipYellow = getInputNumber('expertPrecip', LIMITS.precip.yellow);
+    const precipProbYellow = getInputNumber('expertPrecipProb', LIMITS.precipProb.yellow);
+
+    // Custom Limits mit automatisch berechneten Grün-Schwellen
     const customLimits = {
         wind: {
-            surface: { yellow: getInputNumber('expertWindSurface', LIMITS.wind.surface.yellow) },
-            gusts: { yellow: getInputNumber('expertWindGusts', LIMITS.wind.gusts.yellow) },
-            w850: { yellow: getInputNumber('expertWind850', LIMITS.wind.w850.yellow) },
-            w700: { yellow: getInputNumber('expertWind700', LIMITS.wind.w700.yellow) }
+            surface: {
+                yellow: windSurfaceYellow,
+                green: calcGreenThreshold(windSurfaceYellow, LIMITS.wind.surface.green, LIMITS.wind.surface.yellow)
+            },
+            gusts: {
+                yellow: windGustsYellow,
+                green: calcGreenThreshold(windGustsYellow, LIMITS.wind.gusts.green, LIMITS.wind.gusts.yellow)
+            },
+            gustSpread: {
+                yellow: gustSpreadYellow,
+                green: calcGreenThreshold(gustSpreadYellow, LIMITS.wind.gustSpread.green, LIMITS.wind.gustSpread.yellow)
+            },
+            gradient: {
+                yellow: gradientYellow,
+                green: calcGreenThreshold(gradientYellow, LIMITS.wind.gradient.green, LIMITS.wind.gradient.yellow)
+            },
+            w850: {
+                yellow: w850Yellow,
+                green: calcGreenThreshold(w850Yellow, LIMITS.wind.w850.green, LIMITS.wind.w850.yellow)
+            },
+            w700: {
+                yellow: w700Yellow,
+                green: calcGreenThreshold(w700Yellow, LIMITS.wind.w700.green, LIMITS.wind.w700.yellow)
+            }
         },
-        cape: { yellow: getInputNumber('expertCape', LIMITS.cape.yellow) },
+        cape: {
+            yellow: capeYellow,
+            green: calcGreenThreshold(capeYellow, LIMITS.cape.green, LIMITS.cape.yellow)
+        },
         clouds: {
-            low: { yellow: getInputNumber('expertCloudLow', LIMITS.clouds.low.yellow) }
+            low: {
+                yellow: cloudLowYellow,
+                green: calcGreenThreshold(cloudLowYellow, LIMITS.clouds.low.green, LIMITS.clouds.low.yellow)
+            }
         },
-        visibility: { green: getInputNumber('expertVisibility', LIMITS.visibility.green) }
+        visibility: {
+            green: visibilityGreen,
+            yellow: Math.round(visibilityGreen * 0.5)  // Gelb = 50% von Grün
+        },
+        precip: {
+            yellow: precipYellow,
+            green: Math.round(precipYellow * 0.1 * 10) / 10  // Grün = 10% von Gelb
+        },
+        precipProb: {
+            yellow: precipProbYellow
+        }
     };
 
     state.customLimits = customLimits;

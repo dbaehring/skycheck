@@ -1063,9 +1063,12 @@ footer a { color: var(--accent); text-decoration: none; }
     color: var(--text-secondary);
     margin: 0.5rem 0 0 0;
     opacity: 0.8;
+    transition: all 0.2s;
 }
-.expert-mode-section.active .expert-mode-hint {
-    color: var(--accent);
+.expert-mode-hint.active {
+    color: var(--green);
+    opacity: 1;
+    font-weight: 500;
 }
 
 /* Filter-Warnung wenn nicht alle aktiv */
