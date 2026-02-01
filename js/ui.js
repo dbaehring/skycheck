@@ -1272,6 +1272,96 @@ export function resetExpertSettings() {
     localStorage.removeItem(STORAGE_KEYS.CUSTOM_LIMITS);
     populateExpertForm();
     updateExpertModeUI();
+    updatePresetButtons('standard');
+}
+
+/**
+ * Preset-Profile für Expertenmodus
+ */
+const EXPERT_PRESETS = {
+    beginner: {
+        label: 'Anfänger',
+        description: 'Konservative Limits für Flugschüler und Genussflieger',
+        values: {
+            windSurface: 12,
+            windGusts: 18,
+            gustSpread: 10,
+            gradient: 12,
+            w850: 20,
+            w700: 22,
+            cape: 500,
+            cloudLow: 40,
+            visibility: 15000,
+            precip: 0.5,
+            precipProb: 20
+        }
+    },
+    standard: {
+        label: 'Standard',
+        description: 'Ausgewogene Limits für erfahrene Freizeitpiloten',
+        values: {
+            windSurface: LIMITS.wind.surface.yellow,
+            windGusts: LIMITS.wind.gusts.yellow,
+            gustSpread: LIMITS.wind.gustSpread.yellow,
+            gradient: LIMITS.wind.gradient.yellow,
+            w850: LIMITS.wind.w850.yellow,
+            w700: LIMITS.wind.w700.yellow,
+            cape: LIMITS.cape.yellow,
+            cloudLow: LIMITS.clouds.low.yellow,
+            visibility: LIMITS.visibility.green,
+            precip: LIMITS.precip.yellow,
+            precipProb: LIMITS.precipProb.yellow
+        }
+    },
+    pro: {
+        label: 'Profi',
+        description: 'Erweiterte Limits für erfahrene Piloten mit guter Ortskenntnis',
+        values: {
+            windSurface: 22,
+            windGusts: 32,
+            gustSpread: 18,
+            gradient: 22,
+            w850: 35,
+            w700: 40,
+            cape: 1500,
+            cloudLow: 70,
+            visibility: 8000,
+            precip: 2,
+            precipProb: 40
+        }
+    }
+};
+
+/**
+ * Wendet ein Preset an
+ */
+export function applyExpertPreset(presetName) {
+    const preset = EXPERT_PRESETS[presetName];
+    if (!preset) return;
+
+    // Werte in Formular eintragen
+    setInputValue('expertWindSurface', preset.values.windSurface, LIMITS.wind.surface.yellow);
+    setInputValue('expertWindGusts', preset.values.windGusts, LIMITS.wind.gusts.yellow);
+    setInputValue('expertGustSpread', preset.values.gustSpread, LIMITS.wind.gustSpread.yellow);
+    setInputValue('expertGradient', preset.values.gradient, LIMITS.wind.gradient.yellow);
+    setInputValue('expertWind850', preset.values.w850, LIMITS.wind.w850.yellow);
+    setInputValue('expertWind700', preset.values.w700, LIMITS.wind.w700.yellow);
+    setInputValue('expertCape', preset.values.cape, LIMITS.cape.yellow);
+    setInputValue('expertCloudLow', preset.values.cloudLow, LIMITS.clouds.low.yellow);
+    setInputValue('expertVisibility', preset.values.visibility, LIMITS.visibility.green);
+    setInputValue('expertPrecip', preset.values.precip, LIMITS.precip.yellow);
+    setInputValue('expertPrecipProb', preset.values.precipProb, LIMITS.precipProb.yellow);
+
+    updatePresetButtons(presetName);
+}
+
+/**
+ * Aktualisiert die Preset-Button-Styles
+ */
+function updatePresetButtons(activePreset) {
+    document.querySelectorAll('.expert-preset-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.preset === activePreset);
+    });
 }
 
 // === Phase 6: About-Modal Funktionen ===

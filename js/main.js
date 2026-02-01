@@ -74,7 +74,8 @@ import {
     openExpertSettings,
     closeExpertSettings,
     saveExpertSettings,
-    resetExpertSettings
+    resetExpertSettings,
+    applyExpertPreset
 } from './ui.js';
 
 /**
@@ -407,6 +408,17 @@ function registerEventListeners() {
     const expertResetBtn = document.getElementById('expertResetBtn');
     if (expertResetBtn) {
         expertResetBtn.addEventListener('click', resetExpertSettings);
+    }
+
+    // Expert Presets (Event-Delegation)
+    const expertPresets = document.querySelector('.expert-presets');
+    if (expertPresets) {
+        expertPresets.addEventListener('click', (e) => {
+            const btn = e.target.closest('.expert-preset-btn');
+            if (btn && btn.dataset.preset) {
+                applyExpertPreset(btn.dataset.preset);
+            }
+        });
     }
 }
 
