@@ -963,3 +963,84 @@ export function toggleParamFilter() {
         card.classList.toggle('expanded');
     }
 }
+
+// === Phase 6: About-Modal Funktionen ===
+
+/**
+ * Öffnet das About-Modal
+ */
+export function openAboutModal() {
+    const modal = document.getElementById('aboutModal');
+    if (modal) {
+        modal.classList.add('visible');
+        document.body.style.overflow = 'hidden';
+        // Version aus APP_INFO setzen (wird in main.js importiert)
+        const versionEl = document.getElementById('aboutVersion');
+        if (versionEl && window.APP_VERSION) {
+            versionEl.textContent = 'v' + window.APP_VERSION;
+        }
+    }
+}
+
+/**
+ * Schließt das About-Modal
+ */
+export function closeAboutModal() {
+    const modal = document.getElementById('aboutModal');
+    if (modal) {
+        modal.classList.remove('visible');
+        document.body.style.overflow = '';
+    }
+}
+
+/**
+ * Wechselt den aktiven Tab im About-Modal
+ * @param {string} tabId - ID des Tabs ('about', 'features', 'limits')
+ */
+export function switchAboutTab(tabId) {
+    // Tabs aktivieren/deaktivieren
+    document.querySelectorAll('.about-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tab === tabId);
+    });
+    // Tab-Inhalte anzeigen/verbergen
+    document.querySelectorAll('.about-tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === 'tab-' + tabId);
+    });
+}
+
+/**
+ * Initialisiert Touch-Tooltips für Mobile-Geräte
+ */
+export function initTouchTooltips() {
+    // Nur auf Touch-Geräten
+    if (!('ontouchstart' in window)) return;
+
+    let activeTooltip = null;
+
+    document.addEventListener('touchstart', (e) => {
+        const tooltipContainer = e.target.closest('.tooltip-container');
+
+        if (tooltipContainer) {
+            // Tooltip öffnen/schließen bei Tap
+            e.preventDefault();
+
+            if (activeTooltip === tooltipContainer) {
+                // Gleicher Tooltip - schließen
+                tooltipContainer.classList.remove('touch-active');
+                activeTooltip = null;
+            } else {
+                // Anderen Tooltip schließen
+                if (activeTooltip) {
+                    activeTooltip.classList.remove('touch-active');
+                }
+                // Neuen Tooltip öffnen
+                tooltipContainer.classList.add('touch-active');
+                activeTooltip = tooltipContainer;
+            }
+        } else if (activeTooltip) {
+            // Außerhalb getippt - Tooltip schließen
+            activeTooltip.classList.remove('touch-active');
+            activeTooltip = null;
+        }
+    }, { passive: false });
+}

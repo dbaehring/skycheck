@@ -7,11 +7,12 @@
 // === SkyCheck App Info ===
 export const APP_INFO = {
     name: 'SkyCheck',
-    version: '9.0.0',
+    version: '9.1.0',
     slogan: 'Sicherer fliegen mit der Wetterampel',
     description: 'Professionelle Gleitschirm-Wetteranalyse',
     author: 'SkyCheck Team',
-    year: 2025
+    year: 2025,
+    feedbackEmail: 'danielbaehring@gmail.com'
 };
 
 // === API Konfiguration ===

@@ -60,7 +60,11 @@ import {
     loadParamFilter,
     handleFilterChange,
     resetParamFilter,
-    toggleParamFilter
+    toggleParamFilter,
+    openAboutModal,
+    closeAboutModal,
+    switchAboutTab,
+    initTouchTooltips
 } from './ui.js';
 
 /**
@@ -92,7 +96,13 @@ async function initApp() {
         loadHeightCardState();
         loadParamFilter();
 
-        // 7. URL-Parameter prüfen
+        // 7. Touch-Tooltips initialisieren
+        initTouchTooltips();
+
+        // 8. App-Version global verfügbar machen (für About-Modal)
+        window.APP_VERSION = APP_INFO.version;
+
+        // 9. URL-Parameter prüfen
         const params = checkURLParams();
         if (!isNaN(params.lat) && !isNaN(params.lon)) {
             await handleMapClick(params.lat, params.lon, params.name);
@@ -289,6 +299,7 @@ function registerEventListeners() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeFavoriteModal();
+            closeAboutModal();
         }
     });
 
@@ -313,6 +324,37 @@ function registerEventListeners() {
         paramFilterReset.addEventListener('click', resetParamFilter);
     }
 
+    // === About-Modal Event-Listener ===
+    const aboutBtn = document.getElementById('aboutBtn');
+    if (aboutBtn) {
+        aboutBtn.addEventListener('click', openAboutModal);
+    }
+
+    const closeAboutModalBtn = document.getElementById('closeAboutModal');
+    if (closeAboutModalBtn) {
+        closeAboutModalBtn.addEventListener('click', closeAboutModal);
+    }
+
+    const aboutModal = document.getElementById('aboutModal');
+    if (aboutModal) {
+        // Schließen bei Klick auf Overlay
+        aboutModal.addEventListener('click', (e) => {
+            if (e.target === aboutModal) {
+                closeAboutModal();
+            }
+        });
+    }
+
+    // About-Tabs (Event-Delegation)
+    const aboutTabs = document.querySelector('.about-tabs');
+    if (aboutTabs) {
+        aboutTabs.addEventListener('click', (e) => {
+            const tab = e.target.closest('.about-tab');
+            if (tab && tab.dataset.tab) {
+                switchAboutTab(tab.dataset.tab);
+            }
+        });
+    }
 }
 
 /**

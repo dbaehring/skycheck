@@ -351,6 +351,32 @@ footer a { color: var(--accent); text-decoration: none; }
 .tooltip-container:hover .tooltip-content { opacity: 1; visibility: visible; }
 @media (max-width: 600px) { .tooltip-content { max-width: 200px; left: 0; transform: none; } .tooltip-content::before { left: 16px; } }
 
+/* Touch-Tooltips für Mobile */
+@media (hover: none) and (pointer: coarse) {
+    .tooltip-container .tooltip-content {
+        opacity: 0;
+        visibility: hidden;
+    }
+    .tooltip-container.touch-active .tooltip-content {
+        opacity: 1;
+        visibility: visible;
+    }
+    .tooltip-container:hover .tooltip-content {
+        opacity: 0;
+        visibility: hidden;
+    }
+    .tooltip-container.touch-active:hover .tooltip-content {
+        opacity: 1;
+        visibility: visible;
+    }
+    /* Größere Touch-Targets */
+    .info-icon {
+        width: 20px;
+        height: 20px;
+        font-size: 0.7rem;
+    }
+}
+
 /* === Z-Index Hierarchie (SkyCheck v9) === */
 /* Karten-Container dürfen NICHT höher sein */
 .map-container, #map, .leaflet-container { z-index: var(--z-base) !important; }
@@ -963,4 +989,425 @@ footer a { color: var(--accent); text-decoration: none; }
 }
 .param-filter-card.has-filter .param-filter-header {
     background: var(--accent-glow);
+}
+
+/* === Phase 6: Header-Redesign === */
+.header-left {
+    display: flex;
+    align-items: center;
+}
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.header-logo {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+.logo-text {
+    display: flex;
+    flex-direction: column;
+}
+/* About Button Styling */
+#aboutBtn {
+    position: relative;
+}
+#aboutBtn .about-icon {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    font-style: italic;
+}
+@media (max-width: 500px) {
+    .header-logo { display: none; }
+    header h1 { font-size: 1.5rem; }
+    .subtitle { font-size: 0.85rem; }
+    .header-right { gap: 0.5rem; }
+    .logo-text { gap: 0; }
+}
+@media (max-width: 360px) {
+    header h1 { font-size: 1.25rem; }
+    .subtitle { display: none; }
+}
+
+/* === Phase 6: About-Modal === */
+.about-modal {
+    max-width: 550px;
+    padding: 0;
+    overflow: hidden;
+}
+.about-header {
+    background: var(--sky-gradient);
+    color: white;
+    padding: 1.5rem;
+    text-align: center;
+    position: relative;
+}
+.about-logo {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 0.75rem;
+}
+.about-header h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem;
+}
+.about-tagline {
+    font-size: 0.95rem;
+    opacity: 0.95;
+    margin: 0;
+}
+.about-version {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    font-size: 0.75rem;
+    background: rgba(255,255,255,0.2);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+}
+.about-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-dark);
+}
+.about-tab {
+    flex: 1;
+    padding: 0.75rem 0.5rem;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+}
+.about-tab:hover {
+    color: var(--text-primary);
+    background: var(--bg-card-hover);
+}
+.about-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 600;
+}
+.about-content {
+    padding: 1.25rem;
+    max-height: 350px;
+    overflow-y: auto;
+}
+.about-tab-content {
+    display: none;
+}
+.about-tab-content.active {
+    display: block;
+}
+.about-tab-content p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+.about-tab-content h4 {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    margin: 1rem 0 0.5rem;
+}
+.about-tab-content a {
+    color: var(--accent);
+}
+.about-traffic-lights {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+}
+.about-light {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.about-light.green {
+    background: var(--green-bg);
+    color: var(--green);
+}
+.about-light.yellow {
+    background: var(--yellow-bg);
+    color: var(--yellow);
+}
+.about-light.red {
+    background: var(--red-bg);
+    color: var(--red);
+}
+.light-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.about-light.green .light-dot { background: var(--green); }
+.about-light.yellow .light-dot { background: var(--yellow); }
+.about-light.red .light-dot { background: var(--red); }
+
+.about-feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.about-feature-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+.about-feature-list li:last-child {
+    border-bottom: none;
+}
+.feature-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.about-warning-box {
+    background: var(--red-bg);
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+.about-warning-box h4 {
+    color: var(--red);
+    margin: 0 0 0.5rem;
+}
+.about-limits-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.about-limits-list li {
+    position: relative;
+    padding: 0.4rem 0 0.4rem 1.25rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+.about-limits-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--red);
+    font-weight: bold;
+}
+.about-motto {
+    text-align: center;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    padding: 0.75rem;
+    background: var(--bg-dark);
+    border-radius: 8px;
+    margin: 0;
+}
+.about-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg-dark);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.about-feedback-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.5rem 1rem;
+    background: var(--accent);
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+.about-feedback-link:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+.about-credits {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+.about-credits a {
+    color: var(--accent);
+}
+.about-modal .modal-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition: all 0.2s;
+    z-index: 10;
+}
+.about-modal .modal-close:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+/* About Modal - Mobile Fullscreen */
+@media (max-width: 500px) {
+    .about-modal {
+        max-width: 100%;
+        max-height: 100%;
+        height: 100%;
+        width: 100%;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    .about-content {
+        flex: 1;
+        max-height: none;
+    }
+    .about-tab {
+        font-size: 0.75rem;
+        padding: 0.6rem 0.25rem;
+    }
+    .about-header {
+        padding: 1rem;
+    }
+    .about-logo {
+        width: 48px;
+        height: 48px;
+    }
+    .about-header h2 {
+        font-size: 1.5rem;
+    }
+}
+
+/* === Phase 6: Mobile-Optimierungen === */
+
+/* Modals - Fullscreen auf Mobile */
+@media (max-width: 500px) {
+    .modal-overlay {
+        padding: 0;
+    }
+    .modal:not(.about-modal) {
+        border-radius: 12px 12px 0 0;
+        margin-top: auto;
+        max-width: 100%;
+        width: 100%;
+    }
+}
+
+/* Timeline - verbesserte Touch-Targets und Scroll-Snap */
+@media (max-width: 600px) {
+    .timeline {
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        padding: 0.5rem 0;
+        margin: 0 -0.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .timeline-slot {
+        scroll-snap-align: start;
+        min-width: 48px;
+        min-height: 60px;
+    }
+    .timeline-card {
+        position: relative;
+    }
+    /* Swipe-Hinweis - dezent */
+    .timeline-card::after {
+        content: '← Wischen →';
+        display: block;
+        text-align: center;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        opacity: 0.6;
+        margin-top: 0.25rem;
+    }
+}
+
+/* Kompaktere Cards auf Mobile */
+@media (max-width: 500px) {
+    .location-card {
+        padding: 0.75rem;
+    }
+    .param-card .param-body {
+        padding-left: 0.6rem;
+        padding-right: 0.6rem;
+    }
+    .param-card .param-header {
+        padding: 0.5rem 0.6rem;
+    }
+    .assessment-card {
+        padding: 1rem;
+    }
+    .day-comparison {
+        padding: 0.75rem;
+    }
+    .day-comparison-card {
+        padding: 0.5rem;
+    }
+    .day-comparison-date {
+        font-size: 0.85rem;
+    }
+    /* Weniger Padding in Tabellen */
+    .wind-table-row {
+        padding: 0.35rem 0;
+    }
+    .param-row {
+        padding: 0.25rem 0;
+    }
+}
+
+/* Bessere Touch-Targets für interaktive Elemente */
+@media (hover: none) and (pointer: coarse) {
+    .btn-icon {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    .timeline-slot {
+        min-height: 64px;
+    }
+    .day-comparison-card {
+        min-height: 60px;
+    }
+    .favorite-btn {
+        padding: 0.6rem 1rem;
+        min-height: 44px;
+    }
+    .param-header {
+        min-height: 48px;
+    }
+    .about-tab {
+        min-height: 44px;
+    }
 }

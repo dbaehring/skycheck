@@ -42,13 +42,23 @@
     <div class="container">
         <!-- Header -->
         <header>
-            <div>
-                <h1>SkyCheck</h1>
-                <p class="subtitle">Sicherer fliegen mit der Wetterampel</p>
+            <div class="header-left">
+                <div class="logo-area">
+                    <img src="./img/logo.svg" alt="SkyCheck" class="header-logo">
+                    <div class="logo-text">
+                        <h1>SkyCheck</h1>
+                        <p class="subtitle">Sicherer fliegen mit der Wetterampel</p>
+                    </div>
+                </div>
             </div>
-            <div class="theme-toggle">
-                <span class="theme-toggle-label">Design</span>
-                <div class="theme-switch" id="themeToggle" title="Hell/Dunkel umschalten"></div>
+            <div class="header-right">
+                <button class="btn-icon" id="aboutBtn" title="Info">
+                    <span class="about-icon">i</span>
+                </button>
+                <div class="theme-toggle">
+                    <span class="theme-toggle-label">Design</span>
+                    <div class="theme-switch" id="themeToggle" title="Hell/Dunkel umschalten"></div>
+                </div>
             </div>
         </header>
         <div class="main-layout">
@@ -282,7 +292,7 @@
         <footer class="sky-footer">
             <div class="footer-content">
                 <p class="footer-text">
-                    SkyCheck v9.0 | Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="footer-link">Open-Meteo.com</a> (ICON-D2/EU)
+                    SkyCheck v9.1 | Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="footer-link">Open-Meteo.com</a> (ICON-D2/EU)
                 </p>
                 <p class="footer-disclaimer">
                     <small>SkyCheck ersetzt keine professionelle Wetterberatung. Piloten sind selbst verantwortlich für ihre Flugentscheidungen.</small>
@@ -439,6 +449,65 @@
         </div>
     </div>
     <div class="share-toast" id="shareToast">🔗 Link kopiert!</div>
+    <!-- About Modal -->
+    <div class="modal-overlay" id="aboutModal" role="dialog" aria-modal="true" aria-labelledby="aboutModalTitle">
+        <div class="modal about-modal">
+            <button class="modal-close" id="closeAboutModal" aria-label="Dialog schließen">×</button>
+            <div class="about-header">
+                <img src="./img/logo.svg" alt="SkyCheck Logo" class="about-logo">
+                <h2 id="aboutModalTitle">SkyCheck</h2>
+                <p class="about-tagline">Sicherer fliegen mit der Wetterampel</p>
+                <span class="about-version" id="aboutVersion">v9.0</span>
+            </div>
+            <div class="about-tabs">
+                <button class="about-tab active" data-tab="about">Was ist SkyCheck?</button>
+                <button class="about-tab" data-tab="features">Features</button>
+                <button class="about-tab" data-tab="limits">Grenzen</button>
+            </div>
+            <div class="about-content">
+                <div class="about-tab-content active" id="tab-about">
+                    <p><strong>SkyCheck</strong> analysiert automatisch die wichtigsten Wetterparameter für sicheres Gleitschirmfliegen und zeigt dir auf einen Blick, ob die Bedingungen zum Fliegen geeignet sind.</p>
+                    <h4>Das Ampel-System</h4>
+                    <div class="about-traffic-lights">
+                        <div class="about-light green"><span class="light-dot"></span> GO - Gute Bedingungen</div>
+                        <div class="about-light yellow"><span class="light-dot"></span> VORSICHT - Erhöhte Aufmerksamkeit</div>
+                        <div class="about-light red"><span class="light-dot"></span> NO-GO - Nicht fliegbar</div>
+                    </div>
+                    <h4>Datenquelle</h4>
+                    <p>Die Wetterdaten stammen von <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo.com</a> und nutzen je nach Region das hochaufgelöste ICON-D2 (2.2km) oder ICON-EU (7km) Modell.</p>
+                </div>
+                <div class="about-tab-content" id="tab-features">
+                    <ul class="about-feature-list">
+                        <li><span class="feature-icon">🚦</span> <strong>Wetterampel</strong> mit Stunden-Auflösung (6-20 Uhr)</li>
+                        <li><span class="feature-icon">🚨</span> <strong>5 STOPP-Kriterien</strong> - die wichtigsten Gefahren im Blick</li>
+                        <li><span class="feature-icon">💨</span> <strong>Wind nach Höhe</strong> - Boden bis 3000m mit Gradient</li>
+                        <li><span class="feature-icon">🧭</span> <strong>Windrose</strong> - Windrichtung auf allen Höhen</li>
+                        <li><span class="feature-icon">⭐</span> <strong>Favoriten-System</strong> - deine Startplätze speichern</li>
+                        <li><span class="feature-icon">📱</span> <strong>Offline-fähig</strong> - als PWA installierbar</li>
+                        <li><span class="feature-icon">🌟</span> <strong>Anfänger-Badge</strong> - zeigt perfekte Bedingungen</li>
+                        <li><span class="feature-icon">📅</span> <strong>3-Tage-Vorschau</strong> mit Tages-Ampel</li>
+                    </ul>
+                </div>
+                <div class="about-tab-content" id="tab-limits">
+                    <div class="about-warning-box">
+                        <h4>⚠️ Wichtige Hinweise</h4>
+                        <ul class="about-limits-list">
+                            <li>SkyCheck <strong>ersetzt keine professionelle Wetterberatung</strong> und kein eigenes Urteilsvermögen.</li>
+                            <li><strong>Modelldaten ≠ Realität</strong> - Vorhersagen können von den tatsächlichen Bedingungen abweichen.</li>
+                            <li><strong>Lokale Effekte</strong> (Talwind, Lee, Thermikauslöser) werden nicht erfasst.</li>
+                            <li>Am Flugtag <strong>immer vor Ort prüfen</strong>: Windsack, Wolken, Bauchgefühl!</li>
+                            <li>Piloten sind <strong>selbst verantwortlich</strong> für ihre Flugentscheidungen.</li>
+                        </ul>
+                    </div>
+                    <p class="about-motto">🪂 <em>Im Zweifel: Nicht starten! Der Berg ist morgen noch da.</em></p>
+                </div>
+            </div>
+            <div class="about-footer">
+                <a href="mailto:danielbaehring@gmail.com" class="about-feedback-link">📧 Feedback senden</a>
+                <p class="about-credits">Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a></p>
+            </div>
+        </div>
+    </div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script type="module" src="js/main.js"></script>
     <!-- PWA Service Worker Registration -->
