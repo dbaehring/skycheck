@@ -128,11 +128,17 @@ export const WEATHER_CODES = {
 // localStorage Keys
 export const STORAGE_KEYS = {
     FAVORITES: 'gleitschirm-meteo-favorites',
+    FAVORITES_WEATHER_CACHE: 'gleitschirm-meteo-fav-weather-cache',
     THEME: 'gleitschirm-meteo-theme',
     WINDROSE: 'gleitschirm-meteo-windrose',
     HEIGHT: 'gleitschirm-meteo-height',
     LAST_WEATHER: 'gleitschirm-meteo-last-weather',
     PARAM_FILTER: 'gleitschirm-meteo-param-filter'
+};
+
+// Cache-Konfiguration
+export const CACHE_CONFIG = {
+    favoriteWeatherTTL: 60 * 60 * 1000  // 1 Stunde in ms
 };
 
 // Parameter-Filter Konfiguration

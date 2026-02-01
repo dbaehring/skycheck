@@ -4,12 +4,60 @@
  */
 
 import { state } from './state.js';
-import { STORAGE_KEYS, LIMITS, UI_CONFIG } from './config.js';
+import { STORAGE_KEYS, LIMITS, UI_CONFIG, CACHE_CONFIG } from './config.js';
 import { isInIconEUCoverage, escapeHtml } from './utils.js';
 import { selectLocation } from './map.js';
 
 // Rate limiting: Verzögerung zwischen API-Calls (ms)
 const API_DELAY = 200;
+
+/**
+ * Favoriten-Wetter-Cache aus localStorage laden
+ * Entfernt abgelaufene Einträge automatisch
+ */
+export function loadFavoriteWeatherCache() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEYS.FAVORITES_WEATHER_CACHE);
+        if (!raw) return;
+
+        const parsed = JSON.parse(raw);
+        if (typeof parsed !== 'object' || parsed === null) return;
+
+        const now = Date.now();
+        const validEntries = {};
+
+        // Nur nicht-abgelaufene Einträge behalten
+        for (const [key, entry] of Object.entries(parsed)) {
+            if (entry && entry.timestamp && (now - entry.timestamp) < CACHE_CONFIG.favoriteWeatherTTL) {
+                validEntries[key] = entry;
+            }
+        }
+
+        state.favoriteWeatherCache = validEntries;
+
+        // Cache aufräumen wenn Einträge entfernt wurden
+        if (Object.keys(validEntries).length !== Object.keys(parsed).length) {
+            saveFavoriteWeatherCache();
+        }
+    } catch (e) {
+        console.warn('Fehler beim Laden des Favoriten-Wetter-Cache:', e);
+        state.favoriteWeatherCache = {};
+    }
+}
+
+/**
+ * Favoriten-Wetter-Cache in localStorage speichern
+ */
+function saveFavoriteWeatherCache() {
+    try {
+        localStorage.setItem(
+            STORAGE_KEYS.FAVORITES_WEATHER_CACHE,
+            JSON.stringify(state.favoriteWeatherCache)
+        );
+    } catch (e) {
+        console.warn('Fehler beim Speichern des Favoriten-Wetter-Cache:', e);
+    }
+}
 
 /**
  * Validiert ein Favoriten-Objekt
@@ -250,17 +298,53 @@ export function saveFavorite() {
 // PHASE 3 Aufgabe 4: Schnell-Wetterdaten für Favoriten laden
 
 /**
- * Wetterdaten für alle Favoriten im Hintergrund laden (mit Rate Limiting)
+ * Prüft ob ein Cache-Eintrag noch gültig ist
+ */
+function isCacheValid(cacheEntry) {
+    if (!cacheEntry || !cacheEntry.timestamp) return false;
+    return (Date.now() - cacheEntry.timestamp) < CACHE_CONFIG.favoriteWeatherTTL;
+}
+
+// Batch-Konfiguration
+const BATCH_SIZE = 5;  // Max. parallele API-Calls
+
+/**
+ * Wetterdaten für alle Favoriten im Hintergrund laden (Batch-Rendering)
+ * - Lädt in Batches von BATCH_SIZE parallelen Requests
+ * - Rendert nur einmal pro Batch (statt nach jedem einzelnen Request)
  */
 async function fetchAllFavoriteWeather() {
-    for (const f of state.favorites) {
-        const key = f.lat.toFixed(4) + ',' + f.lon.toFixed(4);
-        if (!state.favoriteWeatherCache[key]) {
-            await fetchQuickWeather(f.lat, f.lon, key);
-            // Rate limiting: Kurze Pause zwischen API-Calls
+    // Sammle alle Favoriten die einen Fetch brauchen
+    const toFetch = state.favorites
+        .map(f => ({
+            lat: f.lat,
+            lon: f.lon,
+            key: f.lat.toFixed(4) + ',' + f.lon.toFixed(4)
+        }))
+        .filter(f => !isCacheValid(state.favoriteWeatherCache[f.key]));
+
+    if (toFetch.length === 0) return;
+
+    // In Batches aufteilen und parallel fetchen
+    for (let i = 0; i < toFetch.length; i += BATCH_SIZE) {
+        const batch = toFetch.slice(i, i + BATCH_SIZE);
+
+        // Alle Requests im Batch parallel starten
+        await Promise.all(
+            batch.map(f => fetchQuickWeather(f.lat, f.lon, f.key))
+        );
+
+        // Nach jedem Batch einmal rendern (nicht nach jedem einzelnen Request)
+        renderFavoritesUI();
+
+        // Kurze Pause zwischen Batches (Rate Limiting)
+        if (i + BATCH_SIZE < toFetch.length) {
             await new Promise(resolve => setTimeout(resolve, API_DELAY));
         }
     }
+
+    // Cache einmal am Ende speichern
+    saveFavoriteWeatherCache();
 }
 
 /**
@@ -318,10 +402,18 @@ async function fetchQuickWeather(lat, lon, cacheKey) {
             info += ' ' + bestWindow.start + '-' + bestWindow.end + 'h';
         }
 
-        state.favoriteWeatherCache[cacheKey] = { status: statusMap[bestScore], info: info };
-        renderFavoritesUI();
+        state.favoriteWeatherCache[cacheKey] = {
+            status: statusMap[bestScore],
+            info: info,
+            timestamp: Date.now()
+        };
+        // Rendering wird vom Batch-Handler übernommen
     } catch (e) {
-        state.favoriteWeatherCache[cacheKey] = { status: 'caution', info: 'Fehler' };
-        renderFavoritesUI();
+        state.favoriteWeatherCache[cacheKey] = {
+            status: 'caution',
+            info: 'Fehler',
+            timestamp: Date.now()
+        };
+        // Rendering wird vom Batch-Handler übernommen
     }
 }

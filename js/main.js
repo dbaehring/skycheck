@@ -21,6 +21,7 @@ import {
 // Favorites-Modul
 import {
     loadFavorites,
+    loadFavoriteWeatherCache,
     renderFavorites,
     openFavoriteModal,
     closeFavoriteModal,
@@ -74,8 +75,9 @@ async function initApp() {
         // 2. Karte initialisieren
         initMap();
 
-        // 3. Favoriten laden
+        // 3. Favoriten laden (inkl. Wetter-Cache)
         loadFavorites();
+        loadFavoriteWeatherCache();
         renderFavorites();
 
         // 4. Callbacks registrieren
