@@ -135,7 +135,9 @@ export const STORAGE_KEYS = {
     HEIGHT: 'gleitschirm-meteo-height',
     LAST_WEATHER: 'gleitschirm-meteo-last-weather',
     PARAM_FILTER: 'gleitschirm-meteo-param-filter',
-    WIND_DIAGRAM: 'gleitschirm-meteo-wind-diagram'
+    WIND_DIAGRAM: 'gleitschirm-meteo-wind-diagram',
+    EXPERT_MODE: 'skycheck-expert-mode',
+    CUSTOM_LIMITS: 'skycheck-custom-limits'
 };
 
 // Cache-Konfiguration

@@ -9,6 +9,33 @@ import { LIMITS, BEGINNER_LIMITS, API_CONFIG, UI_CONFIG, METEO_CONSTANTS } from 
 import { isInIconD2Coverage, isInIconEUCoverage, getGustFactor, isInAlpineRegion, escapeHtml } from './utils.js';
 
 /**
+ * Gibt die effektiven Limits zurück (Custom wenn gesetzt, sonst Default)
+ * @returns {Object} Limits-Objekt
+ */
+export function getEffectiveLimits() {
+    if (!state.expertMode || !state.customLimits) {
+        return LIMITS;
+    }
+    // Deep-Merge: Custom überschreibt Default
+    return deepMerge(LIMITS, state.customLimits);
+}
+
+/**
+ * Deep-Merge für verschachtelte Objekte
+ */
+function deepMerge(target, source) {
+    const result = { ...target };
+    for (const key in source) {
+        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+            result[key] = deepMerge(target[key] || {}, source[key]);
+        } else if (source[key] !== undefined && source[key] !== null) {
+            result[key] = source[key];
+        }
+    }
+    return result;
+}
+
+/**
  * Validates weather data and handles missing values
  * @param {*} value - Raw value from API
  * @param {*} fallback - Fallback value (default: null)
@@ -259,18 +286,19 @@ export async function refreshData() {
  * @returns {'severe'|'likely'|'possible'|'unlikely'} Nebel-Risiko-Level
  */
 export function getFogRisk(spread, windSpeed, visibility) {
+    const L = getEffectiveLimits();
     // SEVERE: Echte "Waschküche" - fast gesättigt + windstill + schlechte Sicht
     // Oder: Sichtweite unter VFR-Minimum
-    if (visibility < LIMITS.fog.visibilitySevere) return 'severe';
-    if (spread <= LIMITS.fog.spreadSevere && windSpeed < LIMITS.fog.windThreshold) return 'severe';
+    if (visibility < L.fog.visibilitySevere) return 'severe';
+    if (spread <= L.fog.spreadSevere && windSpeed < L.fog.windThreshold) return 'severe';
 
     // LIKELY: Hohe Nebelwahrscheinlichkeit - feucht + wenig Wind + mäßige Sicht
-    if (spread <= 2.0 && windSpeed < LIMITS.fog.windDisperse && visibility < LIMITS.fog.visibilityWarning) return 'likely';
+    if (spread <= 2.0 && windSpeed < L.fog.windDisperse && visibility < L.fog.visibilityWarning) return 'likely';
 
     // POSSIBLE: Nebelrisiko besteht - hohe Feuchtigkeit ODER eingeschränkte Sicht
     // Aber: Bei Wind > 12 km/h bildet sich selten Bodennebel
-    if (visibility < LIMITS.fog.visibilityWarning) return 'possible';
-    if (spread < LIMITS.fog.spreadWarning && windSpeed < LIMITS.fog.windDisperse) return 'possible';
+    if (visibility < L.fog.visibilityWarning) return 'possible';
+    if (spread < L.fog.spreadWarning && windSpeed < L.fog.windDisperse) return 'possible';
 
     // UNLIKELY: Gute Sicht und/oder ausreichend trocken
     return 'unlikely';
@@ -286,6 +314,7 @@ export function getHourScore(i) {
     const h = state.hourlyData;
     if (!h) return 1;
 
+    const L = getEffectiveLimits();
     // Parameter-Filter aus State (standardmäßig alle aktiv)
     const filter = state.paramFilter || { wind: true, thermik: true, clouds: true, precip: true };
 
@@ -322,44 +351,44 @@ export function getHourScore(i) {
     // === NO-GO Kriterien (Score 1) ===
     // Wind (nur wenn Filter aktiv)
     if (filter.wind) {
-        if (ws > LIMITS.wind.surface.yellow || wg > LIMITS.wind.gusts.yellow ||
-            gustSpread > LIMITS.wind.gustSpread.yellow ||
-            w850 > LIMITS.wind.w850.yellow || w800 > LIMITS.wind.w800.yellow || w700 > LIMITS.wind.w700.yellow ||
-            grad > LIMITS.wind.gradient.yellow || grad3000 > LIMITS.wind.gradient3000.yellow) return 1;
+        if (ws > L.wind.surface.yellow || wg > L.wind.gusts.yellow ||
+            gustSpread > L.wind.gustSpread.yellow ||
+            w850 > L.wind.w850.yellow || w800 > L.wind.w800.yellow || w700 > L.wind.w700.yellow ||
+            grad > L.wind.gradient.yellow || grad3000 > L.wind.gradient3000.yellow) return 1;
     }
     // Thermik (nur wenn Filter aktiv)
     if (filter.thermik) {
-        if (fogRisk === 'severe' || cape > LIMITS.cape.yellow || li < LIMITS.liftedIndex.yellow) return 1;
+        if (fogRisk === 'severe' || cape > L.cape.yellow || li < L.liftedIndex.yellow) return 1;
     }
     // Wolken (nur wenn Filter aktiv)
     if (filter.clouds) {
-        if (cloudLow > LIMITS.clouds.low.yellow) return 1;
+        if (cloudLow > L.clouds.low.yellow) return 1;
     }
     // Niederschlag (nur wenn Filter aktiv)
     if (filter.precip) {
-        if (precip > LIMITS.precip.yellow || showers > LIMITS.showers.yellow) return 1;
+        if (precip > L.precip.yellow || showers > L.showers.yellow) return 1;
     }
 
     // === VORSICHT Kriterien (Score 2) ===
     // Wind (nur wenn Filter aktiv)
     if (filter.wind) {
-        if (ws > LIMITS.wind.surface.green || wg > LIMITS.wind.gusts.green ||
-            gustSpread > LIMITS.wind.gustSpread.green ||
-            w850 > LIMITS.wind.w850.green || w800 > LIMITS.wind.w800.green || w700 > LIMITS.wind.w700.green ||
-            grad > LIMITS.wind.gradient.green || grad3000 > LIMITS.wind.gradient3000.green) return 2;
+        if (ws > L.wind.surface.green || wg > L.wind.gusts.green ||
+            gustSpread > L.wind.gustSpread.green ||
+            w850 > L.wind.w850.green || w800 > L.wind.w800.green || w700 > L.wind.w700.green ||
+            grad > L.wind.gradient.green || grad3000 > L.wind.gradient3000.green) return 2;
     }
     // Thermik/Nebel (nur wenn Filter aktiv)
     if (filter.thermik) {
         if (fogRisk === 'likely' || fogRisk === 'possible' ||
-            spread > LIMITS.spread.max || cape > LIMITS.cape.green || li < LIMITS.liftedIndex.green) return 2;
+            spread > L.spread.max || cape > L.cape.green || li < L.liftedIndex.green) return 2;
     }
     // Wolken/Sicht (nur wenn Filter aktiv)
     if (filter.clouds) {
-        if (cloudTotal > LIMITS.clouds.total.yellow || cloudLow > LIMITS.clouds.low.green || vis < LIMITS.visibility.green) return 2;
+        if (cloudTotal > L.clouds.total.yellow || cloudLow > L.clouds.low.green || vis < L.visibility.green) return 2;
     }
     // Niederschlag (nur wenn Filter aktiv)
     if (filter.precip) {
-        if (precip > LIMITS.precip.green || precipProb > LIMITS.precipProb.yellow || showers > LIMITS.showers.green) return 2;
+        if (precip > L.precip.green || precipProb > L.precipProb.yellow || showers > L.showers.green) return 2;
     }
 
     // === Alles OK (Score 3) ===
@@ -593,18 +622,19 @@ export function calculateBeginnerSafety(i) {
  * @returns {1|2|3} Score: 1=nogo, 2=caution, 3=go
  */
 export function evaluateWind(ws, wg, w850, w800, w700, grad, grad3000) {
+    const L = getEffectiveLimits();
     const gustFactor = getGustFactor(ws, wg);
     const gustSpread = wg - ws;
-    if (ws > LIMITS.wind.surface.yellow || wg > LIMITS.wind.gusts.yellow || w850 > LIMITS.wind.w850.yellow ||
-        w800 > LIMITS.wind.w800.yellow || w700 > LIMITS.wind.w700.yellow ||
-        grad > LIMITS.wind.gradient.yellow || grad3000 > LIMITS.wind.gradient3000.yellow ||
-        gustSpread > LIMITS.wind.gustSpread.yellow ||
-        (gustFactor > LIMITS.wind.gustFactor.yellow && wg > LIMITS.wind.gustFactorMinWind.yellow)) return 1;
-    if (ws > LIMITS.wind.surface.green || wg > LIMITS.wind.gusts.green || w850 > LIMITS.wind.w850.green ||
-        w800 > LIMITS.wind.w800.green || w700 > LIMITS.wind.w700.green ||
-        grad > LIMITS.wind.gradient.green || grad3000 > LIMITS.wind.gradient3000.green ||
-        gustSpread > LIMITS.wind.gustSpread.green ||
-        (gustFactor > LIMITS.wind.gustFactor.green && wg > LIMITS.wind.gustFactorMinWind.green)) return 2;
+    if (ws > L.wind.surface.yellow || wg > L.wind.gusts.yellow || w850 > L.wind.w850.yellow ||
+        w800 > L.wind.w800.yellow || w700 > L.wind.w700.yellow ||
+        grad > L.wind.gradient.yellow || grad3000 > L.wind.gradient3000.yellow ||
+        gustSpread > L.wind.gustSpread.yellow ||
+        (gustFactor > L.wind.gustFactor.yellow && wg > L.wind.gustFactorMinWind.yellow)) return 1;
+    if (ws > L.wind.surface.green || wg > L.wind.gusts.green || w850 > L.wind.w850.green ||
+        w800 > L.wind.w800.green || w700 > L.wind.w700.green ||
+        grad > L.wind.gradient.green || grad3000 > L.wind.gradient3000.green ||
+        gustSpread > L.wind.gustSpread.green ||
+        (gustFactor > L.wind.gustFactor.green && wg > L.wind.gustFactorMinWind.green)) return 2;
     return 3;
 }
 
@@ -617,11 +647,12 @@ export function evaluateWind(ws, wg, w850, w800, w700, grad, grad3000) {
  * @returns {1|2|3} Score: 1=nogo, 2=caution, 3=go
  */
 export function evaluateThermik(spread, cape, li) {
-    // CAPE und Lifted Index bewerten (unverändert)
-    if (cape > LIMITS.cape.yellow || li < LIMITS.liftedIndex.yellow) return 1;
-    if (cape > LIMITS.cape.green || li < LIMITS.liftedIndex.green) return 2;
+    const L = getEffectiveLimits();
+    // CAPE und Lifted Index bewerten
+    if (cape > L.cape.yellow || li < L.liftedIndex.yellow) return 1;
+    if (cape > L.cape.green || li < L.liftedIndex.green) return 2;
     // Spread nur noch für Thermik-Qualität (sehr trocken = schlechte Thermik)
-    if (spread !== null && spread > LIMITS.spread.max) return 2;
+    if (spread !== null && spread > L.spread.max) return 2;
     return 3;
 }
 
@@ -636,8 +667,9 @@ export function evaluateThermik(spread, cape, li) {
  * @returns {1|2|3} Score: 1=nogo, 2=caution, 3=go
  */
 export function evaluateClouds(cloudTotal, cloudLow, visibility, spread = null, windSpeed = null) {
+    const L = getEffectiveLimits();
     // Tiefe Wolken sind immer kritisch (thermikdämpfend)
-    if (cloudLow > LIMITS.clouds.low.yellow) return 1;
+    if (cloudLow > L.clouds.low.yellow) return 1;
 
     // Intelligente Nebel-Erkennung wenn alle Parameter verfügbar
     if (spread !== null && windSpeed !== null) {
@@ -646,12 +678,12 @@ export function evaluateClouds(cloudTotal, cloudLow, visibility, spread = null, 
         if (fogRisk === 'likely' || fogRisk === 'possible') return 2;
     } else {
         // Fallback: Nur Sichtweite bewerten
-        if (visibility < LIMITS.fog.visibilitySevere) return 1;
-        if (visibility < LIMITS.fog.visibilityWarning) return 2;
+        if (visibility < L.fog.visibilitySevere) return 1;
+        if (visibility < L.fog.visibilityWarning) return 2;
     }
 
     // Restliche Wolken-Bewertung
-    if (cloudTotal > LIMITS.clouds.total.yellow || cloudLow > LIMITS.clouds.low.green || visibility < LIMITS.visibility.green) return 2;
+    if (cloudTotal > L.clouds.total.yellow || cloudLow > L.clouds.low.green || visibility < L.visibility.green) return 2;
     return 3;
 }
 
@@ -664,8 +696,9 @@ export function evaluateClouds(cloudTotal, cloudLow, visibility, spread = null, 
  * @returns {1|2|3} Score: 1=nogo, 2=caution, 3=go
  */
 export function evaluatePrecip(precip, precipProb, cape, showers = 0) {
-    if (precip > LIMITS.precip.yellow || cape > LIMITS.cape.yellow || showers > LIMITS.showers.yellow) return 1;
-    if (precip > LIMITS.precip.green || precipProb > LIMITS.precipProb.yellow || showers > LIMITS.showers.green) return 2;
+    const L = getEffectiveLimits();
+    if (precip > L.precip.yellow || cape > L.cape.yellow || showers > L.showers.yellow) return 1;
+    if (precip > L.precip.green || precipProb > L.precipProb.yellow || showers > L.showers.green) return 2;
     return 3;
 }
 

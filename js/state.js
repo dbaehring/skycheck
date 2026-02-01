@@ -22,5 +22,8 @@ export const state = {
         thermik: true,
         clouds: true,
         precip: true
-    }
+    },
+    // Expertenmodus: Custom Limits
+    expertMode: false,
+    customLimits: null  // Überschreibt LIMITS wenn gesetzt
 };
