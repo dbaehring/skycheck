@@ -306,7 +306,7 @@ h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: line
 .compare-card-label.go { background: var(--green-bg); color: var(--green); }
 .compare-card-label.caution { background: var(--yellow-bg); color: var(--yellow); }
 .compare-card-label.nogo { background: var(--red-bg); color: var(--red); }
-.favorite-btn .fav-quick-info { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--bg-card); border: 1px solid var(--border); padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.7rem; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.2s; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); pointer-events: none; }
+.favorite-btn .fav-quick-info { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 500; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.2s; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.2); pointer-events: none; }
 .favorite-btn .fav-quick-info::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: var(--border); }
 .favorite-btn:hover .fav-quick-info { opacity: 1; visibility: visible; }
 .favorite-btn { position: relative; }

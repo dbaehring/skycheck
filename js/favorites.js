@@ -364,7 +364,7 @@ async function fetchQuickWeather(lat, lon, cacheKey) {
         // Analysiere die nächsten Stunden (6-20 Uhr heute)
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
-        let bestScore = 1, bestWindow = null, currentWindow = null;
+        let worstScore = 3, bestWindow = null, currentWindow = null;
 
         for (let h = 6; h <= 20; h++) {
             const ts = todayStr + 'T' + h.toString().padStart(2, '0') + ':00';
@@ -380,7 +380,10 @@ async function fetchQuickWeather(lat, lon, cacheKey) {
             if (ws > LIMITS.wind.surface.yellow || wg > LIMITS.wind.gusts.yellow || cape > LIMITS.cape.yellow) score = 1;
             else if (ws > LIMITS.wind.surface.green || wg > LIMITS.wind.gusts.green || cape > LIMITS.cape.green) score = 2;
 
-            if (score >= bestScore) bestScore = score;
+            // Schlechtesten Score tracken (niedrigster Wert = schlechteste Bewertung)
+            if (score < worstScore) worstScore = score;
+
+            // Grüne Fenster tracken
             if (score === 3) {
                 if (!currentWindow) currentWindow = { start: h, end: h };
                 else currentWindow.end = h;
@@ -396,14 +399,16 @@ async function fetchQuickWeather(lat, lon, cacheKey) {
         }
 
         const statusMap = { 3: 'go', 2: 'caution', 1: 'nogo' };
-        const labelMap = { 3: 'GO', 2: 'Prüfen', 1: 'No-Go' };
-        let info = labelMap[bestScore];
-        if (bestWindow && bestScore >= 2) {
+        const labelMap = { 3: 'GO', 2: 'Vorsicht', 1: 'No-Go' };
+        let info = labelMap[worstScore];
+        if (bestWindow) {
             info += ' ' + bestWindow.start + '-' + bestWindow.end + 'h';
+        } else if (worstScore === 1) {
+            info += ' (kein Fenster)';
         }
 
         state.favoriteWeatherCache[cacheKey] = {
-            status: statusMap[bestScore],
+            status: statusMap[worstScore],
             info: info,
             timestamp: Date.now()
         };
