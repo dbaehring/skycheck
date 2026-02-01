@@ -1410,9 +1410,10 @@ footer a { color: var(--accent); text-decoration: none; }
 .expert-modal {
     max-width: 500px;
     width: 95%;
-    background: var(--bg-primary);
+    background: var(--bg-card);
     border-radius: 16px;
     overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
 }
 .expert-header {
     background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
