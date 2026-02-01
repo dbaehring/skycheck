@@ -999,6 +999,177 @@ export function toggleParamFilter() {
     }
 }
 
+// === Expertenmodus Funktionen ===
+
+/**
+ * Lädt den Expertenmodus-Zustand aus localStorage
+ */
+export function loadExpertMode() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEYS.EXPERT_MODE);
+        state.expertMode = saved === 'true';
+
+        const customLimits = localStorage.getItem(STORAGE_KEYS.CUSTOM_LIMITS);
+        if (customLimits) {
+            state.customLimits = JSON.parse(customLimits);
+        }
+
+        updateExpertModeUI();
+    } catch (e) {
+        console.warn('Could not load expert mode state:', e);
+    }
+}
+
+/**
+ * Speichert den Expertenmodus-Zustand
+ */
+function saveExpertMode() {
+    localStorage.setItem(STORAGE_KEYS.EXPERT_MODE, state.expertMode.toString());
+    if (state.customLimits) {
+        localStorage.setItem(STORAGE_KEYS.CUSTOM_LIMITS, JSON.stringify(state.customLimits));
+    }
+}
+
+/**
+ * Toggle für Expertenmodus
+ */
+export function toggleExpertMode() {
+    state.expertMode = !state.expertMode;
+    saveExpertMode();
+    updateExpertModeUI();
+
+    // Anzeige aktualisieren wenn Daten vorhanden
+    if (state.hourlyData && state.selectedHourIndex !== null && state.forecastDays?.length > 0) {
+        updateDisplay(state.selectedHourIndex);
+        if (state.forecastDays[state.selectedDay]) {
+            buildTimeline(state.forecastDays[state.selectedDay].date);
+            buildDayComparison();
+        }
+    }
+}
+
+/**
+ * UI für Expertenmodus aktualisieren
+ */
+function updateExpertModeUI() {
+    const toggle = document.getElementById('expertModeToggle');
+    const settingsBtn = document.getElementById('expertSettingsBtn');
+    const section = document.querySelector('.expert-mode-section');
+    const hint = document.getElementById('expertModeHint');
+
+    if (toggle) toggle.checked = state.expertMode;
+    if (settingsBtn) settingsBtn.disabled = !state.expertMode;
+    if (section) section.classList.toggle('active', state.expertMode);
+    if (hint) {
+        hint.textContent = state.expertMode
+            ? (state.customLimits ? 'Eigene Grenzwerte aktiv' : 'Klicke "Anpassen" um Grenzwerte zu setzen')
+            : 'Eigene Grenzwerte für die Ampel-Bewertung definieren';
+    }
+}
+
+/**
+ * Öffnet das Expertenmodus-Einstellungen Modal
+ */
+export function openExpertSettings() {
+    if (!state.expertMode) return;
+
+    const modal = document.getElementById('expertModal');
+    if (modal) {
+        populateExpertForm();
+        modal.classList.add('visible');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+/**
+ * Schließt das Expertenmodus-Einstellungen Modal
+ */
+export function closeExpertSettings() {
+    const modal = document.getElementById('expertModal');
+    if (modal) {
+        modal.classList.remove('visible');
+        document.body.style.overflow = '';
+    }
+}
+
+/**
+ * Füllt das Expertenmodus-Formular mit aktuellen Werten
+ */
+function populateExpertForm() {
+    const currentLimits = state.customLimits || LIMITS;
+
+    // Wind
+    setInputValue('expertWindSurface', currentLimits.wind?.surface?.yellow, LIMITS.wind.surface.yellow);
+    setInputValue('expertWindGusts', currentLimits.wind?.gusts?.yellow, LIMITS.wind.gusts.yellow);
+    setInputValue('expertWind850', currentLimits.wind?.w850?.yellow, LIMITS.wind.w850.yellow);
+    setInputValue('expertWind700', currentLimits.wind?.w700?.yellow, LIMITS.wind.w700.yellow);
+
+    // Thermik
+    setInputValue('expertCape', currentLimits.cape?.yellow, LIMITS.cape.yellow);
+
+    // Wolken/Sicht
+    setInputValue('expertCloudLow', currentLimits.clouds?.low?.yellow, LIMITS.clouds.low.yellow);
+    setInputValue('expertVisibility', currentLimits.visibility?.green, LIMITS.visibility.green);
+}
+
+function setInputValue(id, value, fallback) {
+    const input = document.getElementById(id);
+    if (input) {
+        input.value = value ?? fallback;
+        input.placeholder = fallback;
+    }
+}
+
+/**
+ * Speichert die Expertenmodus-Einstellungen
+ */
+export function saveExpertSettings() {
+    const customLimits = {
+        wind: {
+            surface: { yellow: getInputNumber('expertWindSurface', LIMITS.wind.surface.yellow) },
+            gusts: { yellow: getInputNumber('expertWindGusts', LIMITS.wind.gusts.yellow) },
+            w850: { yellow: getInputNumber('expertWind850', LIMITS.wind.w850.yellow) },
+            w700: { yellow: getInputNumber('expertWind700', LIMITS.wind.w700.yellow) }
+        },
+        cape: { yellow: getInputNumber('expertCape', LIMITS.cape.yellow) },
+        clouds: {
+            low: { yellow: getInputNumber('expertCloudLow', LIMITS.clouds.low.yellow) }
+        },
+        visibility: { green: getInputNumber('expertVisibility', LIMITS.visibility.green) }
+    };
+
+    state.customLimits = customLimits;
+    saveExpertMode();
+    updateExpertModeUI();
+    closeExpertSettings();
+
+    // Anzeige aktualisieren
+    if (state.hourlyData && state.selectedHourIndex !== null && state.forecastDays?.length > 0) {
+        updateDisplay(state.selectedHourIndex);
+        if (state.forecastDays[state.selectedDay]) {
+            buildTimeline(state.forecastDays[state.selectedDay].date);
+            buildDayComparison();
+        }
+    }
+}
+
+function getInputNumber(id, fallback) {
+    const input = document.getElementById(id);
+    if (!input) return fallback;
+    const val = parseFloat(input.value);
+    return isNaN(val) ? fallback : val;
+}
+
+/**
+ * Setzt die Expertenmodus-Einstellungen auf Standardwerte zurück
+ */
+export function resetExpertSettings() {
+    state.customLimits = null;
+    localStorage.removeItem(STORAGE_KEYS.CUSTOM_LIMITS);
+    populateExpertForm();
+    updateExpertModeUI();
+}
+
 // === Phase 6: About-Modal Funktionen ===
 
 /**

@@ -154,6 +154,17 @@
                                 </label>
                             </div>
                             <button class="param-filter-reset" id="paramFilterReset">Alle aktivieren</button>
+                            <div class="expert-mode-section">
+                                <div class="expert-mode-toggle">
+                                    <label class="expert-toggle-label">
+                                        <input type="checkbox" id="expertModeToggle">
+                                        <span class="expert-toggle-switch"></span>
+                                        <span class="expert-toggle-text">⚙️ Expertenmodus</span>
+                                    </label>
+                                    <button class="expert-settings-btn" id="expertSettingsBtn" disabled title="Grenzwerte anpassen">Anpassen</button>
+                                </div>
+                                <p class="expert-mode-hint" id="expertModeHint">Eigene Grenzwerte für die Ampel-Bewertung definieren</p>
+                            </div>
                         </div>
                     </div>
                     <div class="timeline-card" role="region" aria-label="Stündlicher Tagesverlauf"><h3>Tagesverlauf (6-20 Uhr)</h3><div class="timeline" id="timeline" role="listbox" aria-label="Stunden auswählen"></div></div>
@@ -524,6 +535,90 @@
             <div class="about-footer">
                 <a href="mailto:danielbaehring@gmail.com" class="about-feedback-link">📧 Feedback senden</a>
                 <p class="about-credits">Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a></p>
+            </div>
+        </div>
+    </div>
+    <!-- Expert Mode Modal -->
+    <div class="modal-overlay" id="expertModal" role="dialog" aria-modal="true" aria-labelledby="expertModalTitle">
+        <div class="modal expert-modal">
+            <button class="modal-close" id="closeExpertModal" aria-label="Dialog schließen">×</button>
+            <div class="expert-header">
+                <h2 id="expertModalTitle">⚙️ Expertenmodus</h2>
+                <p class="expert-subtitle">Eigene Grenzwerte für die Ampel-Bewertung</p>
+            </div>
+            <div class="expert-content">
+                <p class="expert-info">Hier kannst du die NO-GO Schwellenwerte (Gelb → Rot) anpassen. Die Grün-Schwellen werden automatisch berechnet.</p>
+
+                <div class="expert-section">
+                    <h3>💨 Wind</h3>
+                    <div class="expert-grid">
+                        <label class="expert-field">
+                            <span class="expert-label">Bodenwind</span>
+                            <div class="expert-input-wrap">
+                                <input type="number" id="expertWindSurface" min="5" max="50" step="1">
+                                <span class="expert-unit">km/h</span>
+                            </div>
+                        </label>
+                        <label class="expert-field">
+                            <span class="expert-label">Böen</span>
+                            <div class="expert-input-wrap">
+                                <input type="number" id="expertWindGusts" min="10" max="60" step="1">
+                                <span class="expert-unit">km/h</span>
+                            </div>
+                        </label>
+                        <label class="expert-field">
+                            <span class="expert-label">Wind 1500m</span>
+                            <div class="expert-input-wrap">
+                                <input type="number" id="expertWind850" min="10" max="60" step="1">
+                                <span class="expert-unit">km/h</span>
+                            </div>
+                        </label>
+                        <label class="expert-field">
+                            <span class="expert-label">Wind 3000m</span>
+                            <div class="expert-input-wrap">
+                                <input type="number" id="expertWind700" min="15" max="80" step="1">
+                                <span class="expert-unit">km/h</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="expert-section">
+                    <h3>🌡️ Thermik</h3>
+                    <div class="expert-grid">
+                        <label class="expert-field">
+                            <span class="expert-label">CAPE max</span>
+                            <div class="expert-input-wrap">
+                                <input type="number" id="expertCape" min="100" max="3000" step="100">
+                                <span class="expert-unit">J/kg</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="expert-section">
+                    <h3>☁️ Wolken & Sicht</h3>
+                    <div class="expert-grid">
+                        <label class="expert-field">
+                            <span class="expert-label">Tiefe Wolken max</span>
+                            <div class="expert-input-wrap">
+                                <input type="number" id="expertCloudLow" min="20" max="100" step="5">
+                                <span class="expert-unit">%</span>
+                            </div>
+                        </label>
+                        <label class="expert-field">
+                            <span class="expert-label">Sicht min</span>
+                            <div class="expert-input-wrap">
+                                <input type="number" id="expertVisibility" min="1000" max="20000" step="1000">
+                                <span class="expert-unit">m</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="expert-footer">
+                <button class="expert-btn expert-btn-reset" id="expertResetBtn">Zurücksetzen</button>
+                <button class="expert-btn expert-btn-save" id="expertSaveBtn">Speichern</button>
             </div>
         </div>
     </div>

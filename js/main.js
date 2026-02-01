@@ -67,7 +67,14 @@ import {
     initTouchTooltips,
     renderWindDiagram,
     toggleWindDiagram,
-    loadWindDiagramState
+    loadWindDiagramState,
+    // Expertenmodus
+    loadExpertMode,
+    toggleExpertMode,
+    openExpertSettings,
+    closeExpertSettings,
+    saveExpertSettings,
+    resetExpertSettings
 } from './ui.js';
 
 /**
@@ -99,6 +106,7 @@ async function initApp() {
         loadHeightCardState();
         loadParamFilter();
         loadWindDiagramState();
+        loadExpertMode();
 
         // 7. Touch-Tooltips initialisieren
         initTouchTooltips();
@@ -364,6 +372,41 @@ function registerEventListeners() {
     const windProfileToggle = document.getElementById('windProfileToggle');
     if (windProfileToggle) {
         windProfileToggle.addEventListener('click', toggleWindDiagram);
+    }
+
+    // === Expertenmodus Event-Listener ===
+    const expertModeToggle = document.getElementById('expertModeToggle');
+    if (expertModeToggle) {
+        expertModeToggle.addEventListener('change', toggleExpertMode);
+    }
+
+    const expertSettingsBtn = document.getElementById('expertSettingsBtn');
+    if (expertSettingsBtn) {
+        expertSettingsBtn.addEventListener('click', openExpertSettings);
+    }
+
+    const closeExpertModalBtn = document.getElementById('closeExpertModal');
+    if (closeExpertModalBtn) {
+        closeExpertModalBtn.addEventListener('click', closeExpertSettings);
+    }
+
+    const expertModal = document.getElementById('expertModal');
+    if (expertModal) {
+        expertModal.addEventListener('click', (e) => {
+            if (e.target === expertModal) {
+                closeExpertSettings();
+            }
+        });
+    }
+
+    const expertSaveBtn = document.getElementById('expertSaveBtn');
+    if (expertSaveBtn) {
+        expertSaveBtn.addEventListener('click', saveExpertSettings);
+    }
+
+    const expertResetBtn = document.getElementById('expertResetBtn');
+    if (expertResetBtn) {
+        expertResetBtn.addEventListener('click', resetExpertSettings);
     }
 }
 
