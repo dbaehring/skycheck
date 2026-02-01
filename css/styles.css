@@ -504,6 +504,7 @@ footer a { color: var(--accent); text-decoration: none; }
 .reason-param { font-family: 'Space Mono', monospace; font-weight: 600; padding: 0.1rem 0.3rem; border-radius: 4px; font-size: 0.85rem; }
 .reason-param.red { background: var(--red-bg); color: var(--red); }
 .reason-param.yellow { background: var(--yellow-bg); color: var(--yellow); }
+.filter-hint { font-size: 0.8rem; color: var(--text-secondary); font-style: italic; opacity: 0.8; }
 /* PHASE 1 SAFETY: Konditioniertes Zeitfenster */
 .best-window.yellow { background: linear-gradient(135deg, var(--yellow-bg) 0%, rgba(217, 119, 6, 0.2) 100%); border-color: var(--yellow); }
 .best-window.yellow .best-window-text { color: var(--yellow); }

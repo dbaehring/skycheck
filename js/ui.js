@@ -358,7 +358,15 @@ export function updateDisplay(i) {
     const thermSc = evaluateThermik(spread, cape, li);
     const cloudSc = evaluateClouds(ct, cl, vis, spread, ws);  // Mit intelligenter Nebel-Erkennung
     const precSc = evaluatePrecip(prec, pp, cape, showers);
-    const worst = Math.min(windSc, thermSc, cloudSc, precSc);
+
+    // Filter anwenden: nur gefilterte Parameter in Bewertung einbeziehen
+    const filter = state.paramFilter || { wind: true, thermik: true, clouds: true, precip: true };
+    const scores = [];
+    if (filter.wind) scores.push(windSc);
+    if (filter.thermik) scores.push(thermSc);
+    if (filter.clouds) scores.push(cloudSc);
+    if (filter.precip) scores.push(precSc);
+    const worst = scores.length > 0 ? Math.min(...scores) : 3;
 
     updateOverallAssessment(worst);
 
@@ -490,27 +498,36 @@ function updateOverallAssessment(sc) {
     }
 }
 
-// PHASE 1 SAFETY: Kurzfassung
+// PHASE 1 SAFETY: Kurzfassung (mit Filter-Support)
 function updateReasonSummary(score, ws, wg, w700, grad, cape, vis, spread, cloudLow) {
     const el = document.getElementById('reasonSummary'), textEl = document.getElementById('reasonText');
     el.className = 'reason-summary';
     const gustSpread = wg - ws; // Böen-Differenz
     const fogRisk = getFogRisk(spread || 10, ws, vis); // Intelligente Nebel-Erkennung
+    const filter = state.paramFilter || { wind: true, thermik: true, clouds: true, precip: true };
+
+    // Prüfen ob Filter aktiv ist (nicht alle Parameter ausgewählt)
+    const filterActive = !filter.wind || !filter.thermik || !filter.clouds || !filter.precip;
+    const filterHint = filterActive ? ' <span class="filter-hint">(Filter aktiv)</span>' : '';
 
     if (score === 3) {
         el.classList.add('go');
-        textEl.innerHTML = '✓ <strong>Alle Parameter im sicheren Bereich.</strong> Gute Bedingungen für einen Flug – dennoch vor Ort die Verhältnisse prüfen.';
+        textEl.innerHTML = '✓ <strong>Alle Parameter im sicheren Bereich.</strong>' + filterHint + ' Gute Bedingungen für einen Flug – dennoch vor Ort die Verhältnisse prüfen.';
     } else if (score === 1) {
         el.classList.add('nogo');
         const criticals = [];
         const inAlps = isInAlpineRegion(state.currentLocation.lat, state.currentLocation.lon);
-        if (cape > LIMITS.cape.yellow) criticals.push({ name: 'CAPE', value: Math.round(cape) + ' J/kg', issue: 'Gewittergefahr' });
-        if (w700 > LIMITS.wind.w700.yellow) criticals.push({ name: 'Höhenwind', value: Math.round(w700) + ' km/h', issue: inAlps ? 'Föhngefahr' : 'zu stark' });
-        if (wg > LIMITS.wind.gusts.yellow) criticals.push({ name: 'Böen', value: Math.round(wg) + ' km/h', issue: 'zu stark' });
-        if (gustSpread > LIMITS.wind.gustSpread.yellow) criticals.push({ name: 'Böigkeit', value: Math.round(gustSpread) + ' km/h', issue: 'unruhig' });
-        if (grad > LIMITS.wind.gradient.yellow) criticals.push({ name: 'Gradient', value: Math.round(grad) + ' km/h', issue: 'Windscherung' });
-        // Intelligente Nebel-Erkennung statt nur Spread
-        if (fogRisk === 'severe') {
+        // Thermik-Filter
+        if (filter.thermik && cape > LIMITS.cape.yellow) criticals.push({ name: 'CAPE', value: Math.round(cape) + ' J/kg', issue: 'Gewittergefahr' });
+        // Wind-Filter
+        if (filter.wind) {
+            if (w700 > LIMITS.wind.w700.yellow) criticals.push({ name: 'Höhenwind', value: Math.round(w700) + ' km/h', issue: inAlps ? 'Föhngefahr' : 'zu stark' });
+            if (wg > LIMITS.wind.gusts.yellow) criticals.push({ name: 'Böen', value: Math.round(wg) + ' km/h', issue: 'zu stark' });
+            if (gustSpread > LIMITS.wind.gustSpread.yellow) criticals.push({ name: 'Böigkeit', value: Math.round(gustSpread) + ' km/h', issue: 'unruhig' });
+            if (grad > LIMITS.wind.gradient.yellow) criticals.push({ name: 'Gradient', value: Math.round(grad) + ' km/h', issue: 'Windscherung' });
+        }
+        // Wolken-Filter (Nebel gehört zu Wolken/Sicht)
+        if (filter.clouds && fogRisk === 'severe') {
             if (vis < LIMITS.fog.visibilitySevere) {
                 criticals.push({ name: 'Sicht', value: (vis/1000).toFixed(1) + ' km', issue: 'kritisch' });
             } else {
@@ -520,30 +537,36 @@ function updateReasonSummary(score, ws, wg, w700, grad, cape, vis, spread, cloud
 
         if (criticals.length > 0) {
             const main = criticals.slice(0, 2);
-            textEl.innerHTML = '✗ <strong>Nicht fliegbar wegen:</strong> ' + main.map(c => '<span class="reason-param red">' + c.name + ' ' + c.value + '</span> (' + c.issue + ')').join(', ');
+            textEl.innerHTML = '✗ <strong>Nicht fliegbar wegen:</strong> ' + main.map(c => '<span class="reason-param red">' + c.name + ' ' + c.value + '</span> (' + c.issue + ')').join(', ') + filterHint;
         } else {
-            textEl.innerHTML = '✗ <strong>Mehrere Parameter im kritischen Bereich.</strong> Siehe Warnungen unten.';
+            textEl.innerHTML = '✗ <strong>Mehrere Parameter im kritischen Bereich.</strong>' + filterHint + ' Siehe Warnungen unten.';
         }
     } else {
         el.classList.add('caution');
         const elevated = [];
-        if (wg > LIMITS.wind.gusts.green) elevated.push({ name: 'Böen', value: Math.round(wg) + ' km/h' });
-        if (gustSpread > LIMITS.wind.gustSpread.green) elevated.push({ name: 'Böigkeit', value: Math.round(gustSpread) + ' km/h Differenz' });
-        if (w700 > LIMITS.wind.w700.green) elevated.push({ name: 'Höhenwind', value: Math.round(w700) + ' km/h' });
-        if (ws > LIMITS.wind.surface.green) elevated.push({ name: 'Bodenwind', value: Math.round(ws) + ' km/h' });
-        if (cape > LIMITS.cape.green) elevated.push({ name: 'CAPE', value: Math.round(cape) + ' J/kg' });
-        if (grad > LIMITS.wind.gradient.green) elevated.push({ name: 'Gradient', value: Math.round(grad) + ' km/h' });
-        if (cloudLow > LIMITS.clouds.low.green) elevated.push({ name: 'Tiefe Wolken', value: cloudLow + '%' });
-        // Nebel-Warnung nur wenn Risiko besteht
-        if (fogRisk === 'likely' || fogRisk === 'possible') {
-            elevated.push({ name: 'Nebelrisiko', value: 'Webcam prüfen' });
+        // Wind-Filter
+        if (filter.wind) {
+            if (wg > LIMITS.wind.gusts.green) elevated.push({ name: 'Böen', value: Math.round(wg) + ' km/h' });
+            if (gustSpread > LIMITS.wind.gustSpread.green) elevated.push({ name: 'Böigkeit', value: Math.round(gustSpread) + ' km/h Differenz' });
+            if (w700 > LIMITS.wind.w700.green) elevated.push({ name: 'Höhenwind', value: Math.round(w700) + ' km/h' });
+            if (ws > LIMITS.wind.surface.green) elevated.push({ name: 'Bodenwind', value: Math.round(ws) + ' km/h' });
+            if (grad > LIMITS.wind.gradient.green) elevated.push({ name: 'Gradient', value: Math.round(grad) + ' km/h' });
+        }
+        // Thermik-Filter
+        if (filter.thermik && cape > LIMITS.cape.green) elevated.push({ name: 'CAPE', value: Math.round(cape) + ' J/kg' });
+        // Wolken-Filter
+        if (filter.clouds) {
+            if (cloudLow > LIMITS.clouds.low.green) elevated.push({ name: 'Tiefe Wolken', value: cloudLow + '%' });
+            if (fogRisk === 'likely' || fogRisk === 'possible') {
+                elevated.push({ name: 'Nebelrisiko', value: 'Webcam prüfen' });
+            }
         }
 
         if (elevated.length > 0) {
             const main = elevated.slice(0, 2);
-            textEl.innerHTML = '⚠ <strong>Hauptgrund:</strong> ' + main.map(e => '<span class="reason-param yellow">' + e.name + ' ' + e.value + '</span>').join(' und ') + '. Erhöhte Aufmerksamkeit nötig.';
+            textEl.innerHTML = '⚠ <strong>Hauptgrund:</strong> ' + main.map(e => '<span class="reason-param yellow">' + e.name + ' ' + e.value + '</span>').join(' und ') + '.' + filterHint + ' Erhöhte Aufmerksamkeit nötig.';
         } else {
-            textEl.innerHTML = '⚠ <strong>Einige Parameter leicht erhöht.</strong> Siehe gelbe Hinweise unten.';
+            textEl.innerHTML = '⚠ <strong>Einige Parameter leicht erhöht.</strong>' + filterHint + ' Siehe gelbe Hinweise unten.';
         }
     }
 }
