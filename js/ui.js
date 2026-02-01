@@ -32,6 +32,8 @@ function getDomCache() {
             windDirSurface: document.getElementById('windDirSurface'),
             windGusts: document.getElementById('windGusts'),
             gustSpread: document.getElementById('gustSpread'),
+            wind900: document.getElementById('wind900'),
+            windDir900: document.getElementById('windDir900'),
             wind850: document.getElementById('wind850'),
             windDir850: document.getElementById('windDir850'),
             wind800: document.getElementById('wind800'),
@@ -75,9 +77,11 @@ function getDomCache() {
             currentTemp: document.getElementById('currentTemp'),
             // Windrose
             windArrowSurface: document.getElementById('windArrowSurface'),
+            windArrow900: document.getElementById('windArrow900'),
             windArrow850: document.getElementById('windArrow850'),
             windArrow700: document.getElementById('windArrow700'),
             windroseSurface: document.getElementById('windroseSurface'),
+            windrose900: document.getElementById('windrose900'),
             windrose850: document.getElementById('windrose850'),
             windrose700: document.getElementById('windrose700'),
             windroseShearWarning: document.getElementById('windroseShearWarning')
@@ -125,12 +129,13 @@ export function setupDays() {
                 // Kategorie-Scores berechnen (schlechtester Wert zählt)
                 const ws = h.wind_speed_10m[i] || 0;
                 const wg = h.wind_gusts_10m[i] || 0;
+                const w900 = h.wind_speed_900hPa?.[i] || 0;
                 const w850 = h.wind_speed_850hPa?.[i] || 0;
                 const w800 = h.wind_speed_800hPa?.[i] || 0;
                 const w700 = h.wind_speed_700hPa?.[i] || 0;
                 const grad = Math.abs((h.wind_speed_850hPa?.[i] || 0) - (h.wind_speed_10m[i] || 0));
                 const grad3000 = Math.abs((h.wind_speed_700hPa?.[i] || 0) - (h.wind_speed_10m[i] || 0));  // Gradient Boden-3000m
-                const wScore = evaluateWind(ws, wg, w850, w800, w700, grad, grad3000);
+                const wScore = evaluateWind(ws, wg, w900, w850, w800, w700, grad, grad3000);
                 if (wScore < windScore) windScore = wScore;
 
                 const temp = h.temperature_2m[i];
@@ -337,9 +342,11 @@ export function selectHour(idx) {
 export function updateDisplay(i) {
     const h = state.hourlyData, pi = i > 0 ? i - 1 : null;
     const ws = validateValue(h.wind_speed_10m[i], 0), wg = validateValue(h.wind_gusts_10m[i], 0);
+    const w900 = validateValue(h.wind_speed_900hPa?.[i], 0);
     const w850 = validateValue(h.wind_speed_850hPa?.[i], 0), w800 = validateValue(h.wind_speed_800hPa?.[i], 0);
     const w700 = validateValue(h.wind_speed_700hPa?.[i], 0);
     const wdSurface = validateValue(h.wind_direction_10m[i], 0);
+    const wd900 = validateValue(h.wind_direction_900hPa?.[i], 0);
     const wd850 = validateValue(h.wind_direction_850hPa?.[i], 0), wd800 = validateValue(h.wind_direction_800hPa?.[i], 0);
     const wd700 = validateValue(h.wind_direction_700hPa?.[i], 0);
     const grad = Math.abs(w850 - ws), grad3000 = Math.abs(w700 - ws);  // Beide Gradienten zu Boden
@@ -354,7 +361,7 @@ export function updateDisplay(i) {
     const showers = validateValue(h.showers?.[i], 0), weatherCode = validateValue(h.weather_code?.[i], 0);
     const cloudBase = (temp !== null && dew !== null) ? calculateCloudBase(temp, dew, state.currentLocation.elevation) : null;
 
-    const windSc = evaluateWind(ws, wg, w850, w800, w700, grad, grad3000);
+    const windSc = evaluateWind(ws, wg, w900, w850, w800, w700, grad, grad3000);
     const thermSc = evaluateThermik(spread, cape, li);
     const cloudSc = evaluateClouds(ct, cl, vis, spread, ws);  // Mit intelligenter Nebel-Erkennung
     const precSc = evaluatePrecip(prec, pp, cape, showers);
@@ -387,7 +394,7 @@ export function updateDisplay(i) {
     document.getElementById('killerWarnings')?.classList.remove('visible');
     updateReasonSummary(worst, ws, wg, w700, grad, cape, vis, spread, cl);
     updateWarnings(ws, wg, w850, w700, grad, spread, cape, li, cl, prec, vis, showers, freezing, boundaryLayer);
-    updateWindrose(wdSurface, wd850, wd700, ws, w850, w700);
+    updateWindrose(wdSurface, wd900, wd850, wd700, ws, w900, w850, w700);
 
     // Höhen-Info (nutzt DOM-Cache)
     const dom = getDomCache();
@@ -406,6 +413,7 @@ export function updateDisplay(i) {
     // Trends (750hPa entfernt)
     const wt = getTrend(ws, pi !== null ? h.wind_speed_10m[pi] : null);
     const gt = getTrend(wg, pi !== null ? h.wind_gusts_10m[pi] : null);
+    const t900 = getTrend(w900, pi !== null ? h.wind_speed_900hPa?.[pi] : null);
     const t850 = getTrend(w850, pi !== null ? h.wind_speed_850hPa?.[pi] : null);
     const t800 = getTrend(w800, pi !== null ? h.wind_speed_800hPa?.[pi] : null);
     const t700 = getTrend(w700, pi !== null ? h.wind_speed_700hPa?.[pi] : null);
@@ -422,6 +430,10 @@ export function updateDisplay(i) {
     const gustSpread = wg - ws;
     document.getElementById('gustSpread').textContent = Math.round(gustSpread) + ' km/h';
     document.getElementById('gustSpread').className = 'param-value ' + getColorClass(gustSpread, LIMITS.wind.gustSpread);
+    // 900hPa (~1000m) - typische Flughöhe Hügel/Mittelgebirge
+    document.getElementById('wind900').innerHTML = Math.round(w900) + ' km/h <span class="trend ' + t900.cls + '">' + t900.symbol + '</span>';
+    document.getElementById('wind900').className = 'param-value ' + getColorClass(w900, LIMITS.wind.w900);
+    document.getElementById('windDir900').textContent = Math.round(wd900) + '° ' + getWindDir(wd900);
     document.getElementById('wind850').innerHTML = Math.round(w850) + ' km/h <span class="trend ' + t850.cls + '">' + t850.symbol + '</span>';
     document.getElementById('wind850').className = 'param-value ' + getColorClass(w850, LIMITS.wind.w850);
     document.getElementById('windDir850').textContent = Math.round(wd850) + '° ' + getWindDir(wd850);
@@ -648,19 +660,23 @@ function updateWarnings(ws, wg, w850, w700, grad, spread, cape, li, cloudLow, pr
 }
 
 // Windrose aktualisieren (nutzt DOM-Cache für Performance)
-function updateWindrose(wdSurface, wd850, wd700, wsSurface, ws850, ws700) {
+function updateWindrose(wdSurface, wd900, wd850, wd700, wsSurface, ws900, ws850, ws700) {
     const dom = getDomCache();
 
     dom.windArrowSurface.style.transform = 'translate(-50%, -100%) rotate(' + wdSurface + 'deg)';
+    dom.windArrow900.style.transform = 'translate(-50%, -100%) rotate(' + wd900 + 'deg)';
     dom.windArrow850.style.transform = 'translate(-50%, -100%) rotate(' + wd850 + 'deg)';
     dom.windArrow700.style.transform = 'translate(-50%, -100%) rotate(' + wd700 + 'deg)';
     dom.windroseSurface.textContent = Math.round(wsSurface) + ' km/h ' + getWindDir(wdSurface);
+    dom.windrose900.textContent = Math.round(ws900) + ' km/h ' + getWindDir(wd900);
     dom.windrose850.textContent = Math.round(ws850) + ' km/h ' + getWindDir(wd850);
     dom.windrose700.textContent = Math.round(ws700) + ' km/h ' + getWindDir(wd700);
 
-    const diff1 = Math.abs(wdSurface - wd850), norm1 = diff1 > 180 ? 360 - diff1 : diff1;
-    const diff2 = Math.abs(wdSurface - wd700), norm2 = diff2 > 180 ? 360 - diff2 : diff2;
-    if ((norm1 > 45 && ws850 > 15) || (norm2 > 60 && ws700 > 20)) {
+    // Windscherung prüfen (inkl. 900hPa)
+    const diff900 = Math.abs(wdSurface - wd900), norm900 = diff900 > 180 ? 360 - diff900 : diff900;
+    const diff850 = Math.abs(wdSurface - wd850), norm850 = diff850 > 180 ? 360 - diff850 : diff850;
+    const diff700 = Math.abs(wdSurface - wd700), norm700 = diff700 > 180 ? 360 - diff700 : diff700;
+    if ((norm900 > 30 && ws900 > 12) || (norm850 > 45 && ws850 > 15) || (norm700 > 60 && ws700 > 20)) {
         dom.windroseShearWarning.classList.add('visible');
     } else {
         dom.windroseShearWarning.classList.remove('visible');
@@ -684,10 +700,11 @@ export function toggleTheme() {
     setTheme(current === 'light' ? 'dark' : 'light');
 }
 
-// High Contrast Mode
+// High Contrast Mode (Standard = high)
 export function loadContrastMode() {
     const saved = localStorage.getItem('skycheck-contrast');
-    if (saved === 'high') {
+    // High Contrast ist Standard - nur deaktivieren wenn explizit 'normal' gespeichert
+    if (saved !== 'normal') {
         document.documentElement.setAttribute('data-contrast', 'high');
     }
 }
@@ -696,10 +713,10 @@ export function toggleContrastMode() {
     const current = document.documentElement.getAttribute('data-contrast');
     if (current === 'high') {
         document.documentElement.removeAttribute('data-contrast');
-        localStorage.removeItem('skycheck-contrast');
+        localStorage.setItem('skycheck-contrast', 'normal');  // Explizit speichern um Standard zu überschreiben
     } else {
         document.documentElement.setAttribute('data-contrast', 'high');
-        localStorage.setItem('skycheck-contrast', 'high');
+        localStorage.removeItem('skycheck-contrast');  // Standard wiederherstellen
     }
 }
 
@@ -1161,6 +1178,7 @@ function populateExpertForm() {
     setInputValue('expertWindGusts', currentLimits.wind?.gusts?.yellow, LIMITS.wind.gusts.yellow);
     setInputValue('expertGustSpread', currentLimits.wind?.gustSpread?.yellow, LIMITS.wind.gustSpread.yellow);
     setInputValue('expertGradient', currentLimits.wind?.gradient?.yellow, LIMITS.wind.gradient.yellow);
+    setInputValue('expertWind900', currentLimits.wind?.w900?.yellow, LIMITS.wind.w900.yellow);
     setInputValue('expertWind850', currentLimits.wind?.w850?.yellow, LIMITS.wind.w850.yellow);
     setInputValue('expertWind700', currentLimits.wind?.w700?.yellow, LIMITS.wind.w700.yellow);
 
@@ -1202,6 +1220,7 @@ export function saveExpertSettings() {
     const windGustsYellow = getInputNumber('expertWindGusts', LIMITS.wind.gusts.yellow);
     const gustSpreadYellow = getInputNumber('expertGustSpread', LIMITS.wind.gustSpread.yellow);
     const gradientYellow = getInputNumber('expertGradient', LIMITS.wind.gradient.yellow);
+    const w900Yellow = getInputNumber('expertWind900', LIMITS.wind.w900.yellow);
     const w850Yellow = getInputNumber('expertWind850', LIMITS.wind.w850.yellow);
     const w700Yellow = getInputNumber('expertWind700', LIMITS.wind.w700.yellow);
     const capeYellow = getInputNumber('expertCape', LIMITS.cape.yellow);
@@ -1228,6 +1247,10 @@ export function saveExpertSettings() {
             gradient: {
                 yellow: gradientYellow,
                 green: calcGreenThreshold(gradientYellow, LIMITS.wind.gradient.green, LIMITS.wind.gradient.yellow)
+            },
+            w900: {
+                yellow: w900Yellow,
+                green: calcGreenThreshold(w900Yellow, LIMITS.wind.w900.green, LIMITS.wind.w900.yellow)
             },
             w850: {
                 yellow: w850Yellow,
@@ -1306,6 +1329,7 @@ const EXPERT_PRESETS = {
             windGusts: 18,
             gustSpread: 10,
             gradient: 12,
+            w900: 18,
             w850: 20,
             w700: 22,
             cape: 500,
@@ -1323,6 +1347,7 @@ const EXPERT_PRESETS = {
             windGusts: LIMITS.wind.gusts.yellow,
             gustSpread: LIMITS.wind.gustSpread.yellow,
             gradient: LIMITS.wind.gradient.yellow,
+            w900: LIMITS.wind.w900.yellow,
             w850: LIMITS.wind.w850.yellow,
             w700: LIMITS.wind.w700.yellow,
             cape: LIMITS.cape.yellow,
@@ -1340,6 +1365,7 @@ const EXPERT_PRESETS = {
             windGusts: 32,
             gustSpread: 18,
             gradient: 22,
+            w900: 30,
             w850: 35,
             w700: 40,
             cape: 1500,
@@ -1363,6 +1389,7 @@ export function applyExpertPreset(presetName) {
     setInputValue('expertWindGusts', preset.values.windGusts, LIMITS.wind.gusts.yellow);
     setInputValue('expertGustSpread', preset.values.gustSpread, LIMITS.wind.gustSpread.yellow);
     setInputValue('expertGradient', preset.values.gradient, LIMITS.wind.gradient.yellow);
+    setInputValue('expertWind900', preset.values.w900, LIMITS.wind.w900.yellow);
     setInputValue('expertWind850', preset.values.w850, LIMITS.wind.w850.yellow);
     setInputValue('expertWind700', preset.values.w700, LIMITS.wind.w700.yellow);
     setInputValue('expertCape', preset.values.cape, LIMITS.cape.yellow);
@@ -1574,6 +1601,7 @@ function getWindArrowColor(speed, level) {
     // Unterschiedliche Grenzwerte je nach Höhe
     const limits = {
         ground: { green: 12, yellow: 18 },
+        '900': { green: 15, yellow: 25 },
         '850': { green: 18, yellow: 28 },
         '800': { green: 22, yellow: 30 },
         '700': { green: 25, yellow: 30 }
@@ -1605,6 +1633,7 @@ export function renderWindDiagram(dayStr) {
         { key: '700', speedKey: 'wind_speed_700hPa', dirKey: 'wind_direction_700hPa', label: '3000m' },
         { key: '800', speedKey: 'wind_speed_800hPa', dirKey: 'wind_direction_800hPa', label: '2000m' },
         { key: '850', speedKey: 'wind_speed_850hPa', dirKey: 'wind_direction_850hPa', label: '1500m' },
+        { key: '900', speedKey: 'wind_speed_900hPa', dirKey: 'wind_direction_900hPa', label: '1000m' },
         { key: 'ground', speedKey: 'wind_speed_10m', dirKey: 'wind_direction_10m', label: 'Boden' }
     ];
 
@@ -1674,8 +1703,8 @@ export function renderWindDiagram(dayStr) {
                 // Wind-Pfeil erstellen
                 const arrow = document.createElement('div');
                 arrow.className = `wind-arrow ${colorClass}`;
-                // Pfeil zeigt in Windrichtung (woher der Wind kommt)
-                arrow.style.transform = `rotate(${dir}deg)`;
+                // Pfeil zeigt wohin der Wind weht (wie ein Pfeil der mit dem Wind fliegt)
+                arrow.style.transform = `rotate(${(dir + 180) % 360}deg)`;
                 cell.appendChild(arrow);
             }
 

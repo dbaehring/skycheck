@@ -7,7 +7,7 @@
 // === SkyCheck App Info ===
 export const APP_INFO = {
     name: 'SkyCheck',
-    version: '9.5.0',
+    version: '9.6.0',
     slogan: 'Sicherer fliegen mit der Wetterampel',
     description: 'Professionelle Gleitschirm-Wetteranalyse',
     author: 'SkyCheck Team',
@@ -30,11 +30,17 @@ export const PRESSURE_LEVELS = {
         label: 'Boden',
         description: 'Windverhältnisse am Startplatz'
     },
+    veryLow: {
+        hPa: 900,
+        approxAlt: 1000,
+        label: '~1000m',
+        description: 'Typische Flughöhe Hügel/Mittelgebirge'
+    },
     low: {
         hPa: 850,
         approxAlt: 1500,
         label: '~1500m',
-        description: 'Typische Flughöhe, relevanteste Ebene für Gleitschirm'
+        description: 'Typische Flughöhe Alpenvorland'
     },
     mid: {
         hPa: 800,
@@ -57,6 +63,7 @@ export const LIMITS = {
         surface: { green: 12, yellow: 18 },       // Bodenwind (Flugschul-Standard)
         gusts: { green: 15, yellow: 25 },         // Böen
         gustSpread: { green: 8, yellow: 15 },     // Differenz Böen - Grundwind (Turbulenz-Indikator)
+        w900: { green: 15, yellow: 25 },          // Wind 1000m (typische Flughöhe Hügel/Mittelgebirge)
         w850: { green: 18, yellow: 28 },          // Wind 1500m (Lee-Gefahr ab 25-30)
         w800: { green: 22, yellow: 30 },          // Wind 2000m (30er-Regel, war 35)
         w700: { green: 25, yellow: 30 },          // Wind 3000m (30er-Regel, war 40 - Trimm liegt bei 36-39!)
@@ -92,6 +99,7 @@ export const LIMITS = {
 export const BEGINNER_LIMITS = {
     groundWind: 10,      // Bodenwind < 10 km/h (stressfreies Aufziehen)
     gustDiff: 5,         // Böendifferenz < 5 km/h (ruhige Luft)
+    w900: 12,            // Höhenwind 1000m < 12 km/h (sanfte Bedingungen)
     w850: 15,            // Höhenwind 1500m < 15 km/h (keine Lee-Gefahr)
     w800: 18,            // Höhenwind 2000m < 18 km/h
     w700: 20,            // Höhenwind 3000m < 20 km/h (kein Föhn)

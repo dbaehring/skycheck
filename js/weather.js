@@ -99,7 +99,7 @@ export async function fetchWeatherData() {
         const pressureParams = new URLSearchParams({
             latitude: lat,
             longitude: lon,
-            hourly: 'wind_speed_850hPa,wind_speed_800hPa,wind_speed_700hPa,wind_direction_850hPa,wind_direction_800hPa,wind_direction_700hPa,boundary_layer_height',
+            hourly: 'wind_speed_900hPa,wind_speed_850hPa,wind_speed_800hPa,wind_speed_700hPa,wind_direction_900hPa,wind_direction_850hPa,wind_direction_800hPa,wind_direction_700hPa,boundary_layer_height',
             wind_speed_unit: 'kmh',
             timezone: timezone,
             forecast_days: 3,
@@ -151,9 +151,11 @@ export async function fetchWeatherData() {
 
         // Daten zusammenführen (nur wenn Höhenwinde verfügbar)
         if (d2?.hourly && !d2.error) {
+            d1.hourly.wind_speed_900hPa = d2.hourly.wind_speed_900hPa;
             d1.hourly.wind_speed_850hPa = d2.hourly.wind_speed_850hPa;
             d1.hourly.wind_speed_800hPa = d2.hourly.wind_speed_800hPa;
             d1.hourly.wind_speed_700hPa = d2.hourly.wind_speed_700hPa;
+            d1.hourly.wind_direction_900hPa = d2.hourly.wind_direction_900hPa;
             d1.hourly.wind_direction_850hPa = d2.hourly.wind_direction_850hPa;
             d1.hourly.wind_direction_800hPa = d2.hourly.wind_direction_800hPa;
             d1.hourly.wind_direction_700hPa = d2.hourly.wind_direction_700hPa;
@@ -321,6 +323,7 @@ export function getHourScore(i) {
     // Wind-Parameter
     const ws = h.wind_speed_10m[i] || 0;
     const wg = h.wind_gusts_10m[i] || 0;
+    const w900 = h.wind_speed_900hPa?.[i] || 0;
     const w850 = h.wind_speed_850hPa?.[i] || 0;
     const w800 = h.wind_speed_800hPa?.[i] || 0;
     const w700 = h.wind_speed_700hPa?.[i] || 0;
@@ -353,7 +356,8 @@ export function getHourScore(i) {
     if (filter.wind) {
         if (ws > L.wind.surface.yellow || wg > L.wind.gusts.yellow ||
             gustSpread > L.wind.gustSpread.yellow ||
-            w850 > L.wind.w850.yellow || w800 > L.wind.w800.yellow || w700 > L.wind.w700.yellow ||
+            w900 > L.wind.w900.yellow || w850 > L.wind.w850.yellow ||
+            w800 > L.wind.w800.yellow || w700 > L.wind.w700.yellow ||
             grad > L.wind.gradient.yellow || grad3000 > L.wind.gradient3000.yellow) return 1;
     }
     // Thermik (nur wenn Filter aktiv)
@@ -374,7 +378,8 @@ export function getHourScore(i) {
     if (filter.wind) {
         if (ws > L.wind.surface.green || wg > L.wind.gusts.green ||
             gustSpread > L.wind.gustSpread.green ||
-            w850 > L.wind.w850.green || w800 > L.wind.w800.green || w700 > L.wind.w700.green ||
+            w900 > L.wind.w900.green || w850 > L.wind.w850.green ||
+            w800 > L.wind.w800.green || w700 > L.wind.w700.green ||
             grad > L.wind.gradient.green || grad3000 > L.wind.gradient3000.green) return 2;
     }
     // Thermik/Nebel (nur wenn Filter aktiv)
@@ -496,6 +501,7 @@ export function calculateBeginnerSafety(i) {
 
     const ws = validateValue(h.wind_speed_10m[i], null);
     const wg = validateValue(h.wind_gusts_10m[i], null);
+    const w900 = validateValue(h.wind_speed_900hPa?.[i], null);
     const w850 = validateValue(h.wind_speed_850hPa?.[i], null);
     const w800 = validateValue(h.wind_speed_800hPa?.[i], null);
     const w700 = validateValue(h.wind_speed_700hPa?.[i], null);
@@ -529,6 +535,13 @@ export function calculateBeginnerSafety(i) {
             threshold: BEGINNER_LIMITS.gustDiff,
             label: 'Böendifferenz',
             reason: gustDiff >= BEGINNER_LIMITS.gustDiff ? 'Starke Böen = turbulente Luft' : null
+        },
+        wind1000: {
+            pass: w900 === null || w900 < BEGINNER_LIMITS.w900,
+            value: w900 || 0,
+            threshold: BEGINNER_LIMITS.w900,
+            label: 'Wind 1000m',
+            reason: w900 >= BEGINNER_LIMITS.w900 ? 'Höhenwind 1000m erhöht' : null
         },
         upperWind: {
             pass: w850 < BEGINNER_LIMITS.w850,
@@ -621,16 +634,18 @@ export function calculateBeginnerSafety(i) {
  * @param {number} grad3000 - Gradient Boden-3000m in km/h
  * @returns {1|2|3} Score: 1=nogo, 2=caution, 3=go
  */
-export function evaluateWind(ws, wg, w850, w800, w700, grad, grad3000) {
+export function evaluateWind(ws, wg, w900, w850, w800, w700, grad, grad3000) {
     const L = getEffectiveLimits();
     const gustFactor = getGustFactor(ws, wg);
     const gustSpread = wg - ws;
-    if (ws > L.wind.surface.yellow || wg > L.wind.gusts.yellow || w850 > L.wind.w850.yellow ||
+    if (ws > L.wind.surface.yellow || wg > L.wind.gusts.yellow ||
+        w900 > L.wind.w900.yellow || w850 > L.wind.w850.yellow ||
         w800 > L.wind.w800.yellow || w700 > L.wind.w700.yellow ||
         grad > L.wind.gradient.yellow || grad3000 > L.wind.gradient3000.yellow ||
         gustSpread > L.wind.gustSpread.yellow ||
         (gustFactor > L.wind.gustFactor.yellow && wg > L.wind.gustFactorMinWind.yellow)) return 1;
-    if (ws > L.wind.surface.green || wg > L.wind.gusts.green || w850 > L.wind.w850.green ||
+    if (ws > L.wind.surface.green || wg > L.wind.gusts.green ||
+        w900 > L.wind.w900.green || w850 > L.wind.w850.green ||
         w800 > L.wind.w800.green || w700 > L.wind.w700.green ||
         grad > L.wind.gradient.green || grad3000 > L.wind.gradient3000.green ||
         gustSpread > L.wind.gustSpread.green ||

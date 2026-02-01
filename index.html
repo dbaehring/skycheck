@@ -205,6 +205,7 @@
                                     <div class="wind-table-row"><span class="wind-height">Boden (10m)</span><span class="param-value" id="windSurface">-</span><span class="param-value" id="windDirSurface">-</span></div>
                                     <div class="wind-table-row"><span class="wind-height">Böen</span><span class="param-value" id="windGusts">-</span><span class="wind-height">-</span></div>
                                     <div class="wind-table-row"><span class="wind-height">Böigkeit<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Differenz zwischen Böen und Grundwind. Große Unterschiede = unruhige, schwer einschätzbare Bedingungen.</span></span></span><span class="param-value" id="gustSpread">-</span><span class="wind-height">-</span></div>
+                                    <div class="wind-table-row"><span class="wind-height">900 hPa (~1000m)</span><span class="param-value" id="wind900">-</span><span class="param-value" id="windDir900">-</span></div>
                                     <div class="wind-table-row"><span class="wind-height">850 hPa (~1500m)</span><span class="param-value" id="wind850">-</span><span class="param-value" id="windDir850">-</span></div>
                                     <div class="wind-table-row"><span class="wind-height">800 hPa (~2000m)</span><span class="param-value" id="wind800">-</span><span class="param-value" id="windDir800">-</span></div>
                                     <div class="wind-table-row"><span class="wind-height">700 hPa (~3000m)</span><span class="param-value" id="wind700">-</span><span class="param-value" id="windDir700">-</span></div>
@@ -225,12 +226,14 @@
                                                 <span class="wr-w">W</span>
                                             </div>
                                             <div class="wind-arrow surface" id="windArrowSurface"></div>
+                                            <div class="wind-arrow h900" id="windArrow900"></div>
                                             <div class="wind-arrow h850" id="windArrow850"></div>
                                             <div class="wind-arrow h700" id="windArrow700"></div>
                                             <div class="windrose-center"></div>
                                         </div>
                                         <div class="windrose-legend">
                                             <div class="windrose-legend-item"><span class="windrose-legend-color surface"></span><span>Boden</span><span id="windroseSurface">-</span></div>
+                                            <div class="windrose-legend-item"><span class="windrose-legend-color h900"></span><span>1000m</span><span id="windrose900">-</span></div>
                                             <div class="windrose-legend-item"><span class="windrose-legend-color h850"></span><span>1500m</span><span id="windrose850">-</span></div>
                                             <div class="windrose-legend-item"><span class="windrose-legend-color h700"></span><span>3000m</span><span id="windrose700">-</span></div>
                                             <div class="windrose-shear-warning" id="windroseShearWarning">⚠️ Richtungsscherung erkannt!</div>
@@ -247,6 +250,7 @@
                                             <span class="y-label">3000m</span>
                                             <span class="y-label">2000m</span>
                                             <span class="y-label">1500m</span>
+                                            <span class="y-label">1000m</span>
                                             <span class="y-label">Boden</span>
                                         </div>
                                         <div class="wind-profile-grid" id="windProfileGrid"></div>
@@ -597,6 +601,13 @@
                             <span class="expert-label">Gradient max</span>
                             <div class="expert-input-wrap">
                                 <input type="number" id="expertGradient" min="5" max="40" step="1">
+                                <span class="expert-unit">km/h</span>
+                            </div>
+                        </label>
+                        <label class="expert-field">
+                            <span class="expert-label">Wind 1000m max</span>
+                            <div class="expert-input-wrap">
+                                <input type="number" id="expertWind900" min="10" max="50" step="1">
                                 <span class="expert-unit">km/h</span>
                             </div>
                         </label>
