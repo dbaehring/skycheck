@@ -7,9 +7,9 @@
  * - Erzwingt Cache-Invalidierung bei wiederkehrenden Nutzern
  */
 
-const CACHE_NAME = 'skycheck-v17';
-const STATIC_CACHE_NAME = 'skycheck-static-v17';
-const API_CACHE_NAME = 'skycheck-api-v17';
+const CACHE_NAME = 'skycheck-v18';
+const STATIC_CACHE_NAME = 'skycheck-static-v18';
+const API_CACHE_NAME = 'skycheck-api-v18';
 
 // Statische Assets die gecacht werden sollen
 const STATIC_ASSETS = [
