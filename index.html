@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Content Security Policy (für Produktion aktivieren, wenn auf eigenem Server gehostet)
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.opentopomap.org https://a.tile.opentopomap.org https://b.tile.opentopomap.org https://c.tile.opentopomap.org; connect-src 'self' https://api.open-meteo.com;">
-    -->
+    <!-- Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.opentopomap.org https://*.tile.openstreetmap.org; connect-src 'self' https://api.open-meteo.com;">
 
     <!-- === SkyCheck Meta-Tags === -->
     <title>SkyCheck | Sicherer fliegen mit der Wetterampel</title>
-    <meta name="description" content="SkyCheck - Professionelle Gleitschirm-Wetteranalyse in 60 Sekunden. Thermik, Wind, Wolkenbasis auf einen Blick.">
+    <meta name="description" content="SkyCheck - Detaillierte Gleitschirm-Wetteranalyse in 60 Sekunden. Thermik, Wind, Wolkenbasis auf einen Blick.">
     <meta name="keywords" content="Gleitschirm, Paragliding, Wetter, Meteo, Thermik, Flugwetter, SkyCheck">
     <meta name="author" content="SkyCheck">
 
@@ -32,7 +31,7 @@
     <link rel="apple-touch-icon" href="./img/logo.svg">
 
     <!-- External Resources -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -686,7 +685,7 @@
             </div>
         </div>
     </div>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
     <script type="module" src="js/main.js"></script>
     <!-- PWA Service Worker Registration -->
     <script>

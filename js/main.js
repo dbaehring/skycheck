@@ -80,7 +80,8 @@ import {
     closeExpertSettings,
     saveExpertSettings,
     resetExpertSettings,
-    applyExpertPreset
+    applyExpertPreset,
+    showToast
 } from './ui.js';
 
 /**
@@ -500,3 +501,12 @@ function handleKeyboardShortcuts(e) {
 
 // App starten wenn DOM geladen
 document.addEventListener('DOMContentLoaded', initApp);
+
+// Offline/Online Status überwachen
+window.addEventListener('offline', () => {
+    showToast('📴 Offline - gespeicherte Daten werden angezeigt', 'warning', 5000);
+});
+
+window.addEventListener('online', () => {
+    showToast('🌐 Wieder online', 'success', 3000);
+});

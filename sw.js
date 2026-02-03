@@ -3,9 +3,9 @@
  * PWA-Support mit Cache-First-Strategie für statische Assets
  */
 
-const CACHE_NAME = 'skycheck-v13';
-const STATIC_CACHE_NAME = 'skycheck-static-v13';
-const API_CACHE_NAME = 'skycheck-api-v13';
+const CACHE_NAME = 'skycheck-v15';
+const STATIC_CACHE_NAME = 'skycheck-static-v15';
+const API_CACHE_NAME = 'skycheck-api-v15';
 
 // Statische Assets die gecacht werden sollen
 const STATIC_ASSETS = [
@@ -100,14 +100,28 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Karten-Tiles: Cache-First mit Network-Fallback
+    // Karten-Tiles: Cache-First (ändern sich selten)
     if (url.hostname.includes('tile.opentopomap.org') ||
         url.hostname.includes('tile.openstreetmap.org')) {
         event.respondWith(cacheFirstWithNetwork(event.request, STATIC_CACHE_NAME));
         return;
     }
 
-    // Statische Assets: Cache-First
+    // HTML, JS, CSS: Network-First (Updates sofort sichtbar)
+    if (event.request.method === 'GET' && url.origin === self.location.origin) {
+        const isAppShell = url.pathname.endsWith('.html') ||
+                          url.pathname.endsWith('.js') ||
+                          url.pathname.endsWith('.css') ||
+                          url.pathname === '/' ||
+                          url.pathname.endsWith('/');
+
+        if (isAppShell) {
+            event.respondWith(networkFirstWithCache(event.request, STATIC_CACHE_NAME));
+            return;
+        }
+    }
+
+    // Andere Assets (Bilder, Fonts): Cache-First
     if (event.request.method === 'GET') {
         event.respondWith(cacheFirstWithNetwork(event.request, STATIC_CACHE_NAME));
     }

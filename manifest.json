@@ -1,7 +1,7 @@
 {
   "name": "SkyCheck - Paragliding Meteo",
   "short_name": "SkyCheck",
-  "description": "Sicherer fliegen mit der Wetterampel. Professionelle Gleitschirm-Wetteranalyse.",
+  "description": "Sicherer fliegen mit der Wetterampel. Detaillierte Gleitschirm-Wetteranalyse.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
