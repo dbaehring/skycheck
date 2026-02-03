@@ -348,45 +348,102 @@ async function fetchAllFavoriteWeather() {
 }
 
 /**
- * Schnelle Wetter-Abfrage für einen Favoriten
+ * Vollständige Wetter-Abfrage für einen Favoriten (konsistent mit Hauptampel)
  */
 async function fetchQuickWeather(lat, lon, cacheKey) {
     try {
         // icon_seamless wählt automatisch ICON-D2 > ICON-EU > ICON-Global
         const inEU = isInIconEUCoverage(lat, lon);
         const model = inEU ? 'icon_seamless' : 'best_match';
-        const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon +
-            '&hourly=wind_speed_10m,wind_gusts_10m,cape&models=' + model + '&forecast_days=1&timezone=auto';
+        // Vollständige Parameter wie bei Hauptampel
+        const params = [
+            'wind_speed_10m', 'wind_gusts_10m',
+            'wind_speed_900hPa', 'wind_speed_850hPa', 'wind_speed_800hPa', 'wind_speed_700hPa',
+            'temperature_2m', 'dew_point_2m',
+            'cape', 'lifted_index',
+            'cloud_cover', 'cloud_cover_low', 'visibility',
+            'precipitation', 'precipitation_probability', 'showers'
+        ].join(',');
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=${params}&models=${model}&forecast_days=1&timezone=auto`;
 
         const response = await fetch(url);
         const data = await response.json();
+        const h = data.hourly;
 
         // Analysiere die nächsten Stunden (6-20 Uhr heute)
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
         let worstScore = 3, bestWindow = null, currentWindow = null;
 
-        for (let h = 6; h <= 20; h++) {
-            const ts = todayStr + 'T' + h.toString().padStart(2, '0') + ':00';
-            const idx = data.hourly.time.findIndex(t => t === ts);
+        for (let hour = 6; hour <= 20; hour++) {
+            const ts = todayStr + 'T' + hour.toString().padStart(2, '0') + ':00';
+            const idx = h.time.findIndex(t => t === ts);
             if (idx === -1) continue;
 
-            const ws = data.hourly.wind_speed_10m[idx] || 0;
-            const wg = data.hourly.wind_gusts_10m[idx] || 0;
-            const cape = data.hourly.cape?.[idx] || 0;
+            // Alle Parameter extrahieren (wie in getHourScore)
+            const ws = h.wind_speed_10m[idx] || 0;
+            const wg = h.wind_gusts_10m[idx] || 0;
+            const w900 = h.wind_speed_900hPa?.[idx] || 0;
+            const w850 = h.wind_speed_850hPa?.[idx] || 0;
+            const w800 = h.wind_speed_800hPa?.[idx] || 0;
+            const w700 = h.wind_speed_700hPa?.[idx] || 0;
+            const grad = Math.abs(w850 - ws);
+            const grad3000 = Math.abs(w700 - ws);
+            const gustSpread = wg - ws;
 
-            // Scoring-Logik (Schwellenwerte aus LIMITS, konsistent mit getHourScore)
+            const temp = h.temperature_2m?.[idx];
+            const dew = h.dew_point_2m?.[idx];
+            const spread = (temp != null && dew != null) ? temp - dew : 10;
+            const cape = h.cape?.[idx] || 0;
+            const li = h.lifted_index?.[idx] || 0;
+
+            const vis = h.visibility?.[idx] || 50000;
+            const cloudLow = h.cloud_cover_low?.[idx] || 0;
+            const cloudTotal = h.cloud_cover?.[idx] || 0;
+
+            const precip = h.precipitation?.[idx] || 0;
+            const precipProb = h.precipitation_probability?.[idx] || 0;
+            const showers = h.showers?.[idx] || 0;
+
+            // Scoring-Logik (identisch mit getHourScore)
             let score = 3;
-            if (ws > LIMITS.wind.surface.yellow || wg > LIMITS.wind.gusts.yellow || cape > LIMITS.cape.yellow) score = 1;
-            else if (ws > LIMITS.wind.surface.green || wg > LIMITS.wind.gusts.green || cape > LIMITS.cape.green) score = 2;
 
-            // Schlechtesten Score tracken (niedrigster Wert = schlechteste Bewertung)
+            // NO-GO Kriterien (Score 1)
+            if (ws > LIMITS.wind.surface.yellow || wg > LIMITS.wind.gusts.yellow ||
+                gustSpread > LIMITS.wind.gustSpread.yellow ||
+                w900 > LIMITS.wind.w900.yellow || w850 > LIMITS.wind.w850.yellow ||
+                w800 > LIMITS.wind.w800.yellow || w700 > LIMITS.wind.w700.yellow ||
+                grad > LIMITS.wind.gradient.yellow || grad3000 > LIMITS.wind.gradient3000.yellow) {
+                score = 1;
+            } else if (spread < LIMITS.fog.spreadSevere || cape > LIMITS.cape.yellow || li < LIMITS.liftedIndex.yellow) {
+                score = 1;
+            } else if (cloudLow > LIMITS.clouds.low.yellow || vis < LIMITS.visibility.yellow) {
+                score = 1;
+            } else if (precip > LIMITS.precip.yellow || showers > LIMITS.showers.yellow) {
+                score = 1;
+            }
+            // VORSICHT Kriterien (Score 2)
+            else if (ws > LIMITS.wind.surface.green || wg > LIMITS.wind.gusts.green ||
+                gustSpread > LIMITS.wind.gustSpread.green ||
+                w900 > LIMITS.wind.w900.green || w850 > LIMITS.wind.w850.green ||
+                w800 > LIMITS.wind.w800.green || w700 > LIMITS.wind.w700.green ||
+                grad > LIMITS.wind.gradient.green || grad3000 > LIMITS.wind.gradient3000.green) {
+                score = 2;
+            } else if (spread < LIMITS.fog.spreadWarning || cape > LIMITS.cape.green || li < LIMITS.liftedIndex.green) {
+                score = 2;
+            } else if (cloudTotal > LIMITS.clouds.total.yellow || cloudLow > LIMITS.clouds.low.green || vis < LIMITS.visibility.green) {
+                score = 2;
+            } else if (precip > LIMITS.precip.green || precipProb > LIMITS.precipProb.yellow || showers > LIMITS.showers.green) {
+                score = 2;
+            }
+
+            // Schlechtesten Score tracken
             if (score < worstScore) worstScore = score;
 
             // Grüne Fenster tracken
             if (score === 3) {
-                if (!currentWindow) currentWindow = { start: h, end: h };
-                else currentWindow.end = h;
+                if (!currentWindow) currentWindow = { start: hour, end: hour };
+                else currentWindow.end = hour;
             } else {
                 if (currentWindow && (!bestWindow || (currentWindow.end - currentWindow.start) > (bestWindow.end - bestWindow.start))) {
                     bestWindow = currentWindow;
@@ -412,14 +469,12 @@ async function fetchQuickWeather(lat, lon, cacheKey) {
             info: info,
             timestamp: Date.now()
         };
-        // Rendering wird vom Batch-Handler übernommen
     } catch (e) {
         state.favoriteWeatherCache[cacheKey] = {
             status: 'caution',
             info: 'Fehler',
             timestamp: Date.now()
         };
-        // Rendering wird vom Batch-Handler übernommen
     }
 }
 

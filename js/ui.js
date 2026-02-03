@@ -382,13 +382,8 @@ export function updateDisplay(i) {
     const beginnerAssessment = worst === 3 ? calculateBeginnerSafety(i) : { isBeginner: false };
     renderBeginnerBadge(beginnerAssessment);
 
-    // KISS: Risk-Explanation nur bei CAUTION, bei NO-GO reicht die Reason-Summary
-    if (worst === 2) {
-        const risks = getRiskExplanation(i, worst);
-        renderRiskExplanation(risks);
-    } else {
-        renderRiskExplanation(null); // Ausblenden
-    }
+    // KISS: Risk-Explanation komplett ausblenden - Reason-Summary zeigt bereits Hauptgrund + weitere Hinweise
+    renderRiskExplanation(null);
 
     // KISS: Killers-Section ausblenden - Reason-Summary zeigt bereits die kritischen Werte
     document.getElementById('killerWarnings')?.classList.remove('visible');
