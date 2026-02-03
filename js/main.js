@@ -130,6 +130,20 @@ async function initApp() {
         if (!isNaN(params.lat) && !isNaN(params.lon)) {
             await handleMapClick(params.lat, params.lon, params.name);
             flyTo(params.lat, params.lon, 11);
+        } else {
+            // Keine URL-Parameter: Letzte Position laden
+            try {
+                const lastWeather = localStorage.getItem(STORAGE_KEYS.LAST_WEATHER);
+                if (lastWeather) {
+                    const last = JSON.parse(lastWeather);
+                    if (last.lat && last.lon) {
+                        await handleMapClick(last.lat, last.lon, last.name);
+                        flyTo(last.lat, last.lon, 11);
+                    }
+                }
+            } catch (e) {
+                // Ungültige Daten ignorieren
+            }
         }
 
         // Theme aus URL (falls vorhanden)
@@ -148,6 +162,20 @@ async function initApp() {
 function onWeatherLoaded() {
     setupDays();
     selectDay(0);
+
+    // Letzte Position speichern
+    if (state.currentLocation.lat && state.currentLocation.lon) {
+        try {
+            localStorage.setItem(STORAGE_KEYS.LAST_WEATHER, JSON.stringify({
+                lat: state.currentLocation.lat,
+                lon: state.currentLocation.lon,
+                name: state.currentLocation.name,
+                elevation: state.currentLocation.elevation
+            }));
+        } catch (e) {
+            // localStorage voll oder nicht verfügbar
+        }
+    }
 }
 
 /**

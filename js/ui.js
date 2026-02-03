@@ -294,6 +294,11 @@ export function buildTimeline(dayStr) {
     const bwEl = document.getElementById('bestWindow');
     if (bwEl) bwEl.classList.remove('visible', 'yellow');
 
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const currentHour = now.getHours();
+    const isToday = dayStr === todayStr;
+
     for (let h = 6; h <= 20; h++) {
         const ts = dayStr + 'T' + h.toString().padStart(2, '0') + ':00';
         const idx = state.hourlyData.time.findIndex(t => t === ts);
@@ -307,6 +312,10 @@ export function buildTimeline(dayStr) {
         // Bestes Fenster markieren (grüne Stunden)
         if (bestWin && h >= bestWin.start && h <= bestWin.end && sc === 3) {
             slot.classList.add('best');
+        }
+        // Aktuelle Stunde markieren (nur heute)
+        if (isToday && h === currentHour) {
+            slot.classList.add('now');
         }
 
         const weatherCode = state.hourlyData.weather_code?.[idx] || 0;
@@ -478,10 +487,17 @@ export function updateDisplay(i) {
 
 // Bewertungsfunktionen werden jetzt aus weather.js importiert (Single Source of Truth)
 
+let lastAssessmentScore = null;
+
 function updateOverallAssessment(sc) {
     const el = document.getElementById('assessmentStatus');
     const ic = document.getElementById('statusIcon');
     const tx = document.getElementById('statusText');
+
+    // Prüfen ob Status sich geändert hat
+    const statusChanged = lastAssessmentScore !== null && lastAssessmentScore !== sc;
+    lastAssessmentScore = sc;
+
     el.className = 'assessment-status';
 
     if (sc === 3) {
@@ -496,6 +512,12 @@ function updateOverallAssessment(sc) {
         el.classList.add('nogo');
         ic.textContent = '✗';
         tx.textContent = 'NO-GO';
+    }
+
+    // Pulse-Animation bei Statuswechsel
+    if (statusChanged) {
+        el.classList.add('pulse');
+        setTimeout(() => el.classList.remove('pulse'), 400);
     }
 }
 
