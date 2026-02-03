@@ -1,6 +1,10 @@
 /**
  * SkyCheck Service Worker
- * PWA-Support mit Cache-First-Strategie für statische Assets
+ * PWA-Support mit intelligenter Cache-Strategie
+ *
+ * Cache-Version: Unabhängig von APP_INFO.version (config.js)
+ * - Wird bei JEDER Änderung an gecachten Dateien erhöht
+ * - Erzwingt Cache-Invalidierung bei wiederkehrenden Nutzern
  */
 
 const CACHE_NAME = 'skycheck-v15';

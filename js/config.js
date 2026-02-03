@@ -1,18 +1,19 @@
 /**
  * SkyCheck - Konfiguration
  * LIMITS, WEATHER_CODES und andere Konstanten
- * v9 - Rebranding + Bugfixes
+ * v10 - Sicherheit, PWA-Verbesserungen, 900hPa Integration
  */
 
 // === SkyCheck App Info ===
 export const APP_INFO = {
     name: 'SkyCheck',
-    version: '9.6.0',
+    version: '10.0.0',  // Hauptversion - Cache-Version (sw.js) kann unabhängig sein
     slogan: 'Sicherer fliegen mit der Wetterampel',
     description: 'Detaillierte Gleitschirm-Wetteranalyse',
     author: 'SkyCheck Team',
     year: 2025,
-    feedbackEmail: 'danielbaehring@gmail.com'
+    // Email verschleiert gegen Spam-Bots (wird in ui.js zusammengesetzt)
+    feedbackEmailParts: ['danielbaehring', 'gmail.com']
 };
 
 // === API Konfiguration ===

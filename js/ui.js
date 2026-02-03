@@ -5,7 +5,7 @@
  */
 
 import { state } from './state.js';
-import { LIMITS, STORAGE_KEYS, UI_CONFIG, METEO_CONSTANTS } from './config.js';
+import { LIMITS, STORAGE_KEYS, UI_CONFIG, METEO_CONSTANTS, APP_INFO } from './config.js';
 import {
     getWindDir, getColorClass, getColorClassRev, getSpreadColor,
     scoreToColor, getTrend, getGustFactor, getWeatherInfo, isInAlpineRegion
@@ -1409,10 +1409,16 @@ export function openAboutModal() {
     if (modal) {
         modal.classList.add('visible');
         document.body.style.overflow = 'hidden';
-        // Version aus APP_INFO setzen (wird in main.js importiert)
+        // Version aus APP_INFO setzen
         const versionEl = document.getElementById('aboutVersion');
-        if (versionEl && window.APP_VERSION) {
-            versionEl.textContent = 'v' + window.APP_VERSION;
+        if (versionEl) {
+            versionEl.textContent = 'v' + APP_INFO.version;
+        }
+        // Email-Link zusammensetzen (gegen Spam-Bots verschleiert)
+        const emailLink = document.getElementById('feedbackEmailLink');
+        if (emailLink && APP_INFO.feedbackEmailParts) {
+            const email = APP_INFO.feedbackEmailParts.join('@');
+            emailLink.href = 'mailto:' + email;
         }
     }
 }
