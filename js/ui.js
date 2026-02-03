@@ -257,11 +257,8 @@ export function selectDay(idx) {
     updateForecastConfidence(idx);
     buildTimeline(state.forecastDays[idx].date);
 
-    // Wind-Profil aktualisieren wenn es geöffnet ist
-    const windProfileWrapper = document.getElementById('windProfileWrapper');
-    if (windProfileWrapper?.classList.contains('visible')) {
-        renderWindDiagram(state.forecastDays[idx].date);
-    }
+    // Wind-Profil immer aktualisieren (ist jetzt immer sichtbar)
+    renderWindDiagram(state.forecastDays[idx].date);
 
     const now = new Date(), ch = now.getHours();
     let def = state.forecastDays[idx].indices.find(i => new Date(state.hourlyData.time[i]).getHours() === (idx === 0 ? ch : 12));
@@ -329,11 +326,8 @@ export function selectHour(idx) {
     updateDisplay(idx);
     buildTimeline(state.forecastDays[state.selectedDay].date);
 
-    // Wind-Profil aktualisieren wenn es geöffnet ist (um ausgewählte Stunde zu markieren)
-    const windProfileWrapper = document.getElementById('windProfileWrapper');
-    if (windProfileWrapper?.classList.contains('visible')) {
-        renderWindDiagram(state.forecastDays[state.selectedDay].date);
-    }
+    // Wind-Profil aktualisieren (um ausgewählte Stunde zu markieren)
+    renderWindDiagram(state.forecastDays[state.selectedDay].date);
 }
 
 /**
@@ -1717,35 +1711,17 @@ export function renderWindDiagram(dayStr) {
 }
 
 /**
- * Toggle Wind-Profil erweitern/zuklappen
+ * Toggle Wind-Profil - nicht mehr benötigt, Diagramm ist immer sichtbar
+ * Funktion bleibt für Rückwärtskompatibilität (falls Event-Listener noch existieren)
  */
 export function toggleWindDiagram() {
-    const wrapper = document.getElementById('windProfileWrapper');
-    const toggle = document.getElementById('windProfileToggle');
-    if (!wrapper || !toggle) return;
-
-    const show = !wrapper.classList.contains('visible');
-    wrapper.classList.toggle('visible', show);
-    toggle.classList.toggle('active', show);
-
-    // Bei Öffnen: Diagramm rendern
-    if (show && state.forecastDays?.[state.selectedDay]) {
-        renderWindDiagram(state.forecastDays[state.selectedDay].date);
-    }
-
-    // Zustand speichern
-    localStorage.setItem(STORAGE_KEYS.WIND_DIAGRAM, show.toString());
+    // Diagramm ist jetzt immer sichtbar - nichts zu tun
 }
 
 /**
- * Lädt den Zustand des Wind-Profils aus localStorage
+ * Lädt den Zustand des Wind-Profils - nicht mehr benötigt
+ * Diagramm ist jetzt immer sichtbar
  */
 export function loadWindDiagramState() {
-    const wrapper = document.getElementById('windProfileWrapper');
-    const toggle = document.getElementById('windProfileToggle');
-    if (wrapper && toggle) {
-        const show = localStorage.getItem(STORAGE_KEYS.WIND_DIAGRAM) === 'true';
-        wrapper.classList.toggle('visible', show);
-        toggle.classList.toggle('active', show);
-    }
+    // Diagramm ist jetzt immer sichtbar - nichts zu tun
 }

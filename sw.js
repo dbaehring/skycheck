@@ -3,9 +3,9 @@
  * PWA-Support mit Cache-First-Strategie für statische Assets
  */
 
-const CACHE_NAME = 'skycheck-v12';
-const STATIC_CACHE_NAME = 'skycheck-static-v12';
-const API_CACHE_NAME = 'skycheck-api-v12';
+const CACHE_NAME = 'skycheck-v13';
+const STATIC_CACHE_NAME = 'skycheck-static-v13';
+const API_CACHE_NAME = 'skycheck-api-v13';
 
 // Statische Assets die gecacht werden sollen
 const STATIC_ASSETS = [
