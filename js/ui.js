@@ -398,7 +398,7 @@ export function updateDisplay(i) {
     // Höhen-Info (nutzt DOM-Cache) - verteilt auf Thermik-Box und Location-Card
     const dom = getDomCache();
     dom.cloudBase.textContent = cloudBase !== null ? cloudBase + ' m' : 'N/A';
-    dom.boundaryLayer.textContent = Math.round(boundaryLayer) + ' m';
+    dom.boundaryLayer.textContent = boundaryLayer > 0 ? Math.round(boundaryLayer) + ' m' : 'n.v.';
     dom.freezingLevel.textContent = Math.round(freezing) + ' m';
     dom.stationElevation.textContent = Math.round(state.currentLocation.elevation) + ' m';
     const weatherInfo = getWeatherInfo(weatherCode);
@@ -671,7 +671,8 @@ function updateWarnings(ws, wg, w850, w700, grad, spread, cape, li, cloudLow, pr
     else if (showers > LIMITS.showers.green) warnings.push({ level: 'yellow', text: '🌦️ Lokale Schauer möglich' });
 
     if (freezing < METEO_CONSTANTS.freezingLevelWarning) warnings.push({ level: 'yellow', text: '❄️ Nullgradgrenze niedrig (' + Math.round(freezing) + 'm)' });
-    if (boundaryLayer < METEO_CONSTANTS.boundaryLayerWarning) warnings.push({ level: 'yellow', text: '📉 Grenzschicht aktuell nur ' + Math.round(boundaryLayer) + 'm – schwache Thermik zu dieser Stunde' });
+    // Warnung nur wenn echte Daten vorhanden (boundaryLayer > 0)
+    if (boundaryLayer > 0 && boundaryLayer < METEO_CONSTANTS.boundaryLayerWarning) warnings.push({ level: 'yellow', text: '📉 Grenzschicht aktuell nur ' + Math.round(boundaryLayer) + 'm – schwache Thermik zu dieser Stunde' });
 
     const el = document.getElementById('warnings'), list = document.getElementById('warningsList');
     if (warnings.length) {
@@ -1784,7 +1785,8 @@ export function renderThermicWindow(dayStr, dayIdx) {
         slot.className = `thermic-slot ${data.intensity}`;
         slot.dataset.hour = data.hour;
         slot.dataset.quality = data.quality;
-        slot.title = `${data.hour}:00 - Thermik: ${data.quality}%\nCAPE: ${Math.round(data.cape)} J/kg\nGrenzschicht: ${Math.round(data.boundaryLayer)}m`;
+        const boundaryText = data.boundaryLayer !== null ? Math.round(data.boundaryLayer) + 'm' : 'n.v.';
+        slot.title = `${data.hour}:00 - Thermik: ${data.quality}%\nCAPE: ${Math.round(data.cape)} J/kg\nGrenzschicht: ${boundaryText}`;
 
         // Peak markieren
         if (analysis.peak && data.hour === analysis.peak) {
@@ -1819,12 +1821,17 @@ export function renderThermicWindow(dayStr, dayIdx) {
         }
     }
 
-    // Details
-    maxHeightEl.textContent = Math.round(analysis.maxBoundaryLayer) + 'm';
-    maxHeightEl.className = 'thermic-detail-value';
-    if (analysis.maxBoundaryLayer > 2000) maxHeightEl.style.color = 'var(--green)';
-    else if (analysis.maxBoundaryLayer > 1200) maxHeightEl.style.color = 'var(--yellow)';
-    else maxHeightEl.style.color = 'var(--text-muted)';
+    // Details - Max. Höhe nur anzeigen wenn echte Daten vorhanden
+    if (analysis.maxBoundaryLayer > 0) {
+        maxHeightEl.textContent = Math.round(analysis.maxBoundaryLayer) + 'm';
+        maxHeightEl.className = 'thermic-detail-value';
+        if (analysis.maxBoundaryLayer > 2000) maxHeightEl.style.color = 'var(--green)';
+        else if (analysis.maxBoundaryLayer > 1200) maxHeightEl.style.color = 'var(--yellow)';
+        else maxHeightEl.style.color = 'var(--text-muted)';
+    } else {
+        maxHeightEl.textContent = 'n.v.';
+        maxHeightEl.style.color = 'var(--text-muted)';
+    }
 
     // CAPE-Energie bewerten
     const capeLabel = analysis.maxCape > 800 ? 'Hoch ⚡' :

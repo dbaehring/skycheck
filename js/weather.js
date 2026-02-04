@@ -921,7 +921,10 @@ export function analyzeThermicWindow(dayStr, dayIdx) {
 
         const radiation = validateValue(h.shortwave_radiation?.[idx], 0);
         const cape = validateValue(h.cape?.[idx], 0);
-        const boundaryLayer = validateValue(h.boundary_layer_height?.[idx], 500);
+        // boundary_layer_height: null als Fallback, um echte Daten von fehlenden zu unterscheiden
+        const boundaryLayerRaw = h.boundary_layer_height?.[idx];
+        const boundaryLayer = (boundaryLayerRaw !== null && boundaryLayerRaw !== undefined && !isNaN(boundaryLayerRaw))
+            ? boundaryLayerRaw : null;
         const cloudLow = validateValue(h.cloud_cover_low?.[idx], 0);
         const cloudTotal = validateValue(h.cloud_cover?.[idx], 0);
         const temp = validateValue(h.temperature_2m?.[idx], null);
@@ -930,7 +933,8 @@ export function analyzeThermicWindow(dayStr, dayIdx) {
 
         if (radiation > maxRadiation) maxRadiation = radiation;
         if (cape > maxCape) maxCape = cape;
-        if (boundaryLayer > maxBoundaryLayer) maxBoundaryLayer = boundaryLayer;
+        // Nur echte Werte in Max-Berechnung einbeziehen
+        if (boundaryLayer !== null && boundaryLayer > maxBoundaryLayer) maxBoundaryLayer = boundaryLayer;
 
         hourlyThermic.push({
             hour,
@@ -949,7 +953,10 @@ export function analyzeThermicWindow(dayStr, dayIdx) {
         // Faktoren für Thermik-Qualität
         const radiationFactor = maxRadiation > 0 ? (data.radiation / maxRadiation) : 0;
         const capeFactor = Math.min(data.cape / 500, 1); // Cap bei 500 J/kg für "gute" Thermik
-        const boundaryFactor = Math.min(data.boundaryLayer / 2000, 1); // 2000m = gute Höhe
+        // boundaryFactor: 0.5 als neutraler Faktor wenn keine Daten verfügbar
+        const boundaryFactor = data.boundaryLayer !== null
+            ? Math.min(data.boundaryLayer / 2000, 1)
+            : 0.5;
         const cloudPenalty = data.cloudLow > 50 ? 0.3 : data.cloudLow > 30 ? 0.7 : 1.0;
         const spreadFactor = data.spread >= 5 && data.spread <= 15 ? 1.0 :
                             data.spread < 3 ? 0.3 :
