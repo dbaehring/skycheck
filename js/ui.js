@@ -1869,3 +1869,98 @@ export function renderThermicWindow(dayStr, dayIdx) {
         durationEl.style.color = 'var(--text-muted)';
     }
 }
+
+/**
+ * Live-Wind-Stationen rendern
+ * @param {Array} stations - Array von Stationen aus fetchNearbyLiveWind()
+ */
+export function renderLiveWindStations(stations) {
+    const card = document.getElementById('liveWindCard');
+    const container = document.getElementById('liveWindStations');
+
+    if (!card || !container) return;
+
+    // Keine Stationen gefunden
+    if (!stations || stations.length === 0) {
+        card.style.display = 'none';
+        return;
+    }
+
+    // Karte anzeigen
+    card.style.display = 'block';
+
+    // Stationen rendern
+    container.innerHTML = stations.map(station => {
+        // Windstärke-Farbe
+        const windClass = station.windSpeed > 25 ? 'red' :
+                          station.windSpeed > 15 ? 'yellow' : 'green';
+
+        // Windpfeil-Rotation (Wind kommt AUS dieser Richtung, also + 180° für Pfeilspitze)
+        const arrowRotation = station.windDirection !== null ?
+            `transform: rotate(${station.windDirection + 180}deg)` : '';
+
+        // Böen-Anzeige
+        const gustHtml = station.windGust && station.windGust > station.windSpeed ?
+            `<span class="station-gust">Böen: <span class="gust-value">${station.windGust}</span></span>` : '';
+
+        return `
+            <div class="live-wind-station">
+                <div class="station-info">
+                    <div class="station-name" title="${station.name}">${station.name}</div>
+                    <div class="station-meta">
+                        <span class="station-distance">📍 ${station.distance} km</span>
+                        <span class="station-age">⏱️ ${formatLiveWindAge(station.ageMinutes)}</span>
+                    </div>
+                </div>
+                <div class="station-wind" data-dir="${station.windDirectionText || ''}">
+                    <span class="station-wind-value ${windClass}">${station.windSpeed !== null ? station.windSpeed : '-'}</span>
+                    <span class="station-wind-unit">km/h</span>
+                    ${gustHtml}
+                </div>
+                <div class="station-direction">
+                    <div class="station-dir-arrow" style="${arrowRotation}">↑</div>
+                    <span class="station-dir-text">${station.windDirectionText || '-'}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Zeigt Loading-State für Live-Wind
+ */
+export function showLiveWindLoading() {
+    const card = document.getElementById('liveWindCard');
+    const container = document.getElementById('liveWindStations');
+
+    if (card && container) {
+        card.style.display = 'block';
+        container.innerHTML = `
+            <div class="live-wind-loading">
+                <div class="spinner"></div>
+                <span>Suche Stationen...</span>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Versteckt die Live-Wind-Karte
+ */
+export function hideLiveWindCard() {
+    const card = document.getElementById('liveWindCard');
+    if (card) {
+        card.style.display = 'none';
+    }
+}
+
+/**
+ * Formatiert Alter der Messung
+ */
+function formatLiveWindAge(minutes) {
+    if (minutes < 1) return 'gerade eben';
+    if (minutes < 60) return `vor ${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `vor ${hours}h ${mins}min` : `vor ${hours}h`;
+}

@@ -232,6 +232,25 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Live-Wind Stationen (OpenWindMap/Pioupiou) -->
+                    <div class="live-wind-card" id="liveWindCard" style="display: none;">
+                        <div class="live-wind-header">
+                            <span class="live-wind-icon">📡</span>
+                            <span class="live-wind-title">Live-Wind (Messstationen)</span>
+                            <span class="live-wind-badge">LIVE</span>
+                            <button class="live-wind-refresh" id="liveWindRefresh" title="Aktualisieren">↻</button>
+                        </div>
+                        <div class="live-wind-hint">Aktuelle Messwerte von Stationen in der Nähe</div>
+                        <div class="live-wind-stations" id="liveWindStations">
+                            <!-- Wird dynamisch befüllt -->
+                        </div>
+                        <div class="live-wind-footer">
+                            <span class="live-wind-source">Daten: <a href="https://www.openwindmap.org/" target="_blank" rel="noopener noreferrer">OpenWindMap</a></span>
+                            <span class="live-wind-note">⚠️ Messwerte können lokal abweichen</span>
+                        </div>
+                    </div>
+
                     <div class="assessment-card" role="status" aria-live="polite" aria-label="Aktuelle Flugbedingungen">
                         <div class="weather-current" id="weatherCurrent">
                             <span class="weather-icon-text" id="weatherDesc" aria-label="Aktuelles Wetter">-</span>
@@ -371,7 +390,7 @@
         <footer class="sky-footer">
             <div class="footer-content">
                 <p class="footer-text">
-                    SkyCheck v10.0 | Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="footer-link">Open-Meteo.com</a> (ICON-D2/EU)
+                    SkyCheck v10.0 | Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="footer-link">Open-Meteo.com</a> (ICON-D2/EU) + <a href="https://www.openwindmap.org/" target="_blank" rel="noopener noreferrer" class="footer-link">OpenWindMap</a>
                 </p>
                 <p class="footer-disclaimer">
                     <small>SkyCheck ersetzt keine professionelle Wetterberatung. Piloten sind selbst verantwortlich für ihre Flugentscheidungen.</small>

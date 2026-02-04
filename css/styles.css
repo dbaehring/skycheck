@@ -2282,6 +2282,208 @@ footer a { color: var(--accent); text-decoration: none; }
     position: relative;
 }
 
+/* === Live-Wind Card (OpenWindMap) === */
+.live-wind-card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+}
+.live-wind-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+.live-wind-icon {
+    font-size: 1.2rem;
+}
+.live-wind-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    flex: 1;
+}
+.live-wind-badge {
+    background: var(--green);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    animation: pulse-live 2s infinite;
+}
+@keyframes pulse-live {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+.live-wind-refresh {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    color: var(--text-muted);
+    transition: transform 0.3s, color 0.2s;
+}
+.live-wind-refresh:hover {
+    color: var(--accent);
+    transform: rotate(180deg);
+}
+.live-wind-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+}
+.live-wind-stations {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.live-wind-station {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.6rem 0.75rem;
+    background: var(--bg-dark);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    transition: border-color 0.2s;
+}
+.live-wind-station:hover {
+    border-color: var(--accent);
+}
+.station-info {
+    min-width: 0;
+}
+.station-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.station-meta {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    display: flex;
+    gap: 0.5rem;
+}
+.station-distance {
+    color: var(--accent);
+}
+.station-age {
+    opacity: 0.8;
+}
+.station-wind {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.station-wind-value {
+    font-weight: 600;
+    font-size: 1rem;
+    font-family: 'Space Mono', monospace;
+}
+.station-wind-value.green { color: var(--green); }
+.station-wind-value.yellow { color: var(--yellow); }
+.station-wind-value.red { color: var(--red); }
+.station-wind-unit {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+.station-gust {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+.station-gust .gust-value {
+    font-weight: 500;
+}
+.station-direction {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 40px;
+}
+.station-dir-arrow {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    transition: transform 0.3s;
+}
+.station-dir-text {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-top: 2px;
+}
+.live-wind-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+.live-wind-source a {
+    color: var(--accent);
+    text-decoration: none;
+}
+.live-wind-source a:hover {
+    text-decoration: underline;
+}
+.live-wind-note {
+    font-style: italic;
+}
+.live-wind-empty {
+    text-align: center;
+    padding: 1rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+.live-wind-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    color: var(--text-muted);
+}
+.live-wind-loading .spinner {
+    width: 20px;
+    height: 20px;
+    border-width: 2px;
+}
+
+/* Mobile: Kompaktere Stationen */
+@media (max-width: 500px) {
+    .live-wind-station {
+        grid-template-columns: 1fr auto;
+        gap: 0.5rem;
+    }
+    .station-direction {
+        display: none;
+    }
+    .station-wind::after {
+        content: attr(data-dir);
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        margin-left: 0.25rem;
+    }
+}
+
 /* === Landscape Optimierung === */
 @media (orientation: landscape) and (max-height: 500px) {
     /* Kompakterer Header */

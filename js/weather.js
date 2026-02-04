@@ -1015,3 +1015,148 @@ export function analyzeThermicWindow(dayStr, dayIdx) {
         intensity: peakQuality > 60 ? 'strong' : peakQuality > 35 ? 'moderate' : 'weak'
     };
 }
+
+// === OpenWindMap/Pioupiou Live-Wind Integration ===
+
+// Cache für Live-Wind-Daten (Rate Limit: 1 Anfrage/60 Sek.)
+let liveWindCache = {
+    data: null,
+    timestamp: 0
+};
+
+/**
+ * Berechnet Distanz zwischen zwei Koordinaten (Haversine-Formel)
+ * @param {number} lat1 - Breitengrad Punkt 1
+ * @param {number} lon1 - Längengrad Punkt 1
+ * @param {number} lat2 - Breitengrad Punkt 2
+ * @param {number} lon2 - Längengrad Punkt 2
+ * @returns {number} Distanz in km
+ */
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Erdradius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+/**
+ * Holt alle Pioupiou/OpenWindMap Stationen (mit Cache)
+ * @returns {Promise<Array>} Array aller Stationen
+ */
+async function fetchAllPioupiouStations() {
+    const now = Date.now();
+
+    // Cache prüfen (60 Sekunden TTL wegen API Rate Limit)
+    if (liveWindCache.data && (now - liveWindCache.timestamp) < API_CONFIG.liveWindCacheTTL) {
+        return liveWindCache.data;
+    }
+
+    try {
+        const response = await fetch(API_CONFIG.pioupiouUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const result = await response.json();
+
+        // Cache aktualisieren
+        liveWindCache.data = result.data || [];
+        liveWindCache.timestamp = now;
+
+        return liveWindCache.data;
+    } catch (error) {
+        console.warn('OpenWindMap API Fehler:', error);
+        // Bei Fehler: alte Cache-Daten zurückgeben falls vorhanden
+        return liveWindCache.data || [];
+    }
+}
+
+/**
+ * Konvertiert Windrichtung in Grad zu Himmelsrichtung
+ * @param {number} deg - Windrichtung in Grad
+ * @returns {string} Himmelsrichtung (N, NE, E, etc.)
+ */
+function degToCompass(deg) {
+    if (deg === null || deg === undefined) return '-';
+    const directions = ['N', 'NNO', 'NO', 'ONO', 'O', 'OSO', 'SO', 'SSO',
+                        'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+    const index = Math.round(deg / 22.5) % 16;
+    return directions[index];
+}
+
+/**
+ * Holt Live-Windstationen in der Nähe eines Standorts
+ * @param {number} lat - Breitengrad
+ * @param {number} lon - Längengrad
+ * @param {number} radiusKm - Suchradius in km (default aus Config)
+ * @param {number} maxStations - Max. Anzahl Stationen (default aus Config)
+ * @returns {Promise<Array>} Sortierte Liste der nächsten Stationen
+ */
+export async function fetchNearbyLiveWind(lat, lon, radiusKm = null, maxStations = null) {
+    const radius = radiusKm || API_CONFIG.liveWindRadius;
+    const max = maxStations || API_CONFIG.liveWindMaxStations;
+
+    const allStations = await fetchAllPioupiouStations();
+
+    if (!allStations || allStations.length === 0) {
+        return [];
+    }
+
+    // Stationen mit Distanz anreichern und filtern
+    const nearbyStations = allStations
+        .filter(station => {
+            // Nur Stationen mit gültiger Position und aktuellen Messwerten
+            if (!station.location?.latitude || !station.location?.longitude) return false;
+            if (!station.measurements?.date) return false;
+
+            // Messung nicht älter als 2 Stunden
+            const measurementAge = Date.now() - new Date(station.measurements.date).getTime();
+            if (measurementAge > 2 * 60 * 60 * 1000) return false;
+
+            return true;
+        })
+        .map(station => {
+            const distance = calculateDistance(
+                lat, lon,
+                station.location.latitude,
+                station.location.longitude
+            );
+
+            const m = station.measurements;
+            return {
+                id: station.id,
+                name: station.meta?.name || `Station ${station.id}`,
+                distance: Math.round(distance * 10) / 10,
+                lat: station.location.latitude,
+                lon: station.location.longitude,
+                windSpeed: m.wind_speed_avg !== null ? Math.round(m.wind_speed_avg * 3.6) : null, // m/s → km/h
+                windGust: m.wind_speed_max !== null ? Math.round(m.wind_speed_max * 3.6) : null,
+                windMin: m.wind_speed_min !== null ? Math.round(m.wind_speed_min * 3.6) : null,
+                windDirection: m.wind_heading,
+                windDirectionText: degToCompass(m.wind_heading),
+                lastUpdate: new Date(m.date),
+                ageMinutes: Math.round((Date.now() - new Date(m.date).getTime()) / 60000),
+                source: 'openwindmap'
+            };
+        })
+        .filter(station => station.distance <= radius)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, max);
+
+    return nearbyStations;
+}
+
+/**
+ * Formatiert das Alter einer Messung
+ * @param {number} minutes - Alter in Minuten
+ * @returns {string} Formatierter String
+ */
+export function formatMeasurementAge(minutes) {
+    if (minutes < 1) return 'gerade eben';
+    if (minutes < 60) return `vor ${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    return `vor ${hours}h ${minutes % 60}min`;
+}

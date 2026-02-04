@@ -36,7 +36,8 @@ import {
 import {
     fetchWeatherData,
     refreshData,
-    setWeatherCallback
+    setWeatherCallback,
+    fetchNearbyLiveWind
 } from './weather.js';
 
 // UI-Modul
@@ -82,7 +83,11 @@ import {
     saveExpertSettings,
     resetExpertSettings,
     applyExpertPreset,
-    showToast
+    showToast,
+    // Live-Wind
+    renderLiveWindStations,
+    showLiveWindLoading,
+    hideLiveWindCard
 } from './ui.js';
 
 /**
@@ -176,6 +181,30 @@ function onWeatherLoaded() {
         } catch (e) {
             // localStorage voll oder nicht verfügbar
         }
+
+        // Live-Wind-Stationen laden (im Hintergrund)
+        loadLiveWindStations();
+    }
+}
+
+/**
+ * Live-Windstationen für aktuellen Standort laden
+ */
+async function loadLiveWindStations() {
+    const { lat, lon } = state.currentLocation;
+    if (!lat || !lon) {
+        hideLiveWindCard();
+        return;
+    }
+
+    showLiveWindLoading();
+
+    try {
+        const stations = await fetchNearbyLiveWind(lat, lon);
+        renderLiveWindStations(stations);
+    } catch (error) {
+        console.warn('Live-Wind Fehler:', error);
+        hideLiveWindCard();
     }
 }
 
@@ -439,6 +468,12 @@ function registerEventListeners() {
     const windProfileToggle = document.getElementById('windProfileToggle');
     if (windProfileToggle) {
         windProfileToggle.addEventListener('click', toggleWindDiagram);
+    }
+
+    // Live-Wind Refresh Button
+    const liveWindRefresh = document.getElementById('liveWindRefresh');
+    if (liveWindRefresh) {
+        liveWindRefresh.addEventListener('click', loadLiveWindStations);
     }
 
     // === Expertenmodus Event-Listener ===
