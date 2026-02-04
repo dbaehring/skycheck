@@ -671,7 +671,7 @@ function updateWarnings(ws, wg, w850, w700, grad, spread, cape, li, cloudLow, pr
     else if (showers > LIMITS.showers.green) warnings.push({ level: 'yellow', text: '🌦️ Lokale Schauer möglich' });
 
     if (freezing < METEO_CONSTANTS.freezingLevelWarning) warnings.push({ level: 'yellow', text: '❄️ Nullgradgrenze niedrig (' + Math.round(freezing) + 'm)' });
-    if (boundaryLayer < METEO_CONSTANTS.boundaryLayerWarning) warnings.push({ level: 'yellow', text: '📉 Grenzschicht nur ' + Math.round(boundaryLayer) + 'm – schwache Thermik' });
+    if (boundaryLayer < METEO_CONSTANTS.boundaryLayerWarning) warnings.push({ level: 'yellow', text: '📉 Grenzschicht aktuell nur ' + Math.round(boundaryLayer) + 'm – schwache Thermik zu dieser Stunde' });
 
     const el = document.getElementById('warnings'), list = document.getElementById('warningsList');
     if (warnings.length) {
@@ -1882,10 +1882,13 @@ export function renderLiveWindStations(stations) {
         const gustHtml = station.windGust && station.windGust > station.windSpeed ?
             `<span class="station-gust">Böen: <span class="gust-value">${station.windGust}</span></span>` : '';
 
+        // Link zur Pioupiou/OpenWindMap Station
+        const stationUrl = `https://www.pioupiou.fr/fr/stations/${station.id}`;
+
         return `
             <div class="live-wind-station">
                 <div class="station-info">
-                    <div class="station-name" title="${station.name}">${station.name}</div>
+                    <a href="${stationUrl}" target="_blank" rel="noopener noreferrer" class="station-name" title="${station.name} – auf OpenWindMap öffnen">${station.name} ↗</a>
                     <div class="station-meta">
                         <span class="station-distance">📍 ${station.distance} km</span>
                         <span class="station-age">⏱️ ${formatLiveWindAge(station.ageMinutes)}</span>
