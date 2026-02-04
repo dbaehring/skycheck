@@ -49,6 +49,34 @@ export function validateValue(value, fallback = null) {
     return value;
 }
 
+/**
+ * Extrahiert Wind-Daten aus hourlyData für einen bestimmten Index
+ * Zentrale Funktion um Code-Duplikation zu vermeiden
+ * @param {Object} h - hourlyData Objekt
+ * @param {number} i - Stunden-Index
+ * @returns {Object} Wind-Daten mit allen relevanten Werten
+ */
+export function extractWindData(h, i) {
+    const ws = h.wind_speed_10m?.[i] || 0;
+    const wg = h.wind_gusts_10m?.[i] || 0;
+    const w900 = h.wind_speed_900hPa?.[i] || 0;
+    const w850 = h.wind_speed_850hPa?.[i] || 0;
+    const w800 = h.wind_speed_800hPa?.[i] || 0;
+    const w700 = h.wind_speed_700hPa?.[i] || 0;
+    const wd10m = h.wind_direction_10m?.[i] || 0;
+    const wd900 = h.wind_direction_900hPa?.[i] || 0;
+    const wd850 = h.wind_direction_850hPa?.[i] || 0;
+    const wd700 = h.wind_direction_700hPa?.[i] || 0;
+
+    return {
+        ws, wg, w900, w850, w800, w700,
+        wd10m, wd900, wd850, wd700,
+        grad: Math.abs(w850 - ws),
+        grad3000: Math.abs(w700 - ws),
+        gustSpread: wg - ws
+    };
+}
+
 // Callback für UI-Updates (wird von main.js gesetzt)
 let onWeatherLoaded = null;
 
@@ -320,16 +348,9 @@ export function getHourScore(i) {
     // Parameter-Filter aus State (standardmäßig alle aktiv)
     const filter = state.paramFilter || { wind: true, thermik: true, clouds: true, precip: true };
 
-    // Wind-Parameter
-    const ws = h.wind_speed_10m[i] || 0;
-    const wg = h.wind_gusts_10m[i] || 0;
-    const w900 = h.wind_speed_900hPa?.[i] || 0;
-    const w850 = h.wind_speed_850hPa?.[i] || 0;
-    const w800 = h.wind_speed_800hPa?.[i] || 0;
-    const w700 = h.wind_speed_700hPa?.[i] || 0;
-    const grad = Math.abs(w850 - ws);
-    const grad3000 = Math.abs(w700 - ws);
-    const gustSpread = wg - ws;
+    // Wind-Parameter (zentrale Extraktion)
+    const wind = extractWindData(h, i);
+    const { ws, wg, w900, w850, w800, w700, grad, grad3000, gustSpread } = wind;
 
     // Thermik-Parameter
     const temp = h.temperature_2m?.[i];
@@ -455,11 +476,8 @@ export function dayHasKillers(dayStr) {
         const idx = state.hourlyData.time.findIndex(t => t === ts);
         if (idx === -1) continue;
 
-        const ws = state.hourlyData.wind_speed_10m[idx] || 0;
-        const wg = state.hourlyData.wind_gusts_10m[idx] || 0;
-        const w700 = state.hourlyData.wind_speed_700hPa?.[idx] || 0;
-        const w850 = state.hourlyData.wind_speed_850hPa?.[idx] || 0;
-        const grad = Math.abs(w850 - ws);
+        const wind = extractWindData(state.hourlyData, idx);
+        const { ws, wg, w700, grad } = wind;
         const cape = state.hourlyData.cape?.[idx] || 0;
         const vis = state.hourlyData.visibility?.[idx] || 10000;
         const gustFactor = getGustFactor(ws, wg);

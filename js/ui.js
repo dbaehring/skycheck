@@ -9,11 +9,12 @@ import { LIMITS, STORAGE_KEYS, UI_CONFIG, METEO_CONSTANTS, APP_INFO } from './co
 import {
     getWindDir, getColorClass, getColorClassRev, getSpreadColor,
     scoreToColor, getTrend, getGustFactor, getWeatherInfo, isInAlpineRegion,
-    escapeHtml
+    escapeHtml, validateCustomLimits
 } from './utils.js';
 import {
     getHourScore, findBestWindow, updateSunTimes, calculateCloudBase, validateValue,
     calculateBeginnerSafety, getRiskExplanation, getFogRisk, analyzeThermicWindow,
+    extractWindData,
     // Zentralisierte Bewertungsfunktionen (Single Source of Truth)
     evaluateWind, evaluateThermik, evaluateClouds, evaluatePrecip
 } from './weather.js';
@@ -126,19 +127,13 @@ export function setupDays() {
                 if (s < worst) worst = s;
 
                 // Kategorie-Scores berechnen (schlechtester Wert zählt)
-                const ws = h.wind_speed_10m[i] || 0;
-                const wg = h.wind_gusts_10m[i] || 0;
-                const w900 = h.wind_speed_900hPa?.[i] || 0;
-                const w850 = h.wind_speed_850hPa?.[i] || 0;
-                const w800 = h.wind_speed_800hPa?.[i] || 0;
-                const w700 = h.wind_speed_700hPa?.[i] || 0;
-                const grad = Math.abs((h.wind_speed_850hPa?.[i] || 0) - (h.wind_speed_10m[i] || 0));
-                const grad3000 = Math.abs((h.wind_speed_700hPa?.[i] || 0) - (h.wind_speed_10m[i] || 0));  // Gradient Boden-3000m
+                const wind = extractWindData(h, i);
+                const { ws, wg, w900, w850, w800, w700, grad, grad3000 } = wind;
                 const wScore = evaluateWind(ws, wg, w900, w850, w800, w700, grad, grad3000);
                 if (wScore < windScore) windScore = wScore;
 
-                const temp = h.temperature_2m[i];
-                const dew = h.dew_point_2m[i];
+                const temp = h.temperature_2m?.[i];
+                const dew = h.dew_point_2m?.[i];
                 const spread = (temp != null && dew != null) ? temp - dew : 10;
                 const cape = h.cape?.[i] || 0;
                 const li = h.lifted_index?.[i] || 0;
@@ -730,7 +725,7 @@ export function toggleTheme() {
 
 // High Contrast Mode (Standard = high)
 export function loadContrastMode() {
-    const saved = localStorage.getItem('skycheck-contrast');
+    const saved = localStorage.getItem(STORAGE_KEYS.CONTRAST);
     // High Contrast ist Standard - nur deaktivieren wenn explizit 'normal' gespeichert
     if (saved !== 'normal') {
         document.documentElement.setAttribute('data-contrast', 'high');
@@ -741,10 +736,10 @@ export function toggleContrastMode() {
     const current = document.documentElement.getAttribute('data-contrast');
     if (current === 'high') {
         document.documentElement.removeAttribute('data-contrast');
-        localStorage.setItem('skycheck-contrast', 'normal');  // Explizit speichern um Standard zu überschreiben
+        localStorage.setItem(STORAGE_KEYS.CONTRAST, 'normal');  // Explizit speichern um Standard zu überschreiben
     } else {
         document.documentElement.setAttribute('data-contrast', 'high');
-        localStorage.removeItem('skycheck-contrast');  // Standard wiederherstellen
+        localStorage.removeItem(STORAGE_KEYS.CONTRAST);  // Standard wiederherstellen
     }
 }
 
@@ -1058,7 +1053,14 @@ export function loadExpertMode() {
 
         const customLimits = localStorage.getItem(STORAGE_KEYS.CUSTOM_LIMITS);
         if (customLimits) {
-            state.customLimits = JSON.parse(customLimits);
+            const parsed = JSON.parse(customLimits);
+            const validated = validateCustomLimits(parsed);
+            if (validated) {
+                state.customLimits = validated;
+            } else {
+                // Ungültige Daten entfernen
+                localStorage.removeItem(STORAGE_KEYS.CUSTOM_LIMITS);
+            }
         }
 
         updateExpertModeUI();

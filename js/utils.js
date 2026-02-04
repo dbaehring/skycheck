@@ -127,3 +127,99 @@ export function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+/**
+ * Validiert customLimits aus localStorage gegen erwartetes Schema
+ * @param {Object} limits - Die zu validierenden Limits
+ * @returns {Object|null} Validierte Limits oder null wenn ungültig
+ */
+export function validateCustomLimits(limits) {
+    if (!limits || typeof limits !== 'object') {
+        return null;
+    }
+
+    // Erwartete Struktur mit erlaubten Bereichen
+    const schema = {
+        wind: {
+            surface: { min: 0, max: 50 },
+            gusts: { min: 0, max: 80 },
+            w900: { min: 0, max: 60 },
+            w850: { min: 0, max: 60 },
+            w800: { min: 0, max: 70 },
+            w700: { min: 0, max: 80 },
+            gradient: { min: 0, max: 50 }
+        },
+        cape: { min: 0, max: 5000 },
+        visibility: { min: 100, max: 50000 }
+    };
+
+    // Validierungsfunktion für einzelne Werte
+    const isValidNumber = (val, min, max) => {
+        return typeof val === 'number' && !isNaN(val) && val >= min && val <= max;
+    };
+
+    // Rekursive Validierung
+    const validateObject = (obj, schemaObj) => {
+        if (!obj || typeof obj !== 'object') return false;
+        for (const key of Object.keys(schemaObj)) {
+            if (obj[key] === undefined) continue; // Optionale Felder
+            const spec = schemaObj[key];
+            if (spec.min !== undefined && spec.max !== undefined) {
+                // Endknoten mit green/yellow
+                if (obj[key].green !== undefined && !isValidNumber(obj[key].green, spec.min, spec.max)) {
+                    return false;
+                }
+                if (obj[key].yellow !== undefined && !isValidNumber(obj[key].yellow, spec.min, spec.max)) {
+                    return false;
+                }
+            } else if (typeof spec === 'object') {
+                // Verschachteltes Objekt
+                if (!validateObject(obj[key], spec)) return false;
+            }
+        }
+        return true;
+    };
+
+    // Validiere nur wenn wind-Objekt vorhanden
+    if (limits.wind && !validateObject(limits, schema)) {
+        console.warn('customLimits Schema-Validierung fehlgeschlagen');
+        return null;
+    }
+
+    return limits;
+}
+
+/**
+ * Zentrale Error-Handling Funktion
+ * Vereinheitlicht Fehlerbehandlung und Logging
+ * @param {Error|string} error - Fehler-Objekt oder Nachricht
+ * @param {string} context - Kontext wo der Fehler auftrat (z.B. 'Wetterdaten laden')
+ * @param {Object} options - Optionale Einstellungen
+ * @param {boolean} options.silent - Wenn true, kein console.error
+ * @param {boolean} options.showToast - Wenn true, Toast-Nachricht anzeigen
+ * @param {string} options.level - 'error', 'warn', 'info' (default: 'error')
+ */
+export function handleError(error, context, options = {}) {
+    const { silent = false, showToast = false, level = 'error' } = options;
+    const message = error instanceof Error ? error.message : String(error);
+    const fullMessage = `${context}: ${message}`;
+
+    // Logging (falls nicht silent)
+    if (!silent) {
+        if (level === 'warn') {
+            console.warn(fullMessage);
+        } else if (level === 'info') {
+            console.info(fullMessage);
+        } else {
+            console.error(fullMessage);
+        }
+    }
+
+    // Toast anzeigen (falls gewünscht und showToast verfügbar)
+    if (showToast && typeof window !== 'undefined') {
+        // Dynamischer Import vermeiden - Toast wird von aufrufendem Code gehandhabt
+        return { message: fullMessage, level };
+    }
+
+    return { message: fullMessage, level };
+}

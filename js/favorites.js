@@ -7,6 +7,7 @@ import { state } from './state.js';
 import { STORAGE_KEYS, LIMITS, UI_CONFIG, CACHE_CONFIG } from './config.js';
 import { isInIconEUCoverage, escapeHtml } from './utils.js';
 import { selectLocation } from './map.js';
+import { extractWindData } from './weather.js';
 
 // Rate limiting: Verzögerung zwischen API-Calls (ms)
 const API_DELAY = 200;
@@ -383,16 +384,9 @@ async function fetchQuickWeather(lat, lon, cacheKey) {
             const idx = h.time.findIndex(t => t === ts);
             if (idx === -1) continue;
 
-            // Alle Parameter extrahieren (wie in getHourScore)
-            const ws = h.wind_speed_10m[idx] || 0;
-            const wg = h.wind_gusts_10m[idx] || 0;
-            const w900 = h.wind_speed_900hPa?.[idx] || 0;
-            const w850 = h.wind_speed_850hPa?.[idx] || 0;
-            const w800 = h.wind_speed_800hPa?.[idx] || 0;
-            const w700 = h.wind_speed_700hPa?.[idx] || 0;
-            const grad = Math.abs(w850 - ws);
-            const grad3000 = Math.abs(w700 - ws);
-            const gustSpread = wg - ws;
+            // Alle Parameter extrahieren (zentrale Helper-Funktion)
+            const wind = extractWindData(h, idx);
+            const { ws, wg, w900, w850, w800, w700, grad, grad3000, gustSpread } = wind;
 
             const temp = h.temperature_2m?.[idx];
             const dew = h.dew_point_2m?.[idx];

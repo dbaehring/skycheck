@@ -141,11 +141,12 @@ export const WEATHER_CODES = {
     99: { icon: '⛈️', text: 'Starkes Gewitter' }
 };
 
-// localStorage Keys
+// localStorage Keys (konsolidiert)
 export const STORAGE_KEYS = {
     FAVORITES: 'gleitschirm-meteo-favorites',
     FAVORITES_WEATHER_CACHE: 'gleitschirm-meteo-fav-weather-cache',
     THEME: 'gleitschirm-meteo-theme',
+    CONTRAST: 'skycheck-contrast',
     WINDROSE: 'gleitschirm-meteo-windrose',
     HEIGHT: 'gleitschirm-meteo-height',
     LAST_WEATHER: 'gleitschirm-meteo-last-weather',
