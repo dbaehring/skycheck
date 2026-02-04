@@ -461,7 +461,7 @@ export function dayHasKillers(dayStr) {
         const w850 = state.hourlyData.wind_speed_850hPa?.[idx] || 0;
         const grad = Math.abs(w850 - ws);
         const cape = state.hourlyData.cape?.[idx] || 0;
-        const vis = state.hourlyData.visibility[idx] || 10000;
+        const vis = state.hourlyData.visibility?.[idx] || 10000;
         const gustFactor = getGustFactor(ws, wg);
 
         // Killer-Kriterien (aus LIMITS für Single Source of Truth)
@@ -966,8 +966,13 @@ export function analyzeThermicWindow(dayStr, dayIdx) {
         const hoursSinceSunrise = data.hour - sunriseHour;
         const hoursUntilSunset = sunsetHour - data.hour;
         let timeFactor = 1.0;
-        if (hoursSinceSunrise < 2) timeFactor = hoursSinceSunrise / 2 * 0.5; // Langsamer Aufbau
-        if (hoursUntilSunset < 1.5) timeFactor = Math.max(0, hoursUntilSunset / 1.5) * 0.7; // Schnelles Abklingen
+        if (hoursSinceSunrise < 2) {
+            timeFactor = hoursSinceSunrise / 2 * 0.5; // Langsamer Aufbau
+        }
+        if (hoursUntilSunset < 1.5) {
+            // Minimum aus beiden Faktoren nehmen (nicht überschreiben)
+            timeFactor = Math.min(timeFactor, Math.max(0, hoursUntilSunset / 1.5) * 0.7);
+        }
 
         // Gesamtqualität berechnen
         const quality = Math.round(

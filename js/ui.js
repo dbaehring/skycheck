@@ -8,7 +8,8 @@ import { state } from './state.js';
 import { LIMITS, STORAGE_KEYS, UI_CONFIG, METEO_CONSTANTS, APP_INFO } from './config.js';
 import {
     getWindDir, getColorClass, getColorClassRev, getSpreadColor,
-    scoreToColor, getTrend, getGustFactor, getWeatherInfo, isInAlpineRegion
+    scoreToColor, getTrend, getGustFactor, getWeatherInfo, isInAlpineRegion,
+    escapeHtml
 } from './utils.js';
 import {
     getHourScore, findBestWindow, updateSunTimes, calculateCloudBase, validateValue,
@@ -354,13 +355,13 @@ export function updateDisplay(i) {
     const wd850 = validateValue(h.wind_direction_850hPa?.[i], 0), wd800 = validateValue(h.wind_direction_800hPa?.[i], 0);
     const wd700 = validateValue(h.wind_direction_700hPa?.[i], 0);
     const grad = Math.abs(w850 - ws), grad3000 = Math.abs(w700 - ws);  // Beide Gradienten zu Boden
-    const temp = validateValue(h.temperature_2m[i], null), dew = validateValue(h.dew_point_2m[i], null);
+    const temp = validateValue(h.temperature_2m?.[i], null), dew = validateValue(h.dew_point_2m?.[i], null);
     const spread = (temp !== null && dew !== null) ? temp - dew : null;
     const cape = validateValue(h.cape?.[i], 0), li = validateValue(h.lifted_index?.[i], 0);
-    const ct = validateValue(h.cloud_cover[i], 0), cl = validateValue(h.cloud_cover_low[i], 0);
-    const cm = validateValue(h.cloud_cover_mid[i], 0), cloudHigh = validateValue(h.cloud_cover_high[i], 0);
-    const vis = validateValue(h.visibility[i], 10000), prec = validateValue(h.precipitation[i], 0);
-    const pp = validateValue(h.precipitation_probability[i], 0);
+    const ct = validateValue(h.cloud_cover?.[i], 0), cl = validateValue(h.cloud_cover_low?.[i], 0);
+    const cm = validateValue(h.cloud_cover_mid?.[i], 0), cloudHigh = validateValue(h.cloud_cover_high?.[i], 0);
+    const vis = validateValue(h.visibility?.[i], 10000), prec = validateValue(h.precipitation?.[i], 0);
+    const pp = validateValue(h.precipitation_probability?.[i], 0);
     const freezing = validateValue(h.freezing_level_height?.[i], 0), boundaryLayer = validateValue(h.boundary_layer_height?.[i], 0);
     const showers = validateValue(h.showers?.[i], 0), weatherCode = validateValue(h.weather_code?.[i], 0);
     const cloudBase = (temp !== null && dew !== null) ? calculateCloudBase(temp, dew, state.currentLocation.elevation) : null;
@@ -572,7 +573,7 @@ function updateReasonSummary(score, ws, wg, w700, grad, cape, vis, spread, cloud
 
         if (criticals.length > 0) {
             const main = criticals.slice(0, 2);
-            textEl.innerHTML = '✗ <strong>Nicht fliegbar wegen:</strong> ' + main.map(c => '<span class="reason-param red">' + c.name + ' ' + c.value + '</span> (' + c.issue + ')').join(', ') + filterHint;
+            textEl.innerHTML = '✗ <strong>Nicht fliegbar wegen:</strong> ' + main.map(c => '<span class="reason-param red">' + escapeHtml(c.name) + ' ' + escapeHtml(c.value) + '</span> (' + escapeHtml(c.issue) + ')').join(', ') + filterHint;
         } else {
             textEl.innerHTML = '✗ <strong>Mehrere Parameter im kritischen Bereich.</strong>' + filterHint + ' Siehe Warnungen unten.';
         }
@@ -599,7 +600,7 @@ function updateReasonSummary(score, ws, wg, w700, grad, cape, vis, spread, cloud
 
         if (elevated.length > 0) {
             const main = elevated.slice(0, 2);
-            textEl.innerHTML = '⚠ <strong>Hauptgrund:</strong> ' + main.map(e => '<span class="reason-param yellow">' + e.name + ' ' + e.value + '</span>').join(' und ') + '.' + filterHint + ' Erhöhte Aufmerksamkeit nötig.';
+            textEl.innerHTML = '⚠ <strong>Hauptgrund:</strong> ' + main.map(e => '<span class="reason-param yellow">' + escapeHtml(e.name) + ' ' + escapeHtml(e.value) + '</span>').join(' und ') + '.' + filterHint + ' Erhöhte Aufmerksamkeit nötig.';
         } else {
             textEl.innerHTML = '⚠ <strong>Einige Parameter leicht erhöht.</strong>' + filterHint + ' Siehe gelbe Hinweise unten.';
         }
@@ -715,8 +716,11 @@ export function getPreferredTheme() {
 }
 
 export function setTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem(STORAGE_KEYS.THEME, theme);
+    // Nur gültige Themes erlauben (Injection-Schutz)
+    const validThemes = ['light', 'dark'];
+    const safeTheme = validThemes.includes(theme) ? theme : 'light';
+    document.documentElement.setAttribute('data-theme', safeTheme);
+    localStorage.setItem(STORAGE_KEYS.THEME, safeTheme);
 }
 
 export function toggleTheme() {
@@ -1514,13 +1518,14 @@ let toastTimeout = null;
  * @param {number} duration - Anzeigedauer in ms (default 3000)
  */
 export function showToast(message, type = '', duration = 3000) {
-    const toast = document.getElementById('toast');
-    if (!toast) return;
-
-    // Vorherigen Timeout abbrechen
+    // Vorherigen Timeout IMMER abbrechen (Memory Leak verhindern)
     if (toastTimeout) {
         clearTimeout(toastTimeout);
+        toastTimeout = null;
     }
+
+    const toast = document.getElementById('toast');
+    if (!toast) return;
 
     // Typ-Klassen zurücksetzen
     toast.classList.remove('success', 'warning', 'error', 'visible');
@@ -1587,11 +1592,14 @@ export function initPullToRefresh(onRefresh) {
         if (indicator.classList.contains('ready') && pullRefreshCallback) {
             indicator.classList.add('refreshing');
             indicator.querySelector('.pull-refresh-text').textContent = 'Aktualisiere...';
-            pullRefreshCallback().finally(() => {
-                indicator.classList.remove('refreshing', 'ready');
-                indicator.style.transform = '';
-                indicator.style.opacity = '0';
-            });
+            // Promise.resolve() für den Fall, dass Callback kein Promise zurückgibt
+            Promise.resolve(pullRefreshCallback())
+                .catch(err => console.error('Refresh-Fehler:', err))
+                .finally(() => {
+                    indicator.classList.remove('refreshing', 'ready');
+                    indicator.style.transform = '';
+                    indicator.style.opacity = '0';
+                });
         } else {
             indicator.classList.remove('ready');
             indicator.style.transform = '';

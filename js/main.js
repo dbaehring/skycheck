@@ -140,7 +140,7 @@ async function initApp() {
                 const lastWeather = localStorage.getItem(STORAGE_KEYS.LAST_WEATHER);
                 if (lastWeather) {
                     const last = JSON.parse(lastWeather);
-                    if (last.lat && last.lon) {
+                    if (typeof last.lat === 'number' && typeof last.lon === 'number') {
                         await handleMapClick(last.lat, last.lon, last.name);
                         flyTo(last.lat, last.lon, 11);
                     }

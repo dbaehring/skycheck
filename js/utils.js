@@ -57,7 +57,7 @@ export function getTrend(cur, prev) {
  * PHASE 1 SAFETY: Gust-Faktor Berechnung
  */
 export function getGustFactor(ws, wg) {
-    if (ws < 5) return 0; // Bei sehr schwachem Wind nicht relevant
+    if (!ws || ws <= 0 || ws < 5) return 0; // Bei sehr schwachem/keinem Wind nicht relevant
     return (wg - ws) / ws;
 }
 

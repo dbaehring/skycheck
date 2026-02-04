@@ -367,6 +367,9 @@ async function fetchQuickWeather(lat, lon, cacheKey) {
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=${params}&models=${model}&forecast_days=1&timezone=auto`;
 
         const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
         const data = await response.json();
         const h = data.hourly;
 
