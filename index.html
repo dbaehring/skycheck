@@ -203,7 +203,7 @@
                         <div class="day-diagram-card" id="thermicWindowCard" role="region" aria-label="Thermik-Zeitfenster">
                             <div class="diagram-header">
                                 <span class="diagram-icon">🌡️</span>
-                                <span class="diagram-title">Thermik-Zeitfenster</span>
+                                <span class="diagram-title">Thermik-Zeitfenster<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Thermik-Qualität basiert auf: Sonneneinstrahlung (30%), CAPE (25%), Grenzschicht-Höhe (15%), Spread (15%), Tageszeit (15%). Tiefe Wolken reduzieren die Qualität. Stark >60%, Moderat 35-60%, Schwach 15-35%.</span></span></span>
                                 <span class="diagram-summary" id="thermicSummary">-</span>
                             </div>
                             <div class="thermic-bar-container">
@@ -225,10 +225,10 @@
                                 </div>
                             </div>
                             <div class="thermic-legend">
-                                <span class="thermic-legend-item"><span class="thermic-legend-color strong"></span>Stark</span>
-                                <span class="thermic-legend-item"><span class="thermic-legend-color moderate"></span>Moderat</span>
-                                <span class="thermic-legend-item"><span class="thermic-legend-color weak"></span>Schwach</span>
-                                <span class="thermic-legend-item"><span class="thermic-legend-color none"></span>Keine</span>
+                                <span class="thermic-legend-item" title="Qualität >60%"><span class="thermic-legend-color strong"></span>Stark</span>
+                                <span class="thermic-legend-item" title="Qualität 35-60%"><span class="thermic-legend-color moderate"></span>Moderat</span>
+                                <span class="thermic-legend-item" title="Qualität 15-35%"><span class="thermic-legend-color weak"></span>Schwach</span>
+                                <span class="thermic-legend-item" title="Qualität <15%"><span class="thermic-legend-color none"></span>Keine</span>
                             </div>
                         </div>
                     </div>
