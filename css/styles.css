@@ -2326,6 +2326,36 @@ footer a { color: var(--accent); text-decoration: none; }
     color: var(--text-muted);
     margin-bottom: 0.75rem;
 }
+.live-wind-load-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    width: 100%;
+    padding: 1rem;
+    background: var(--bg-dark);
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+}
+.live-wind-load-btn:hover {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+}
+.load-btn-icon {
+    font-size: 1.5rem;
+}
+.load-btn-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.load-btn-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
 .live-wind-stations {
     display: flex;
     flex-direction: column;

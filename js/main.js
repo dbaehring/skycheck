@@ -85,7 +85,8 @@ import {
     // Live-Wind
     renderLiveWindStations,
     showLiveWindLoading,
-    hideLiveWindCard
+    hideLiveWindCard,
+    showLiveWindButton
 } from './ui.js';
 
 /**
@@ -179,8 +180,8 @@ function onWeatherLoaded() {
             // localStorage voll oder nicht verfügbar
         }
 
-        // Live-Wind-Stationen laden (im Hintergrund)
-        loadLiveWindStations();
+        // Live-Wind: Nur Button anzeigen, nicht automatisch laden
+        showLiveWindButton();
     }
 }
 
@@ -194,14 +195,33 @@ async function loadLiveWindStations() {
         return;
     }
 
+    // Laden-Button verstecken, Loading anzeigen
+    const loadBtn = document.getElementById('liveWindLoadBtn');
+    if (loadBtn) loadBtn.style.display = 'none';
+
     showLiveWindLoading();
 
     try {
         const stations = await fetchNearbyLiveWind(lat, lon);
         renderLiveWindStations(stations);
+
+        // Bei Erfolg: Badge, Refresh-Button und Footer anzeigen
+        if (stations && stations.length > 0) {
+            const badge = document.getElementById('liveWindBadge');
+            const refresh = document.getElementById('liveWindRefresh');
+            const footer = document.getElementById('liveWindFooter');
+            if (badge) badge.style.display = '';
+            if (refresh) refresh.style.display = '';
+            if (footer) footer.style.display = '';
+        }
     } catch (error) {
         console.warn('Live-Wind Fehler:', error);
-        hideLiveWindCard();
+        // Bei Fehler: Button wieder anzeigen
+        if (loadBtn) loadBtn.style.display = 'flex';
+        const container = document.getElementById('liveWindStations');
+        if (container) {
+            container.innerHTML = '<div class="live-wind-empty">⚠️ Daten konnten nicht geladen werden</div>';
+        }
     }
 }
 
@@ -458,6 +478,12 @@ function registerEventListeners() {
     const windProfileToggle = document.getElementById('windProfileToggle');
     if (windProfileToggle) {
         windProfileToggle.addEventListener('click', toggleWindDiagram);
+    }
+
+    // Live-Wind Laden Button
+    const liveWindLoadBtn = document.getElementById('liveWindLoadBtn');
+    if (liveWindLoadBtn) {
+        liveWindLoadBtn.addEventListener('click', loadLiveWindStations);
     }
 
     // Live-Wind Refresh Button

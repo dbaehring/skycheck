@@ -259,14 +259,18 @@
                         <div class="live-wind-header">
                             <span class="live-wind-icon">📡</span>
                             <span class="live-wind-title">Live-Wind (Messstationen)</span>
-                            <span class="live-wind-badge">LIVE</span>
-                            <button class="live-wind-refresh" id="liveWindRefresh" title="Aktualisieren">↻</button>
+                            <span class="live-wind-badge" id="liveWindBadge" style="display: none;">LIVE</span>
+                            <button class="live-wind-refresh" id="liveWindRefresh" title="Aktualisieren" style="display: none;">↻</button>
                         </div>
-                        <div class="live-wind-hint">Aktuelle Messwerte von Stationen in der Nähe</div>
+                        <button class="live-wind-load-btn" id="liveWindLoadBtn">
+                            <span class="load-btn-icon">📡</span>
+                            <span class="load-btn-text">Live-Windwerte laden</span>
+                            <span class="load-btn-hint">Stationen im Umkreis von 25 km</span>
+                        </button>
                         <div class="live-wind-stations" id="liveWindStations">
                             <!-- Wird dynamisch befüllt -->
                         </div>
-                        <div class="live-wind-footer">
+                        <div class="live-wind-footer" id="liveWindFooter" style="display: none;">
                             <span class="live-wind-source">Daten: <a href="https://www.openwindmap.org/" target="_blank" rel="noopener noreferrer">OpenWindMap</a></span>
                             <span class="live-wind-note">⚠️ Messwerte können lokal abweichen</span>
                         </div>

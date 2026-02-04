@@ -1852,12 +1852,16 @@ export function renderThermicWindow(dayStr, dayIdx) {
 export function renderLiveWindStations(stations) {
     const card = document.getElementById('liveWindCard');
     const container = document.getElementById('liveWindStations');
+    const loadBtn = document.getElementById('liveWindLoadBtn');
 
     if (!card || !container) return;
 
+    // Laden-Button verstecken
+    if (loadBtn) loadBtn.style.display = 'none';
+
     // Keine Stationen gefunden
     if (!stations || stations.length === 0) {
-        card.style.display = 'none';
+        container.innerHTML = '<div class="live-wind-empty">Keine Stationen im Umkreis von 25 km gefunden</div>';
         return;
     }
 
@@ -1926,6 +1930,35 @@ export function hideLiveWindCard() {
     const card = document.getElementById('liveWindCard');
     if (card) {
         card.style.display = 'none';
+    }
+}
+
+/**
+ * Zeigt den Button zum Laden der Live-Wind-Daten
+ */
+export function showLiveWindButton() {
+    const card = document.getElementById('liveWindCard');
+    const container = document.getElementById('liveWindStations');
+    const loadBtn = document.getElementById('liveWindLoadBtn');
+
+    if (card) {
+        card.style.display = 'block';
+    }
+    if (container) {
+        container.innerHTML = '';
+    }
+    if (loadBtn) {
+        loadBtn.style.display = 'flex';
+    }
+}
+
+/**
+ * Versteckt den Laden-Button (nach dem Klick)
+ */
+export function hideLiveWindButton() {
+    const loadBtn = document.getElementById('liveWindLoadBtn');
+    if (loadBtn) {
+        loadBtn.style.display = 'none';
     }
 }
 
