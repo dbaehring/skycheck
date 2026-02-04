@@ -223,3 +223,30 @@ export function handleError(error, context, options = {}) {
 
     return { message: fullMessage, level };
 }
+
+/**
+ * Registriert Standard-Schließverhalten für ein Modal
+ * Schließt bei Klick auf Overlay (außerhalb des Inhalts)
+ * @param {string} modalId - ID des Modal-Elements
+ * @param {Function} closeCallback - Funktion zum Schließen des Modals
+ * @param {string} [closeBtnId] - Optionale ID des Schließen-Buttons
+ */
+export function setupModalClose(modalId, closeCallback, closeBtnId = null) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+
+    // Schließen bei Klick auf Overlay
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeCallback();
+        }
+    });
+
+    // Optionaler Schließen-Button
+    if (closeBtnId) {
+        const closeBtn = document.getElementById(closeBtnId);
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeCallback);
+        }
+    }
+}

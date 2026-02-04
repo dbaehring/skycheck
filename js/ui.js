@@ -91,11 +91,11 @@ function getDomCache() {
 }
 
 /**
- * Formats value for display, shows "N/A" for missing data
- * @param {*} value - Value to display
- * @param {string} unit - Unit (e.g., 'km/h', '°C')
- * @param {number} decimals - Decimal places (default: 0)
- * @returns {string} Formatted string
+ * Formatiert Wert für Anzeige, zeigt "N/A" bei fehlenden Daten
+ * @param {*} value - Anzuzeigender Wert
+ * @param {string} unit - Einheit (z.B. 'km/h', '°C')
+ * @param {number} decimals - Dezimalstellen (Standard: 0)
+ * @returns {string} Formatierter String
  */
 export function formatValue(value, unit = '', decimals = 0) {
     if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) {
@@ -817,7 +817,7 @@ export function showQuickExplanation() {
 
 /**
  * PHASE 2: Rendert Beginner-Badge wenn Bedingungen perfekt sind
- * @param {Object} assessment - Beginner assessment from weather.js
+ * @param {Object} assessment - Beginner-Bewertung aus weather.js
  */
 export function renderBeginnerBadge(assessment) {
     const container = document.getElementById('beginnerBadge');
@@ -846,7 +846,7 @@ export function renderBeginnerBadge(assessment) {
 
 /**
  * PHASE 2: Rendert Risiko-Erklärungen bei Gelb/Rot
- * @param {Array} risks - Risk objects from weather.js
+ * @param {Array} risks - Risiko-Objekte aus weather.js
  */
 export function renderRiskExplanation(risks) {
     const container = document.getElementById('riskExplanation');
@@ -1065,7 +1065,7 @@ export function loadExpertMode() {
 
         updateExpertModeUI();
     } catch (e) {
-        console.warn('Could not load expert mode state:', e);
+        console.warn('Expertenmodus-Zustand konnte nicht geladen werden:', e);
     }
 }
 

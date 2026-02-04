@@ -36,10 +36,10 @@ function deepMerge(target, source) {
 }
 
 /**
- * Validates weather data and handles missing values
- * @param {*} value - Raw value from API
- * @param {*} fallback - Fallback value (default: null)
- * @returns {*} Validated value or null if invalid
+ * Validiert Wetterdaten und behandelt fehlende Werte
+ * @param {*} value - Rohwert von der API
+ * @param {*} fallback - Fallback-Wert (Standard: null)
+ * @returns {*} Validierter Wert oder Fallback wenn ungültig
  */
 export function validateValue(value, fallback = null) {
     if (value === null || value === undefined || value === '' ||

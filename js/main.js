@@ -6,6 +6,7 @@
 
 import { state } from './state.js';
 import { STORAGE_KEYS, APP_INFO } from './config.js';
+import { setupModalClose } from './utils.js';
 
 // Map-Modul
 import {
@@ -155,7 +156,7 @@ async function initApp() {
             setTheme(params.theme);
         }
     } catch (error) {
-        console.error('SkyCheck: Initialization error:', error);
+        console.error('SkyCheck: Initialisierungsfehler:', error);
     }
 }
 
@@ -302,34 +303,15 @@ function registerEventListeners() {
         confirmCancelBtn.addEventListener('click', closeConfirmModal);
     }
 
-    const confirmModal = document.getElementById('confirmModal');
-    if (confirmModal) {
-        confirmModal.addEventListener('click', (e) => {
-            if (e.target === confirmModal) {
-                closeConfirmModal();
-            }
-        });
-    }
+    // Modal-Schließverhalten (zentralisiert)
+    setupModalClose('confirmModal', closeConfirmModal);
 
     // Favoriten-Vergleich
     const favCompareBtn = document.getElementById('favCompareBtn');
     if (favCompareBtn) {
         favCompareBtn.addEventListener('click', openCompareModal);
     }
-
-    const closeCompareModalBtn = document.getElementById('closeCompareModal');
-    if (closeCompareModalBtn) {
-        closeCompareModalBtn.addEventListener('click', closeCompareModal);
-    }
-
-    const compareModal = document.getElementById('compareModal');
-    if (compareModal) {
-        compareModal.addEventListener('click', (e) => {
-            if (e.target === compareModal) {
-                closeCompareModal();
-            }
-        });
-    }
+    setupModalClose('compareModal', closeCompareModal, 'closeCompareModal');
 
     // Windrose-Toggle
     const windroseToggle = document.getElementById('windroseToggle');
@@ -403,15 +385,8 @@ function registerEventListeners() {
     // Keyboard-Shortcuts
     document.addEventListener('keydown', handleKeyboardShortcuts);
 
-    // Modal schließen bei Klick außerhalb
-    const favoriteModal = document.getElementById('favoriteModal');
-    if (favoriteModal) {
-        favoriteModal.addEventListener('click', (e) => {
-            if (e.target === favoriteModal) {
-                closeFavoriteModal();
-            }
-        });
-    }
+    // Modal schließen bei Klick außerhalb (zentralisiert)
+    setupModalClose('favoriteModal', closeFavoriteModal);
 
     // Escape zum Schließen von Modals
     document.addEventListener('keydown', (e) => {
@@ -447,21 +422,7 @@ function registerEventListeners() {
     if (aboutBtn) {
         aboutBtn.addEventListener('click', openAboutModal);
     }
-
-    const closeAboutModalBtn = document.getElementById('closeAboutModal');
-    if (closeAboutModalBtn) {
-        closeAboutModalBtn.addEventListener('click', closeAboutModal);
-    }
-
-    const aboutModal = document.getElementById('aboutModal');
-    if (aboutModal) {
-        // Schließen bei Klick auf Overlay
-        aboutModal.addEventListener('click', (e) => {
-            if (e.target === aboutModal) {
-                closeAboutModal();
-            }
-        });
-    }
+    setupModalClose('aboutModal', closeAboutModal, 'closeAboutModal');
 
     // About-Tabs (Event-Delegation)
     const aboutTabs = document.querySelector('.about-tabs');
@@ -503,19 +464,7 @@ function registerEventListeners() {
         expertSettingsBtn.addEventListener('click', openExpertSettings);
     }
 
-    const closeExpertModalBtn = document.getElementById('closeExpertModal');
-    if (closeExpertModalBtn) {
-        closeExpertModalBtn.addEventListener('click', closeExpertSettings);
-    }
-
-    const expertModal = document.getElementById('expertModal');
-    if (expertModal) {
-        expertModal.addEventListener('click', (e) => {
-            if (e.target === expertModal) {
-                closeExpertSettings();
-            }
-        });
-    }
+    setupModalClose('expertModal', closeExpertSettings, 'closeExpertModal');
 
     const expertSaveBtn = document.getElementById('expertSaveBtn');
     if (expertSaveBtn) {
