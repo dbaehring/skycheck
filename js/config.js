@@ -24,7 +24,7 @@ export const API_CONFIG = {
     // OpenWindMap/Pioupiou API für Live-Winddaten
     pioupiouUrl: 'https://api.pioupiou.fr/v1/live/all',
     pioupiouStationUrl: 'https://api.pioupiou.fr/v1/live/',
-    liveWindRadius: 50,  // km - Radius für Stationen in der Nähe
+    liveWindRadius: 25,  // km - Radius für Stationen in der Nähe
     liveWindMaxStations: 5,  // Max. Anzahl angezeigter Stationen
     liveWindCacheTTL: 60000  // 60 Sekunden Cache (API Rate Limit)
 };

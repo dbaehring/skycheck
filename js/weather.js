@@ -1132,9 +1132,9 @@ export async function fetchNearbyLiveWind(lat, lon, radiusKm = null, maxStations
                 distance: Math.round(distance * 10) / 10,
                 lat: station.location.latitude,
                 lon: station.location.longitude,
-                windSpeed: m.wind_speed_avg !== null ? Math.round(m.wind_speed_avg * 3.6) : null, // m/s → km/h
-                windGust: m.wind_speed_max !== null ? Math.round(m.wind_speed_max * 3.6) : null,
-                windMin: m.wind_speed_min !== null ? Math.round(m.wind_speed_min * 3.6) : null,
+                windSpeed: m.wind_speed_avg !== null ? Math.round(m.wind_speed_avg) : null, // bereits km/h
+                windGust: m.wind_speed_max !== null ? Math.round(m.wind_speed_max) : null,
+                windMin: m.wind_speed_min !== null ? Math.round(m.wind_speed_min) : null,
                 windDirection: m.wind_heading,
                 windDirectionText: degToCompass(m.wind_heading),
                 lastUpdate: new Date(m.date),
