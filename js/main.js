@@ -73,6 +73,7 @@ import {
     toggleWindDiagram,
     loadWindDiagramState,
     initPullToRefresh,
+    renderThermicWindow,
     // Expertenmodus
     loadExpertMode,
     toggleExpertMode,
@@ -314,7 +315,8 @@ function registerEventListeners() {
             const header = e.target.closest('.param-header');
             if (header) {
                 const card = header.closest('.param-card');
-                if (card) {
+                // height-card hat eigenen Event-Listener (toggleHeightCard)
+                if (card && !card.classList.contains('height-card')) {
                     toggleParamCard(card, e);
                 }
             }

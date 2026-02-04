@@ -172,6 +172,66 @@
                         </div>
                     </div>
                     <div class="timeline-card" role="region" aria-label="Stündlicher Tagesverlauf"><h3>Tagesverlauf (6-20 Uhr)</h3><div class="timeline" id="timeline" role="listbox" aria-label="Stunden auswählen"></div></div>
+
+                    <!-- Tagesverlauf-Diagramme: Wind + Thermik -->
+                    <div class="day-diagrams-container">
+                        <div class="day-diagram-card" id="windDiagramCard">
+                            <div class="diagram-header">
+                                <span class="diagram-icon">💨</span>
+                                <span class="diagram-title">Wind nach Höhe</span>
+                            </div>
+                            <div class="wind-profile-wrapper visible" id="windProfileWrapper">
+                                <div class="wind-profile-container">
+                                    <div class="wind-profile-y-axis">
+                                        <span class="y-label">3000m</span>
+                                        <span class="y-label">2000m</span>
+                                        <span class="y-label">1500m</span>
+                                        <span class="y-label">1000m</span>
+                                        <span class="y-label">Boden</span>
+                                    </div>
+                                    <div class="wind-profile-grid" id="windProfileGrid"></div>
+                                </div>
+                                <div class="wind-profile-x-axis" id="windProfileXAxis"></div>
+                                <div class="wind-profile-legend">
+                                    <span class="legend-item"><span class="legend-symbol calm">○</span>Windstille</span>
+                                    <span class="legend-item"><span class="legend-color green"></span>&lt;15</span>
+                                    <span class="legend-item"><span class="legend-color yellow"></span>15-25</span>
+                                    <span class="legend-item"><span class="legend-color red"></span>&gt;25 km/h</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="day-diagram-card" id="thermicWindowCard" role="region" aria-label="Thermik-Zeitfenster">
+                            <div class="diagram-header">
+                                <span class="diagram-icon">🌡️</span>
+                                <span class="diagram-title">Thermik-Zeitfenster</span>
+                                <span class="diagram-summary" id="thermicSummary">-</span>
+                            </div>
+                            <div class="thermic-bar-container">
+                                <div class="thermic-bar" id="thermicBar"></div>
+                                <div class="thermic-time-labels" id="thermicTimeLabels"></div>
+                            </div>
+                            <div class="thermic-details" id="thermicDetails">
+                                <div class="thermic-detail-item">
+                                    <span class="thermic-detail-label">📈 Max. Höhe:</span>
+                                    <span class="thermic-detail-value" id="thermicMaxHeight">-</span>
+                                </div>
+                                <div class="thermic-detail-item">
+                                    <span class="thermic-detail-label">⚡ Energie:</span>
+                                    <span class="thermic-detail-value" id="thermicEnergy">-</span>
+                                </div>
+                                <div class="thermic-detail-item">
+                                    <span class="thermic-detail-label">⏱️ Dauer:</span>
+                                    <span class="thermic-detail-value" id="thermicDuration">-</span>
+                                </div>
+                            </div>
+                            <div class="thermic-legend">
+                                <span class="thermic-legend-item"><span class="thermic-legend-color strong"></span>Stark</span>
+                                <span class="thermic-legend-item"><span class="thermic-legend-color moderate"></span>Moderat</span>
+                                <span class="thermic-legend-item"><span class="thermic-legend-color weak"></span>Schwach</span>
+                                <span class="thermic-legend-item"><span class="thermic-legend-color none"></span>Keine</span>
+                            </div>
+                        </div>
+                    </div>
                     <div class="assessment-card" role="status" aria-live="polite" aria-label="Aktuelle Flugbedingungen">
                         <div class="weather-current" id="weatherCurrent">
                             <span class="weather-icon-text" id="weatherDesc" aria-label="Aktuelles Wetter">-</span>
@@ -197,30 +257,9 @@
                     </div>
 
                     <div class="params-grid parameter-grid" role="region" aria-label="Wetterparameter">
-                        <div class="param-card full-width collapsed" data-card="wind" role="region" aria-label="Windparameter">
-                            <div class="param-header"><span class="param-title">💨 Wind nach Höhe<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Wind in verschiedenen Höhen. Großer Unterschied (Gradient) = Turbulenz beim Aufsteigen. Höhenwind >55 km/h = Föhngefahr!</span></span></span><span class="param-status" id="windStatus"></span><span class="toggle-icon">▼</span></div>
+                        <div class="param-card full-width expanded" data-card="wind" role="region" aria-label="Windparameter">
+                            <div class="param-header"><span class="param-title">💨 Wind (Details)<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Detaillierte Windwerte für die ausgewählte Stunde. Großer Gradient = Turbulenz. Höhenwind >30 km/h = Föhngefahr!</span></span></span><span class="param-status" id="windStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
-                                <!-- Wind-Höhenprofil (Tagesverlauf) - immer sichtbar -->
-                                <div class="wind-profile-wrapper visible" id="windProfileWrapper">
-                                    <div class="wind-profile-container">
-                                        <div class="wind-profile-y-axis">
-                                            <span class="y-label">3000m</span>
-                                            <span class="y-label">2000m</span>
-                                            <span class="y-label">1500m</span>
-                                            <span class="y-label">1000m</span>
-                                            <span class="y-label">Boden</span>
-                                        </div>
-                                        <div class="wind-profile-grid" id="windProfileGrid"></div>
-                                    </div>
-                                    <div class="wind-profile-x-axis" id="windProfileXAxis"></div>
-                                    <div class="wind-profile-legend">
-                                        <span class="legend-item"><span class="legend-symbol calm">○</span>Windstille</span>
-                                        <span class="legend-item"><span class="legend-color green"></span>&lt;15</span>
-                                        <span class="legend-item"><span class="legend-color yellow"></span>15-25</span>
-                                        <span class="legend-item"><span class="legend-color red"></span>&gt;25 km/h</span>
-                                        <span class="legend-item"><span class="legend-symbol nodata">—</span>k.D.</span>
-                                    </div>
-                                </div>
                                 <div class="wind-table">
                                     <div class="wind-table-header"><span>Höhe</span><span>Geschw.</span><span>Richtung</span></div>
                                     <div class="wind-table-row"><span class="wind-height">Boden (10m)</span><span class="param-value" id="windSurface">-</span><span class="param-value" id="windDirSurface">-</span></div>
@@ -263,8 +302,8 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="param-card collapsed" data-card="thermik" role="region" aria-label="Thermikparameter">
-                            <div class="param-header"><span class="param-title">🌡️ Thermik<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Spread = Temp minus Taupunkt. Ideal 5-15°C. Zu klein (&lt;3°C) = Nebel. CAPE >1000 = Gewittergefahr!</span></span></span><span class="param-status" id="thermikStatus"></span><span class="toggle-icon">▼</span></div>
+                        <div class="param-card expanded" data-card="thermik" role="region" aria-label="Thermikparameter">
+                            <div class="param-header"><span class="param-title">🌡️ Thermik<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">CAPE zeigt Thermik-Energie. >1000 J/kg = Gewittergefahr! Lifted Index negativ = labile Luft.</span></span></span><span class="param-status" id="thermikStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
                                 <div class="param-row"><span class="param-label">Temperatur</span><span class="param-value" id="temp2m">-</span></div>
                                 <div class="param-row"><span class="param-label">Taupunkt</span><span class="param-value" id="dewpoint">-</span></div>
@@ -273,7 +312,7 @@
                                 <div class="param-row"><span class="param-label">Lifted Index<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Stabilitätsindex. Negativ = labil = kräftige Thermik. &lt;-4 = Gewitter!</span></span></span><span class="param-value" id="liftedIndex">-</span></div>
                             </div>
                         </div>
-                        <div class="param-card height-card collapsed" id="heightCard" data-card="height">
+                        <div class="param-card height-card expanded" id="heightCard" data-card="height">
                         <div class="param-header" id="heightCardToggle">
                             <span class="param-title">📏 Höhen-Info<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Wichtige Höhenangaben: Wolkenbasis, maximale Thermik (Grenzschicht), Nullgradgrenze</span></span></span>
                             <span class="toggle-icon">▼</span>
@@ -305,7 +344,7 @@
                             </div>
                         </div>
                         </div>
-                        <div class="param-card collapsed" data-card="clouds" role="region" aria-label="Wolken und Sicht">
+                        <div class="param-card expanded" data-card="clouds" role="region" aria-label="Wolken und Sicht">
                             <div class="param-header"><span class="param-title">☁️ Wolken & Sicht<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Tiefe Wolken (&lt;2000m) sind kritisch - dämpfen Thermik und können Start eindecken.</span></span></span><span class="param-status" id="cloudStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
                                 <div class="param-row"><span class="param-label">Gesamt</span><span class="param-value" id="cloudTotal">-</span></div>
@@ -313,9 +352,10 @@
                                 <div class="param-row"><span class="param-label">Mittel</span><span class="param-value" id="cloudMid">-</span></div>
                                 <div class="param-row"><span class="param-label">Hoch</span><span class="param-value" id="cloudHigh">-</span></div>
                                 <div class="param-row"><span class="param-label">Sicht</span><span class="param-value" id="visibility">-</span></div>
+                                <div class="param-row fog-risk-row"><span class="param-label">Nebelrisiko<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Basiert auf Spread (Temp-Taupunkt), Wind und Sichtweite. Bei wenig Wind und niedrigem Spread kann sich Bodennebel bilden.</span></span></span><span class="param-value" id="fogRisk">-</span></div>
                             </div>
                         </div>
-                        <div class="param-card collapsed" data-card="precip" role="region" aria-label="Niederschlag">
+                        <div class="param-card expanded" data-card="precip" role="region" aria-label="Niederschlag">
                             <div class="param-header"><span class="param-title">🌧️ Niederschlag<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Jeder Niederschlag ist problematisch - nasser Schirm hat schlechtere Flugeigenschaften!</span></span></span><span class="param-status" id="precipStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
                                 <div class="param-row"><span class="param-label">Menge (gesamt)</span><span class="param-value" id="precip">-</span></div>
@@ -331,7 +371,7 @@
         <footer class="sky-footer">
             <div class="footer-content">
                 <p class="footer-text">
-                    SkyCheck v9.2 | Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="footer-link">Open-Meteo.com</a> (ICON-D2/EU)
+                    SkyCheck v10.0 | Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="footer-link">Open-Meteo.com</a> (ICON-D2/EU)
                 </p>
                 <p class="footer-disclaimer">
                     <small>SkyCheck ersetzt keine professionelle Wetterberatung. Piloten sind selbst verantwortlich für ihre Flugentscheidungen.</small>
@@ -497,7 +537,7 @@
                 <img src="./img/logo.svg" alt="SkyCheck Logo" class="about-logo">
                 <h2 id="aboutModalTitle">SkyCheck</h2>
                 <p class="about-tagline">Sicherer fliegen mit der Wetterampel</p>
-                <span class="about-version" id="aboutVersion">v9.2</span>
+                <span class="about-version" id="aboutVersion">v10.0</span>
             </div>
             <div class="about-tabs">
                 <button class="about-tab active" data-tab="about">Was ist SkyCheck?</button>

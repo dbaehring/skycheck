@@ -83,11 +83,11 @@ export async function fetchWeatherData() {
     const timezone = inEU ? 'Europe/Berlin' : 'auto';
 
     try {
-        // v8: Erweiterte hourly Parameter
+        // v8: Erweiterte hourly Parameter (v10.1: +shortwave_radiation für Thermik-Zeitfenster)
         const params = new URLSearchParams({
             latitude: lat,
             longitude: lon,
-            hourly: 'temperature_2m,dew_point_2m,precipitation,precipitation_probability,showers,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cape,lifted_index,freezing_level_height,weather_code',
+            hourly: 'temperature_2m,dew_point_2m,precipitation,precipitation_probability,showers,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cape,lifted_index,freezing_level_height,weather_code,shortwave_radiation',
             daily: 'sunrise,sunset',
             wind_speed_unit: 'kmh',
             timezone: timezone,
@@ -360,13 +360,13 @@ export function getHourScore(i) {
             w800 > L.wind.w800.yellow || w700 > L.wind.w700.yellow ||
             grad > L.wind.gradient.yellow || grad3000 > L.wind.gradient3000.yellow) return 1;
     }
-    // Thermik (nur wenn Filter aktiv)
+    // Thermik (nur wenn Filter aktiv) - CAPE und Lifted Index, NICHT Nebel
     if (filter.thermik) {
-        if (fogRisk === 'severe' || cape > L.cape.yellow || li < L.liftedIndex.yellow) return 1;
+        if (cape > L.cape.yellow || li < L.liftedIndex.yellow) return 1;
     }
-    // Wolken (nur wenn Filter aktiv)
+    // Wolken/Sicht (nur wenn Filter aktiv) - inkl. Nebelrisiko
     if (filter.clouds) {
-        if (cloudLow > L.clouds.low.yellow) return 1;
+        if (cloudLow > L.clouds.low.yellow || fogRisk === 'severe') return 1;
     }
     // Niederschlag (nur wenn Filter aktiv)
     if (filter.precip) {
@@ -382,14 +382,14 @@ export function getHourScore(i) {
             w800 > L.wind.w800.green || w700 > L.wind.w700.green ||
             grad > L.wind.gradient.green || grad3000 > L.wind.gradient3000.green) return 2;
     }
-    // Thermik/Nebel (nur wenn Filter aktiv)
+    // Thermik (nur wenn Filter aktiv) - CAPE, Lifted Index, sehr trockene Luft
     if (filter.thermik) {
-        if (fogRisk === 'likely' || fogRisk === 'possible' ||
-            spread > L.spread.max || cape > L.cape.green || li < L.liftedIndex.green) return 2;
+        if (spread > L.spread.max || cape > L.cape.green || li < L.liftedIndex.green) return 2;
     }
-    // Wolken/Sicht (nur wenn Filter aktiv)
+    // Wolken/Sicht (nur wenn Filter aktiv) - inkl. Nebelrisiko
     if (filter.clouds) {
-        if (cloudTotal > L.clouds.total.yellow || cloudLow > L.clouds.low.green || vis < L.visibility.green) return 2;
+        if (cloudTotal > L.clouds.total.yellow || cloudLow > L.clouds.low.green ||
+            vis < L.visibility.green || fogRisk === 'likely' || fogRisk === 'possible') return 2;
     }
     // Niederschlag (nur wenn Filter aktiv)
     if (filter.precip) {
@@ -885,4 +885,133 @@ export function getRiskExplanation(i, score) {
     }
 
     return risks;
+}
+
+/**
+ * Thermik-Zeitfenster für einen Tag berechnen
+ * Analysiert wann Thermik beginnt, peakt und endet basierend auf:
+ * - Sonneneinstrahlung (shortwave_radiation)
+ * - CAPE (Konvektionsenergie)
+ * - Grenzschichthöhe (boundary_layer_height)
+ * - Sonnenauf-/untergang
+ *
+ * @param {string} dayStr - Datum im Format 'YYYY-MM-DD'
+ * @param {number} dayIdx - Index des Tages (0=heute, 1=morgen, etc.)
+ * @returns {Object} Thermik-Analyse mit Zeitfenster und Intensität
+ */
+export function analyzeThermicWindow(dayStr, dayIdx) {
+    const h = state.hourlyData;
+    if (!h || !state.dailyData) return null;
+
+    const sunrise = new Date(state.dailyData.sunrise[dayIdx]);
+    const sunset = new Date(state.dailyData.sunset[dayIdx]);
+    const sunriseHour = sunrise.getHours() + sunrise.getMinutes() / 60;
+    const sunsetHour = sunset.getHours() + sunset.getMinutes() / 60;
+
+    // Thermik-Daten pro Stunde sammeln (6-20 Uhr)
+    const hourlyThermic = [];
+    let maxRadiation = 0;
+    let maxCape = 0;
+    let maxBoundaryLayer = 0;
+
+    for (let hour = 6; hour <= 20; hour++) {
+        const ts = dayStr + 'T' + hour.toString().padStart(2, '0') + ':00';
+        const idx = h.time.findIndex(t => t === ts);
+        if (idx === -1) continue;
+
+        const radiation = validateValue(h.shortwave_radiation?.[idx], 0);
+        const cape = validateValue(h.cape?.[idx], 0);
+        const boundaryLayer = validateValue(h.boundary_layer_height?.[idx], 500);
+        const cloudLow = validateValue(h.cloud_cover_low?.[idx], 0);
+        const cloudTotal = validateValue(h.cloud_cover?.[idx], 0);
+        const temp = validateValue(h.temperature_2m?.[idx], null);
+        const dew = validateValue(h.dew_point_2m?.[idx], null);
+        const spread = (temp !== null && dew !== null) ? temp - dew : 10;
+
+        if (radiation > maxRadiation) maxRadiation = radiation;
+        if (cape > maxCape) maxCape = cape;
+        if (boundaryLayer > maxBoundaryLayer) maxBoundaryLayer = boundaryLayer;
+
+        hourlyThermic.push({
+            hour,
+            idx,
+            radiation,
+            cape,
+            boundaryLayer,
+            cloudLow,
+            cloudTotal,
+            spread
+        });
+    }
+
+    // Thermik-Qualität pro Stunde berechnen (0-100)
+    const thermicQuality = hourlyThermic.map(data => {
+        // Faktoren für Thermik-Qualität
+        const radiationFactor = maxRadiation > 0 ? (data.radiation / maxRadiation) : 0;
+        const capeFactor = Math.min(data.cape / 500, 1); // Cap bei 500 J/kg für "gute" Thermik
+        const boundaryFactor = Math.min(data.boundaryLayer / 2000, 1); // 2000m = gute Höhe
+        const cloudPenalty = data.cloudLow > 50 ? 0.3 : data.cloudLow > 30 ? 0.7 : 1.0;
+        const spreadFactor = data.spread >= 5 && data.spread <= 15 ? 1.0 :
+                            data.spread < 3 ? 0.3 :
+                            data.spread > 20 ? 0.7 : 0.8;
+
+        // Zeitfaktor: Thermik braucht Zeit zum Aufbauen nach Sonnenaufgang
+        const hoursSinceSunrise = data.hour - sunriseHour;
+        const hoursUntilSunset = sunsetHour - data.hour;
+        let timeFactor = 1.0;
+        if (hoursSinceSunrise < 2) timeFactor = hoursSinceSunrise / 2 * 0.5; // Langsamer Aufbau
+        if (hoursUntilSunset < 1.5) timeFactor = Math.max(0, hoursUntilSunset / 1.5) * 0.7; // Schnelles Abklingen
+
+        // Gesamtqualität berechnen
+        const quality = Math.round(
+            radiationFactor * 30 +  // Sonneneinstrahlung 30%
+            capeFactor * 25 +       // CAPE 25%
+            boundaryFactor * 15 +   // Grenzschicht 15%
+            spreadFactor * 15 +     // Spread 15%
+            timeFactor * 15         // Tageszeit 15%
+        ) * cloudPenalty;
+
+        return {
+            ...data,
+            quality,
+            intensity: quality > 60 ? 'strong' : quality > 35 ? 'moderate' : quality > 15 ? 'weak' : 'none'
+        };
+    });
+
+    // Thermik-Zeitfenster finden
+    let thermicStart = null;
+    let thermicEnd = null;
+    let peakHour = null;
+    let peakQuality = 0;
+
+    thermicQuality.forEach(data => {
+        if (data.quality > 15) {
+            if (thermicStart === null) thermicStart = data.hour;
+            thermicEnd = data.hour;
+            if (data.quality > peakQuality) {
+                peakQuality = data.quality;
+                peakHour = data.hour;
+            }
+        }
+    });
+
+    // Zusammenfassung erstellen
+    const hasUsableThermic = thermicStart !== null && peakQuality > 25;
+    const thermicDuration = hasUsableThermic ? (thermicEnd - thermicStart + 1) : 0;
+
+    return {
+        hasUsableThermic,
+        start: thermicStart,
+        end: thermicEnd,
+        peak: peakHour,
+        peakQuality,
+        duration: thermicDuration,
+        maxBoundaryLayer,
+        maxCape,
+        hourlyData: thermicQuality,
+        summary: hasUsableThermic
+            ? `Thermik ${thermicStart}-${thermicEnd}h, Peak ~${peakHour}h`
+            : 'Keine brauchbare Thermik erwartet',
+        intensity: peakQuality > 60 ? 'strong' : peakQuality > 35 ? 'moderate' : 'weak'
+    };
 }

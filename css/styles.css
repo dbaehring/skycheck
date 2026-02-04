@@ -706,7 +706,7 @@ footer a { color: var(--accent); text-decoration: none; }
 .windrose-toggle:hover { border-color: var(--accent); color: var(--accent); }
 .windrose-toggle.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
 .windrose-wrapper { max-height: 0; overflow: hidden; transition: max-height 0.35s ease-out; }
-.windrose-wrapper.visible { max-height: 200px; }
+.windrose-wrapper.visible { max-height: 280px; }
 /* PHASE 2: Mobile Timeline */
 @media (max-width: 500px) {
     .timeline-slot { width: 42px; padding: 0.4rem 0.15rem; }
@@ -733,6 +733,155 @@ footer a { color: var(--accent); text-decoration: none; }
 /* PHASE 2: Schnell-Erklärung */
 .quick-explain-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer; margin-left: 0.75rem; transition: all 0.2s; }
 .quick-explain-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* === Tagesverlauf-Diagramme Container === */
+.day-diagrams-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+@media (max-width: 900px) {
+    .day-diagrams-container {
+        grid-template-columns: 1fr;
+    }
+}
+.day-diagram-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 1px 3px var(--shadow);
+}
+.diagram-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+.diagram-icon { font-size: 1.1rem; }
+.diagram-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+.diagram-summary {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-family: 'Space Mono', monospace;
+}
+/* Wind-Diagramm im Container */
+.day-diagram-card .wind-profile-wrapper {
+    max-height: none;
+    margin-top: 0;
+}
+.day-diagram-card .wind-profile-legend {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+}
+
+/* === Thermik-Zeitfenster Karte (jetzt in day-diagram-card) === */
+/* Thermik-spezifische Styles */
+.thermic-bar-container {
+    position: relative;
+    margin-bottom: 0.5rem;
+}
+.thermic-bar {
+    display: flex;
+    height: 24px;
+    background: var(--bg-dark);
+    border-radius: 6px;
+    overflow: hidden;
+    gap: 1px;
+}
+.thermic-slot {
+    flex: 1;
+    position: relative;
+    transition: transform 0.2s, filter 0.2s;
+    cursor: pointer;
+}
+.thermic-slot:hover {
+    transform: scaleY(1.15);
+    filter: brightness(1.1);
+    z-index: 1;
+}
+.thermic-slot.strong { background: linear-gradient(to top, #e65100, #ff9800); }
+.thermic-slot.moderate { background: linear-gradient(to top, #f9a825, #ffeb3b); }
+.thermic-slot.weak { background: linear-gradient(to top, #90caf9, #bbdefb); }
+.thermic-slot.none { background: var(--bg-dark); }
+.thermic-slot.peak::after {
+    content: '▲';
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.65rem;
+    color: #ff5722;
+}
+.thermic-time-labels {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+.thermic-details {
+    display: flex;
+    justify-content: space-around;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--border);
+    margin-top: 0.5rem;
+}
+.thermic-detail-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+}
+.thermic-detail-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+.thermic-detail-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: 'Space Mono', monospace;
+    color: var(--text-primary);
+}
+.thermic-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    padding-top: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+.thermic-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.thermic-legend-color {
+    width: 12px;
+    height: 8px;
+    border-radius: 2px;
+}
+.thermic-legend-color.strong { background: linear-gradient(to right, #e65100, #ff9800); }
+.thermic-legend-color.moderate { background: linear-gradient(to right, #f9a825, #ffeb3b); }
+.thermic-legend-color.weak { background: linear-gradient(to right, #90caf9, #bbdefb); }
+.thermic-legend-color.none { background: var(--bg-dark); border: 1px solid var(--border); }
+/* Thermik-Karte verstecken wenn keine Daten */
+.day-diagram-card.no-data { display: none; }
+#thermicWindowCard.no-data { display: none; }
+@media (max-width: 500px) {
+    .thermic-details { flex-wrap: wrap; }
+    .thermic-legend { flex-wrap: wrap; gap: 0.5rem; }
+}
 
 /* === PHASE 2: Beginner Badge === */
 .beginner-badge {
