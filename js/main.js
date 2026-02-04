@@ -58,8 +58,6 @@ import {
     autoExpandRedCards,
     toggleWindroseVisibility,
     loadWindroseState,
-    toggleHeightCard,
-    loadHeightCardState,
     toggleExplanation,
     showQuickExplanation,
     loadParamFilter,
@@ -117,7 +115,6 @@ async function initApp() {
 
         // 6. UI-Zustände aus localStorage laden
         loadWindroseState();
-        loadHeightCardState();
         loadParamFilter();
         loadWindDiagramState();
         loadExpertMode();
@@ -320,12 +317,6 @@ function registerEventListeners() {
         windroseToggle.addEventListener('click', toggleWindroseVisibility);
     }
 
-    // Höhenkarte-Toggle
-    const heightCardToggle = document.getElementById('heightCardToggle');
-    if (heightCardToggle) {
-        heightCardToggle.addEventListener('click', toggleHeightCard);
-    }
-
     // Alle erweitern/reduzieren Buttons
     const expandAllBtn = document.getElementById('expandAllBtn');
     if (expandAllBtn) {
@@ -344,8 +335,7 @@ function registerEventListeners() {
             const header = e.target.closest('.param-header');
             if (header) {
                 const card = header.closest('.param-card');
-                // height-card hat eigenen Event-Listener (toggleHeightCard)
-                if (card && !card.classList.contains('height-card')) {
+                if (card) {
                     toggleParamCard(card, e);
                 }
             }

@@ -65,15 +65,11 @@ function getDomCache() {
             precipStatus: document.getElementById('precipStatus'),
             // Nebelrisiko
             fogRisk: document.getElementById('fogRisk'),
-            // Höhen-Info
+            // Höhen-Info (verteilt auf Thermik-Box und Location-Card)
             cloudBase: document.getElementById('cloudBase'),
             boundaryLayer: document.getElementById('boundaryLayer'),
             freezingLevel: document.getElementById('freezingLevel'),
             stationElevation: document.getElementById('stationElevation'),
-            cloudBaseSummary: document.getElementById('cloudBaseSummary'),
-            boundaryLayerSummary: document.getElementById('boundaryLayerSummary'),
-            freezingLevelSummary: document.getElementById('freezingLevelSummary'),
-            stationElevationSummary: document.getElementById('stationElevationSummary'),
             // Sonstiges
             weatherDesc: document.getElementById('weatherDesc'),
             currentTemp: document.getElementById('currentTemp'),
@@ -399,16 +395,12 @@ export function updateDisplay(i) {
     updateWarnings(ws, wg, w850, w700, grad, spread, cape, li, cl, prec, vis, showers, freezing, boundaryLayer);
     updateWindrose(wdSurface, wd900, wd850, wd700, ws, w900, w850, w700);
 
-    // Höhen-Info (nutzt DOM-Cache)
+    // Höhen-Info (nutzt DOM-Cache) - verteilt auf Thermik-Box und Location-Card
     const dom = getDomCache();
     dom.cloudBase.textContent = cloudBase !== null ? cloudBase + ' m' : 'N/A';
     dom.boundaryLayer.textContent = Math.round(boundaryLayer) + ' m';
     dom.freezingLevel.textContent = Math.round(freezing) + ' m';
     dom.stationElevation.textContent = Math.round(state.currentLocation.elevation) + ' m';
-    dom.cloudBaseSummary.textContent = cloudBase !== null ? cloudBase + 'm' : 'N/A';
-    dom.boundaryLayerSummary.textContent = Math.round(boundaryLayer) + 'm';
-    dom.freezingLevelSummary.textContent = Math.round(freezing) + 'm';
-    dom.stationElevationSummary.textContent = Math.round(state.currentLocation.elevation) + 'm';
     const weatherInfo = getWeatherInfo(weatherCode);
     dom.weatherDesc.textContent = weatherInfo.icon + ' ' + weatherInfo.text;
     dom.currentTemp.textContent = temp !== null ? Math.round(temp) + '°C' : '-';
@@ -798,23 +790,6 @@ export function loadWindroseState() {
     const toggle = document.getElementById('windroseToggle');
     if (wrapper) wrapper.classList.toggle('visible', show);
     if (toggle) toggle.classList.toggle('active', show);
-}
-
-// PHASE 2: Höhen-Box Toggle
-export function toggleHeightCard() {
-    const card = document.getElementById('heightCard');
-    card.classList.toggle('collapsed');
-    card.classList.toggle('expanded');
-    localStorage.setItem(STORAGE_KEYS.HEIGHT, card.classList.contains('expanded').toString());
-}
-
-export function loadHeightCardState() {
-    // Höhen-Info startet immer collapsed (wie andere Param-Cards)
-    const card = document.getElementById('heightCard');
-    if (card) {
-        card.classList.add('collapsed');
-        card.classList.remove('expanded');
-    }
 }
 
 // PHASE 2: Erklärung Toggle

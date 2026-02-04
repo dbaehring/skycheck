@@ -118,7 +118,6 @@ body::before { content: ''; position: fixed; inset: 0; background-image: linear-
     .risk-explanation,
     .best-window,
     .reason-summary,
-    .height-info-grid,
     .favorite-btn,
     .coords-display {
         touch-action: pan-y;
@@ -429,6 +428,8 @@ h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: line
 .param-body { padding: 0.75rem 0.9rem; }
 .param-row { display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
 .param-row:last-child { border-bottom: none; }
+/* Höhen-Zeilen in Thermik-Box mit visueller Trennung */
+.thermik-height-row { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border); }
 .param-label { color: var(--text-secondary); }
 .param-value { font-family: 'Space Mono', monospace; font-weight: 600; font-size: 0.8rem; }
 .param-value.green { color: var(--green); }
@@ -654,12 +655,6 @@ footer a { color: var(--accent); text-decoration: none; }
 .forecast-change-item.better { background: var(--green-bg); color: var(--green); }
 .forecast-change-item.worse { background: var(--red-bg); color: var(--red); }
 .forecast-change-item.same { background: var(--bg-card); color: var(--text-muted); }
-/* v8 NEU: Höhen-Info Card Styles */
-.height-info-grid { display: flex; flex-direction: column; gap: 0.5rem; }
-.height-info-item { display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
-.height-info-item:last-child { border-bottom: none; }
-.height-info-label { color: var(--text-secondary); }
-.height-info-value { font-family: 'Space Mono', monospace; font-weight: 600; font-size: 0.8rem; }
 /* PHASE 1 SAFETY: Killer-Warnungen */
 .killer-warnings { display: none; background: linear-gradient(135deg, var(--red-bg) 0%, rgba(220, 38, 38, 0.25) 100%); border: 3px solid var(--red); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; animation: pulse-border 2s ease-in-out infinite; }
 .killer-warnings.visible { display: block; }
@@ -720,12 +715,6 @@ footer a { color: var(--accent); text-decoration: none; }
     }
     .timeline-slot { scroll-snap-align: start; flex-shrink: 0; }
 }
-/* PHASE 2: Klappbare Höhen-Box */
-.height-card .param-header { cursor: pointer; }
-/* height-card nutzt jetzt die allgemeinen param-card Regeln für expanded/collapsed */
-.height-card .height-summary { display: none; }
-.height-summary-item { font-size: 0.8rem; display: flex; align-items: center; gap: 0.3rem; }
-.height-summary-value { font-family: 'Space Mono', monospace; font-weight: 600; }
 /* PHASE 2: Schnell-Erklärung */
 .quick-explain-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer; margin-left: 0.75rem; transition: all 0.2s; }
 .quick-explain-btn:hover { border-color: var(--accent); color: var(--accent); }

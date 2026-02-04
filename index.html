@@ -107,6 +107,8 @@
                             <div class="sun-time"><span>☀️ Aufgang:</span><span class="sun-time-value" id="sunrise">-</span></div>
                             <div class="sun-time"><span>🌙 Untergang:</span><span class="sun-time-value" id="sunset">-</span></div>
                             <div class="sun-time"><span>⏱️ Tageslicht:</span><span class="sun-time-value" id="daylight">-</span></div>
+                            <div class="sun-time"><span>❄️ 0°C-Grenze:</span><span class="sun-time-value" id="freezingLevel">-</span></div>
+                            <div class="sun-time"><span>📍 Stationshöhe:</span><span class="sun-time-value" id="stationElevation">-</span></div>
                         </div>
                         <div class="best-window" id="bestWindow">
                             <span class="best-window-icon">⭐</span>
@@ -173,7 +175,26 @@
                     </div>
                     <div class="timeline-card" role="region" aria-label="Stündlicher Tagesverlauf"><h3>Tagesverlauf (6-20 Uhr)</h3><div class="timeline" id="timeline" role="listbox" aria-label="Stunden auswählen"></div></div>
 
-                    <!-- Tagesverlauf-Diagramme: Wind + Thermik -->
+                    <div class="assessment-card" role="status" aria-live="polite" aria-label="Aktuelle Flugbedingungen">
+                        <div class="weather-current" id="weatherCurrent">
+                            <span class="weather-icon-text" id="weatherDesc" aria-label="Aktuelles Wetter">-</span>
+                            <span class="weather-temp" id="currentTemp" aria-label="Temperatur">-</span>
+                        </div>
+                        <div class="assessment-status" id="assessmentStatus" role="alert"><span id="statusIcon" aria-hidden="true">○</span><span id="statusText">-</span></div>
+                        <div class="reason-summary" id="reasonSummary"><div class="reason-summary-text" id="reasonText"></div></div>
+                    </div>
+                    <!-- PHASE 2: Beginner Badge -->
+                    <div class="beginner-badge" id="beginnerBadge" style="display: none;"></div>
+                    <!-- PHASE 2: Risk Explanation -->
+                    <div class="risk-explanation" id="riskExplanation" style="display: none;"></div>
+                    <div class="killer-warnings" id="killerWarnings">
+                        <div class="killer-warnings-header"><span style="font-size: 1.5rem;">🚨</span><span class="killer-warnings-title">STOPP-Kriterien</span></div>
+                        <div class="killer-warnings-subtitle">Bei diesen Bedingungen NICHT fliegen:</div>
+                        <div id="killerList"></div>
+                    </div>
+                    <div class="warnings" id="warnings"><h3>⚠️ Weitere Hinweise</h3><div id="warningsList"></div></div>
+
+                    <!-- Tagesverlauf-Diagramme: Wind + Thermik + Live -->
                     <div class="day-diagrams-container">
                         <div class="day-diagram-card" id="windDiagramCard">
                             <div class="diagram-header">
@@ -251,25 +272,6 @@
                         </div>
                     </div>
 
-                    <div class="assessment-card" role="status" aria-live="polite" aria-label="Aktuelle Flugbedingungen">
-                        <div class="weather-current" id="weatherCurrent">
-                            <span class="weather-icon-text" id="weatherDesc" aria-label="Aktuelles Wetter">-</span>
-                            <span class="weather-temp" id="currentTemp" aria-label="Temperatur">-</span>
-                        </div>
-                        <div class="assessment-status" id="assessmentStatus" role="alert"><span id="statusIcon" aria-hidden="true">○</span><span id="statusText">-</span></div>
-                        <div class="reason-summary" id="reasonSummary"><div class="reason-summary-text" id="reasonText"></div></div>
-                    </div>
-                    <!-- PHASE 2: Beginner Badge -->
-                    <div class="beginner-badge" id="beginnerBadge" style="display: none;"></div>
-                    <!-- PHASE 2: Risk Explanation -->
-                    <div class="risk-explanation" id="riskExplanation" style="display: none;"></div>
-                    <div class="killer-warnings" id="killerWarnings">
-                        <div class="killer-warnings-header"><span style="font-size: 1.5rem;">🚨</span><span class="killer-warnings-title">STOPP-Kriterien</span></div>
-                        <div class="killer-warnings-subtitle">Bei diesen Bedingungen NICHT fliegen:</div>
-                        <div id="killerList"></div>
-                    </div>
-                    <div class="warnings" id="warnings"><h3>⚠️ Weitere Hinweise</h3><div id="warningsList"></div></div>
-
                     <div class="params-controls">
                         <button class="params-control-btn" id="expandAllBtn">📂 Alle aufklappen</button>
                         <button class="params-control-btn" id="collapseAllBtn">📁 Alle zuklappen</button>
@@ -329,39 +331,9 @@
                                 <div class="param-row"><span class="param-label">Spread<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Differenz Temperatur - Taupunkt. Zeigt wie feucht die Luft ist.</span></span></span><span class="param-value" id="spread">-</span></div>
                                 <div class="param-row"><span class="param-label">CAPE<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Energie für Konvektion (J/kg). >1000 = hohe Gewittergefahr!</span></span></span><span class="param-value" id="cape">-</span></div>
                                 <div class="param-row"><span class="param-label">Lifted Index<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Stabilitätsindex. Negativ = labil = kräftige Thermik. &lt;-4 = Gewitter!</span></span></span><span class="param-value" id="liftedIndex">-</span></div>
+                                <div class="param-row thermik-height-row"><span class="param-label">☁️ Wolkenbasis<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Geschätzte Untergrenze der Cumulus-Wolken, berechnet aus Spread × 125m + Stationshöhe.</span></span></span><span class="param-value" id="cloudBase">-</span></div>
+                                <div class="param-row thermik-height-row"><span class="param-label">📈 Max. Thermik<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Grenzschichthöhe - maximale Höhe, die Thermik typischerweise erreichen kann.</span></span></span><span class="param-value" id="boundaryLayer">-</span></div>
                             </div>
-                        </div>
-                        <div class="param-card height-card expanded" id="heightCard" data-card="height">
-                        <div class="param-header" id="heightCardToggle">
-                            <span class="param-title">📏 Höhen-Info<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Wichtige Höhenangaben: Wolkenbasis, maximale Thermik (Grenzschicht), Nullgradgrenze</span></span></span>
-                            <span class="toggle-icon">▼</span>
-                        </div>
-                        <div class="height-summary">
-                            <span class="height-summary-item">☁️ Wolkenbasis: <span class="height-summary-value" id="cloudBaseSummary">-</span></span>
-                            <span class="height-summary-item">🌡️ Max. Thermik: <span class="height-summary-value" id="boundaryLayerSummary">-</span></span>
-                            <span class="height-summary-item">❄️ 0°C: <span class="height-summary-value" id="freezingLevelSummary">-</span></span>
-                            <span class="height-summary-item">📍 Station: <span class="height-summary-value" id="stationElevationSummary">-</span></span>
-                        </div>
-                        <div class="param-body">
-                            <div class="height-info-grid">
-                                <div class="height-info-item">
-                                    <div class="height-info-label">☁️ Wolkenbasis (berechnet)</div>
-                                    <div class="height-info-value" id="cloudBase">-</div>
-                                </div>
-                                <div class="height-info-item">
-                                    <div class="height-info-label">🌡️ Max. Thermik (Grenzschicht)</div>
-                                    <div class="height-info-value" id="boundaryLayer">-</div>
-                                </div>
-                                <div class="height-info-item">
-                                    <div class="height-info-label">❄️ Nullgradgrenze</div>
-                                    <div class="height-info-value" id="freezingLevel">-</div>
-                                </div>
-                                <div class="height-info-item">
-                                    <div class="height-info-label">📍 Stationshöhe</div>
-                                    <div class="height-info-value" id="stationElevation">-</div>
-                                </div>
-                            </div>
-                        </div>
                         </div>
                         <div class="param-card expanded" data-card="clouds" role="region" aria-label="Wolken und Sicht">
                             <div class="param-header"><span class="param-title">☁️ Wolken & Sicht<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Tiefe Wolken (&lt;2000m) sind kritisch - dämpfen Thermik und können Start eindecken.</span></span></span><span class="param-status" id="cloudStatus"></span><span class="toggle-icon">▼</span></div>
