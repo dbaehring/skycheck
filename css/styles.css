@@ -722,12 +722,8 @@ footer a { color: var(--accent); text-decoration: none; }
 }
 /* PHASE 2: Klappbare Höhen-Box */
 .height-card .param-header { cursor: pointer; }
-.height-card .param-body { max-height: 0; overflow: hidden; padding-top: 0; padding-bottom: 0; transition: max-height 0.35s ease-out, padding 0.35s ease-out; }
-.height-card.expanded .param-body { max-height: 300px; padding: 0.75rem 0.9rem; overflow: visible; }
-.height-card.collapsed .param-body { max-height: 0; padding-top: 0; padding-bottom: 0; overflow: hidden; }
+/* height-card nutzt jetzt die allgemeinen param-card Regeln für expanded/collapsed */
 .height-card .height-summary { display: none; }
-.height-card.collapsed .height-summary { display: none; }
-.height-card.expanded .height-summary { display: none; }
 .height-summary-item { font-size: 0.8rem; display: flex; align-items: center; gap: 0.3rem; }
 .height-summary-value { font-family: 'Space Mono', monospace; font-weight: 600; }
 /* PHASE 2: Schnell-Erklärung */
