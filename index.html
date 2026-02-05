@@ -10,7 +10,7 @@
 
     <!-- === SkyCheck Meta-Tags === -->
     <title>SkyCheck | Sicherer fliegen mit der Wetterampel</title>
-    <meta name="description" content="SkyCheck - Detaillierte Gleitschirm-Wetteranalyse in 60 Sekunden. Thermik, Wind, Wolkenbasis auf einen Blick.">
+    <meta name="description" content="SkyCheck - Kompakte Gleitschirm-Wetteranalyse in 60 Sekunden. Wind, Thermik, Wolken & Sicht, Niederschlag auf einen Blick.">
     <meta name="keywords" content="Gleitschirm, Paragliding, Wetter, Meteo, Thermik, Flugwetter, SkyCheck">
     <meta name="author" content="SkyCheck">
 
@@ -180,7 +180,14 @@
                             <span class="weather-icon-text" id="weatherDesc" aria-label="Aktuelles Wetter">-</span>
                             <span class="weather-temp" id="currentTemp" aria-label="Temperatur">-</span>
                         </div>
-                        <div class="assessment-status" id="assessmentStatus" role="alert"><span id="statusIcon" aria-hidden="true">○</span><span id="statusText">-</span></div>
+                        <div class="assessment-wrapper">
+                            <div class="traffic-light" id="trafficLight" aria-hidden="true">
+                                <div class="light red" id="lightRed"></div>
+                                <div class="light yellow" id="lightYellow"></div>
+                                <div class="light green" id="lightGreen"></div>
+                            </div>
+                            <div class="assessment-status" id="assessmentStatus" role="alert"><span id="statusIcon" aria-hidden="true">○</span><span id="statusText">-</span></div>
+                        </div>
                         <div class="reason-summary" id="reasonSummary"><div class="reason-summary-text" id="reasonText"></div></div>
                     </div>
                     <!-- PHASE 2: Beginner Badge -->

@@ -497,6 +497,9 @@ function updateOverallAssessment(sc) {
     const el = document.getElementById('assessmentStatus');
     const ic = document.getElementById('statusIcon');
     const tx = document.getElementById('statusText');
+    const lightRed = document.getElementById('lightRed');
+    const lightYellow = document.getElementById('lightYellow');
+    const lightGreen = document.getElementById('lightGreen');
 
     // Prüfen ob Status sich geändert hat
     const statusChanged = lastAssessmentScore !== null && lastAssessmentScore !== sc;
@@ -504,18 +507,26 @@ function updateOverallAssessment(sc) {
 
     el.className = 'assessment-status';
 
+    // Alle Ampel-Lichter zurücksetzen
+    lightRed.classList.remove('active');
+    lightYellow.classList.remove('active');
+    lightGreen.classList.remove('active');
+
     if (sc === 3) {
         el.classList.add('go');
         ic.textContent = '✓';
         tx.textContent = 'GO';
+        lightGreen.classList.add('active');
     } else if (sc === 2) {
         el.classList.add('caution');
         ic.textContent = '⚠';
         tx.textContent = 'VORSICHT';
+        lightYellow.classList.add('active');
     } else {
         el.classList.add('nogo');
         ic.textContent = '✗';
         tx.textContent = 'NO-GO';
+        lightRed.classList.add('active');
     }
 
     // Pulse-Animation bei Statuswechsel

@@ -379,7 +379,35 @@ h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: line
 .weather-current { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 1.25rem; font-size: 1.1rem; }
 .weather-icon-text { color: var(--text-primary); }
 .weather-temp { font-weight: 600; color: var(--text-secondary); }
-.assessment-status { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 50px; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; transition: all 0.3s ease; }
+/* Ampel-Wrapper */
+.assessment-wrapper { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 0.75rem; }
+
+/* Traffic Light Ampel */
+.traffic-light {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+    border: 1px solid #333;
+}
+.traffic-light .light {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+}
+.traffic-light .light.red { background: #4a2020; }
+.traffic-light .light.yellow { background: #4a4020; }
+.traffic-light .light.green { background: #204a20; }
+.traffic-light .light.red.active { background: var(--red); box-shadow: 0 0 12px var(--red), 0 0 24px var(--red), inset 0 -2px 4px rgba(0,0,0,0.3); }
+.traffic-light .light.yellow.active { background: var(--yellow); box-shadow: 0 0 12px var(--yellow), 0 0 24px var(--yellow), inset 0 -2px 4px rgba(0,0,0,0.3); }
+.traffic-light .light.green.active { background: var(--green); box-shadow: 0 0 12px var(--green), 0 0 24px var(--green), inset 0 -2px 4px rgba(0,0,0,0.3); }
+
+.assessment-status { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 50px; font-size: 1.25rem; font-weight: 700; margin-bottom: 0; transition: all 0.3s ease; }
 .assessment-status.go { background: var(--green-bg); color: var(--green); border: 2px solid var(--green); }
 .assessment-status.caution { background: var(--yellow-bg); color: var(--yellow); border: 2px solid var(--yellow); }
 .assessment-status.nogo { background: var(--red-bg); color: var(--red); border: 2px solid var(--red); }
@@ -2471,6 +2499,18 @@ footer a { color: var(--accent); text-decoration: none; }
     /* Kompaktere Cards */
     .assessment-card {
         padding: 0.75rem;
+    }
+    .assessment-wrapper {
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+    .traffic-light {
+        padding: 4px;
+        gap: 3px;
+    }
+    .traffic-light .light {
+        width: 16px;
+        height: 16px;
     }
     .assessment-status {
         padding: 0.5rem 1rem;

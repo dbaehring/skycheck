@@ -1055,11 +1055,9 @@ function parseAvalancheStation(feature, targetLat, targetLon) {
     const [lon, lat, elevation] = coords;
     const distance = calculateDistance(targetLat, targetLon, lat, lon);
 
-    // Wind von m/s in km/h umrechnen
-    const windSpeedMs = props.WG;
-    const windGustMs = props.WG_BOE;
-    const windSpeed = windSpeedMs !== null ? Math.round(windSpeedMs * 3.6) : null;
-    const windGust = windGustMs !== null ? Math.round(windGustMs * 3.6) : null;
+    // Wind - API liefert bereits km/h
+    const windSpeed = props.WG !== null ? Math.round(props.WG) : null;
+    const windGust = props.WG_BOE !== null ? Math.round(props.WG_BOE) : null;
 
     // Alter der Messung berechnen
     const measurementDate = props.date ? new Date(props.date) : null;
