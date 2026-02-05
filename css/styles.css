@@ -2284,11 +2284,47 @@ footer a { color: var(--accent); text-decoration: none; }
 .station-name:hover {
     color: var(--accent);
 }
+.station-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+}
+.station-source {
+    font-size: 0.55rem;
+    font-weight: 600;
+    padding: 0.15rem 0.35rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+}
+.station-source.lwd {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+}
+.station-source.owm {
+    background: linear-gradient(135deg, #27ae60, #1e8449);
+    color: white;
+}
+.source-lwd {
+    border-left: 3px solid #3498db;
+}
+.source-owm {
+    border-left: 3px solid #27ae60;
+}
 .station-meta {
     font-size: 0.7rem;
     color: var(--text-muted);
     display: flex;
     gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.station-elevation {
+    color: var(--text-secondary);
+}
+.station-temp {
+    color: var(--text-secondary);
 }
 .station-distance {
     color: var(--accent);

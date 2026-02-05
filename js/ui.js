@@ -1758,6 +1758,7 @@ export function loadWindDiagramState() {
 
 /**
  * Live-Wind-Stationen rendern
+ * Unterstützt OpenWindMap/Pioupiou und Lawinenwarndienst-Stationen
  * @param {Array} stations - Array von Stationen aus fetchNearbyLiveWind()
  */
 export function renderLiveWindStations(stations) {
@@ -1772,7 +1773,7 @@ export function renderLiveWindStations(stations) {
 
     // Keine Stationen gefunden
     if (!stations || stations.length === 0) {
-        container.innerHTML = '<div class="live-wind-empty">Keine Stationen im Umkreis von 25 km gefunden</div>';
+        container.innerHTML = '<div class="live-wind-empty">Keine Stationen im Umkreis von 30 km gefunden</div>';
         return;
     }
 
@@ -1793,15 +1794,41 @@ export function renderLiveWindStations(stations) {
         const gustHtml = station.windGust && station.windGust > station.windSpeed ?
             `<span class="station-gust">Böen: <span class="gust-value">${station.windGust}</span></span>` : '';
 
-        // Link zur Pioupiou/OpenWindMap Station
-        const stationUrl = `https://www.pioupiou.fr/fr/stations/${station.id}`;
+        // Stations-Link und -Badge je nach Quelle
+        let stationLink, sourceBadge, sourceClass;
+        if (station.source === 'lwd') {
+            // Lawinenwarndienst - kein direkter Link, aber Operator anzeigen
+            stationLink = `<span class="station-name">${escapeHtml(station.name)}</span>`;
+            sourceBadge = `<span class="station-source lwd" title="${escapeHtml(station.operator)}">LWD</span>`;
+            sourceClass = 'source-lwd';
+        } else {
+            // OpenWindMap/Pioupiou - Link zur Station
+            const stationId = station.id.replace('piou-', '');
+            const stationUrl = `https://www.pioupiou.fr/fr/stations/${stationId}`;
+            stationLink = `<a href="${stationUrl}" target="_blank" rel="noopener noreferrer" class="station-name" title="${escapeHtml(station.name)} – auf OpenWindMap öffnen">${escapeHtml(station.name)} ↗</a>`;
+            sourceBadge = `<span class="station-source owm" title="OpenWindMap">OWM</span>`;
+            sourceClass = 'source-owm';
+        }
+
+        // Zusätzliche Infos (Höhe, Temperatur)
+        let extraInfo = '';
+        if (station.elevation) {
+            extraInfo += `<span class="station-elevation">⛰️ ${station.elevation}m</span>`;
+        }
+        if (station.temperature !== null && station.temperature !== undefined) {
+            extraInfo += `<span class="station-temp">🌡️ ${station.temperature}°C</span>`;
+        }
 
         return `
-            <div class="live-wind-station">
+            <div class="live-wind-station ${sourceClass}">
                 <div class="station-info">
-                    <a href="${stationUrl}" target="_blank" rel="noopener noreferrer" class="station-name" title="${station.name} – auf OpenWindMap öffnen">${station.name} ↗</a>
+                    <div class="station-header">
+                        ${stationLink}
+                        ${sourceBadge}
+                    </div>
                     <div class="station-meta">
                         <span class="station-distance">📍 ${station.distance} km</span>
+                        ${extraInfo}
                         <span class="station-age">⏱️ ${formatLiveWindAge(station.ageMinutes)}</span>
                     </div>
                 </div>

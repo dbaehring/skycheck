@@ -905,12 +905,13 @@ export function getRiskExplanation(i, score) {
     return risks;
 }
 
-// === OpenWindMap/Pioupiou Live-Wind Integration ===
+// === Live-Wind Integration ===
+// Quellen: OpenWindMap/Pioupiou + Lawinenwarndienste (avalanche.report)
 
-// Cache für Live-Wind-Daten (Rate Limit: 1 Anfrage/60 Sek.)
+// Cache für Live-Wind-Daten
 let liveWindCache = {
-    data: null,
-    timestamp: 0
+    pioupiou: { data: null, timestamp: 0 },
+    avalanche: { data: null, timestamp: 0 }
 };
 
 /**
@@ -938,10 +939,11 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
  */
 async function fetchAllPioupiouStations() {
     const now = Date.now();
+    const cache = liveWindCache.pioupiou;
 
     // Cache prüfen (60 Sekunden TTL wegen API Rate Limit)
-    if (liveWindCache.data && (now - liveWindCache.timestamp) < API_CONFIG.liveWindCacheTTL) {
-        return liveWindCache.data;
+    if (cache.data && (now - cache.timestamp) < API_CONFIG.liveWindCacheTTL) {
+        return cache.data;
     }
 
     try {
@@ -952,15 +954,142 @@ async function fetchAllPioupiouStations() {
         const result = await response.json();
 
         // Cache aktualisieren
-        liveWindCache.data = result.data || [];
-        liveWindCache.timestamp = now;
+        cache.data = result.data || [];
+        cache.timestamp = now;
 
-        return liveWindCache.data;
+        return cache.data;
     } catch (error) {
         console.warn('OpenWindMap API Fehler:', error);
         // Bei Fehler: alte Cache-Daten zurückgeben falls vorhanden
-        return liveWindCache.data || [];
+        return cache.data || [];
     }
+}
+
+/**
+ * Generiert die URL für avalanche.report Wetterstationen
+ * Format: YYYY-MM-DD_HH-00_stations.geojson (stündlich)
+ * @returns {string} URL zur aktuellen GeoJSON-Datei
+ */
+function getAvalancheReportUrl() {
+    const now = new Date();
+    // Auf volle Stunde abrunden
+    now.setMinutes(0, 0, 0);
+
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hour = String(now.getHours()).padStart(2, '0');
+
+    return `${API_CONFIG.avalancheReportUrl}${year}-${month}-${day}_${hour}-00_stations.geojson`;
+}
+
+/**
+ * Holt alle Lawinenwarndienst-Stationen (mit Cache)
+ * Quellen: LWD Tirol, Bayern, Salzburg, Südtirol, GeoSphere Austria
+ * @returns {Promise<Array>} Array aller Stationen im einheitlichen Format
+ */
+async function fetchAllAvalancheStations() {
+    if (!API_CONFIG.avalancheReportEnabled) {
+        return [];
+    }
+
+    const now = Date.now();
+    const cache = liveWindCache.avalanche;
+
+    // Cache prüfen
+    if (cache.data && (now - cache.timestamp) < API_CONFIG.liveWindCacheTTL) {
+        return cache.data;
+    }
+
+    try {
+        const url = getAvalancheReportUrl();
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            // Fallback: Versuche vorherige Stunde
+            const fallbackUrl = url.replace(/_\d{2}-00_/, (match) => {
+                const hour = parseInt(match.slice(1, 3));
+                const prevHour = hour > 0 ? hour - 1 : 23;
+                return `_${String(prevHour).padStart(2, '0')}-00_`;
+            });
+            const fallbackResponse = await fetch(fallbackUrl);
+            if (!fallbackResponse.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const geojson = await fallbackResponse.json();
+            cache.data = geojson.features || [];
+            cache.timestamp = now;
+            return cache.data;
+        }
+
+        const geojson = await response.json();
+
+        // Cache aktualisieren
+        cache.data = geojson.features || [];
+        cache.timestamp = now;
+
+        return cache.data;
+    } catch (error) {
+        console.warn('Avalanche.report API Fehler:', error);
+        // Bei Fehler: alte Cache-Daten zurückgeben falls vorhanden
+        return cache.data || [];
+    }
+}
+
+/**
+ * Konvertiert avalanche.report Station ins einheitliche Format
+ * @param {Object} feature - GeoJSON Feature
+ * @param {number} targetLat - Ziel-Breitengrad für Distanzberechnung
+ * @param {number} targetLon - Ziel-Längengrad für Distanzberechnung
+ * @returns {Object|null} Station im einheitlichen Format oder null wenn ungültig
+ */
+function parseAvalancheStation(feature, targetLat, targetLon) {
+    const props = feature.properties;
+    const coords = feature.geometry?.coordinates;
+
+    // Mindestens Position und Windgeschwindigkeit erforderlich
+    if (!coords || coords.length < 2 || props.WG === undefined) {
+        return null;
+    }
+
+    const [lon, lat, elevation] = coords;
+    const distance = calculateDistance(targetLat, targetLon, lat, lon);
+
+    // Wind von m/s in km/h umrechnen
+    const windSpeedMs = props.WG;
+    const windGustMs = props.WG_BOE;
+    const windSpeed = windSpeedMs !== null ? Math.round(windSpeedMs * 3.6) : null;
+    const windGust = windGustMs !== null ? Math.round(windGustMs * 3.6) : null;
+
+    // Alter der Messung berechnen
+    const measurementDate = props.date ? new Date(props.date) : null;
+    const ageMinutes = measurementDate
+        ? Math.round((Date.now() - measurementDate.getTime()) / 60000)
+        : null;
+
+    // Nur aktuelle Messungen (max 2 Stunden alt)
+    if (ageMinutes !== null && ageMinutes > 120) {
+        return null;
+    }
+
+    return {
+        id: `lwd-${props.name?.replace(/\s+/g, '-').toLowerCase() || 'unknown'}`,
+        name: props.name || 'Unbekannte Station',
+        distance: Math.round(distance * 10) / 10,
+        lat: lat,
+        lon: lon,
+        elevation: elevation ? Math.round(elevation) : null,
+        windSpeed: windSpeed,
+        windGust: windGust,
+        windMin: null,  // Nicht verfügbar
+        windDirection: props.WR,
+        windDirectionText: degToCompass(props.WR),
+        temperature: props.LT !== undefined ? Math.round(props.LT * 10) / 10 : null,
+        lastUpdate: measurementDate,
+        ageMinutes: ageMinutes,
+        source: 'lwd',
+        operator: props.operator || 'Lawinenwarndienst'
+    };
 }
 
 /**
@@ -978,6 +1107,7 @@ function degToCompass(deg) {
 
 /**
  * Holt Live-Windstationen in der Nähe eines Standorts
+ * Kombiniert Daten von OpenWindMap/Pioupiou und Lawinenwarndiensten
  * @param {number} lat - Breitengrad
  * @param {number} lon - Längengrad
  * @param {number} radiusKm - Suchradius in km (default aus Config)
@@ -988,54 +1118,84 @@ export async function fetchNearbyLiveWind(lat, lon, radiusKm = null, maxStations
     const radius = radiusKm || API_CONFIG.liveWindRadius;
     const max = maxStations || API_CONFIG.liveWindMaxStations;
 
-    const allStations = await fetchAllPioupiouStations();
+    // Beide Quellen parallel abrufen
+    const [pioupiouStations, avalancheFeatures] = await Promise.all([
+        fetchAllPioupiouStations(),
+        fetchAllAvalancheStations()
+    ]);
 
-    if (!allStations || allStations.length === 0) {
-        return [];
+    const allNearbyStations = [];
+
+    // === Pioupiou/OpenWindMap Stationen verarbeiten ===
+    if (pioupiouStations && pioupiouStations.length > 0) {
+        const pioupiouNearby = pioupiouStations
+            .filter(station => {
+                // Nur Stationen mit gültiger Position und aktuellen Messwerten
+                if (!station.location?.latitude || !station.location?.longitude) return false;
+                if (!station.measurements?.date) return false;
+
+                // Messung nicht älter als 2 Stunden
+                const measurementAge = Date.now() - new Date(station.measurements.date).getTime();
+                if (measurementAge > 2 * 60 * 60 * 1000) return false;
+
+                return true;
+            })
+            .map(station => {
+                const distance = calculateDistance(
+                    lat, lon,
+                    station.location.latitude,
+                    station.location.longitude
+                );
+
+                const m = station.measurements;
+                return {
+                    id: `piou-${station.id}`,
+                    name: station.meta?.name || `Station ${station.id}`,
+                    distance: Math.round(distance * 10) / 10,
+                    lat: station.location.latitude,
+                    lon: station.location.longitude,
+                    elevation: station.location.altitude ? Math.round(station.location.altitude) : null,
+                    windSpeed: m.wind_speed_avg !== null ? Math.round(m.wind_speed_avg) : null,
+                    windGust: m.wind_speed_max !== null ? Math.round(m.wind_speed_max) : null,
+                    windMin: m.wind_speed_min !== null ? Math.round(m.wind_speed_min) : null,
+                    windDirection: m.wind_heading,
+                    windDirectionText: degToCompass(m.wind_heading),
+                    temperature: null,
+                    lastUpdate: new Date(m.date),
+                    ageMinutes: Math.round((Date.now() - new Date(m.date).getTime()) / 60000),
+                    source: 'openwindmap',
+                    operator: 'OpenWindMap'
+                };
+            })
+            .filter(station => station.distance <= radius);
+
+        allNearbyStations.push(...pioupiouNearby);
     }
 
-    // Stationen mit Distanz anreichern und filtern
-    const nearbyStations = allStations
-        .filter(station => {
-            // Nur Stationen mit gültiger Position und aktuellen Messwerten
-            if (!station.location?.latitude || !station.location?.longitude) return false;
-            if (!station.measurements?.date) return false;
+    // === Lawinenwarndienst Stationen verarbeiten ===
+    if (avalancheFeatures && avalancheFeatures.length > 0) {
+        const avalancheNearby = avalancheFeatures
+            .map(feature => parseAvalancheStation(feature, lat, lon))
+            .filter(station => station !== null && station.distance <= radius);
 
-            // Messung nicht älter als 2 Stunden
-            const measurementAge = Date.now() - new Date(station.measurements.date).getTime();
-            if (measurementAge > 2 * 60 * 60 * 1000) return false;
+        allNearbyStations.push(...avalancheNearby);
+    }
 
-            return true;
+    // Nach Distanz sortieren und auf max begrenzen
+    // Bei gleicher Distanz: LWD-Stationen bevorzugen (höhere Qualität)
+    const sortedStations = allNearbyStations
+        .sort((a, b) => {
+            const distDiff = a.distance - b.distance;
+            if (Math.abs(distDiff) < 1) {
+                // Bei ähnlicher Distanz: LWD bevorzugen
+                if (a.source === 'lwd' && b.source !== 'lwd') return -1;
+                if (b.source === 'lwd' && a.source !== 'lwd') return 1;
+            }
+            return distDiff;
         })
-        .map(station => {
-            const distance = calculateDistance(
-                lat, lon,
-                station.location.latitude,
-                station.location.longitude
-            );
-
-            const m = station.measurements;
-            return {
-                id: station.id,
-                name: station.meta?.name || `Station ${station.id}`,
-                distance: Math.round(distance * 10) / 10,
-                lat: station.location.latitude,
-                lon: station.location.longitude,
-                windSpeed: m.wind_speed_avg !== null ? Math.round(m.wind_speed_avg) : null, // bereits km/h
-                windGust: m.wind_speed_max !== null ? Math.round(m.wind_speed_max) : null,
-                windMin: m.wind_speed_min !== null ? Math.round(m.wind_speed_min) : null,
-                windDirection: m.wind_heading,
-                windDirectionText: degToCompass(m.wind_heading),
-                lastUpdate: new Date(m.date),
-                ageMinutes: Math.round((Date.now() - new Date(m.date).getTime()) / 60000),
-                source: 'openwindmap'
-            };
-        })
-        .filter(station => station.distance <= radius)
-        .sort((a, b) => a.distance - b.distance)
         .slice(0, max);
 
-    return nearbyStations;
+    return sortedStations;
 }
 
 /**

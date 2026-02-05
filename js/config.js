@@ -24,9 +24,14 @@ export const API_CONFIG = {
     // OpenWindMap/Pioupiou API für Live-Winddaten
     pioupiouUrl: 'https://api.pioupiou.fr/v1/live/all',
     pioupiouStationUrl: 'https://api.pioupiou.fr/v1/live/',
-    liveWindRadius: 25,  // km - Radius für Stationen in der Nähe
-    liveWindMaxStations: 5,  // Max. Anzahl angezeigter Stationen
-    liveWindCacheTTL: 60000  // 60 Sekunden Cache (API Rate Limit)
+    // Lawinenwarndienste (avalanche.report) - Alpenraum
+    // Quellen: LWD Tirol, Bayern, Salzburg, Südtirol, GeoSphere Austria
+    avalancheReportUrl: 'https://static.avalanche.report/weather_stations/',
+    avalancheReportEnabled: true,  // Kann deaktiviert werden falls API-Probleme
+    // Gemeinsame Live-Wind Konfiguration
+    liveWindRadius: 30,  // km - Radius für Stationen in der Nähe (erhöht für Bergstationen)
+    liveWindMaxStations: 8,  // Max. Anzahl angezeigter Stationen (erhöht)
+    liveWindCacheTTL: 60000  // 60 Sekunden Cache
 };
 
 // Drucklevel-Konfiguration

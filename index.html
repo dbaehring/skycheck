@@ -223,24 +223,24 @@
                         </div>
                     </div>
 
-                    <!-- Live-Wind Stationen (OpenWindMap/Pioupiou) -->
+                    <!-- Live-Wind Stationen (OpenWindMap + Lawinenwarndienste) -->
                     <div class="live-wind-card" id="liveWindCard" style="display: none;">
                         <div class="live-wind-header">
                             <span class="live-wind-icon">📡</span>
-                            <span class="live-wind-title">Live-Wind (Messstationen)<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Aktuelle Windmessungen von echten Stationen im Umkreis (OpenWindMap/Pioupiou). Klick auf Stationsname öffnet Details auf pioupiou.fr. Hinweis: Modellprognosen und lokale Messwerte können voneinander abweichen!</span></span></span>
+                            <span class="live-wind-title">Live-Wind (Messstationen)<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Aktuelle Windmessungen von echten Stationen im Umkreis. Quellen: OpenWindMap/Pioupiou (OWM) + Lawinenwarndienste (LWD Tirol, Bayern, Salzburg, Südtirol). Hinweis: Messwerte können lokal von Modellprognosen abweichen!</span></span></span>
                             <span class="live-wind-badge" id="liveWindBadge" style="display: none;">LIVE</span>
                             <button class="live-wind-refresh" id="liveWindRefresh" title="Aktualisieren" style="display: none;">↻</button>
                         </div>
                         <button class="live-wind-load-btn" id="liveWindLoadBtn">
                             <span class="load-btn-icon">📡</span>
                             <span class="load-btn-text">Live-Windwerte laden</span>
-                            <span class="load-btn-hint">Stationen im Umkreis von 25 km</span>
+                            <span class="load-btn-hint">Stationen im Umkreis von 30 km</span>
                         </button>
                         <div class="live-wind-stations" id="liveWindStations">
                             <!-- Wird dynamisch befüllt -->
                         </div>
                         <div class="live-wind-footer" id="liveWindFooter" style="display: none;">
-                            <span class="live-wind-source">Daten: <a href="https://www.openwindmap.org/" target="_blank" rel="noopener noreferrer">OpenWindMap</a></span>
+                            <span class="live-wind-source">Daten: <a href="https://www.openwindmap.org/" target="_blank" rel="noopener noreferrer">OpenWindMap</a> + <a href="https://avalanche.report/" target="_blank" rel="noopener noreferrer">Lawinenwarndienste</a></span>
                             <span class="live-wind-note">⚠️ Messwerte können lokal abweichen</span>
                         </div>
                     </div>
@@ -335,7 +335,7 @@
         <footer class="sky-footer">
             <div class="footer-content">
                 <p class="footer-text">
-                    SkyCheck v10.0 | Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="footer-link">Open-Meteo.com</a> (ICON-D2/EU) + <a href="https://www.openwindmap.org/" target="_blank" rel="noopener noreferrer" class="footer-link">OpenWindMap</a>
+                    SkyCheck v10.0 | Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="footer-link">Open-Meteo</a> (ICON-D2/EU) + <a href="https://www.openwindmap.org/" target="_blank" rel="noopener noreferrer" class="footer-link">OpenWindMap</a> + <a href="https://avalanche.report/" target="_blank" rel="noopener noreferrer" class="footer-link">LWD</a>
                 </p>
                 <p class="footer-disclaimer">
                     <small>SkyCheck ersetzt keine fundierte Wetterberatung. Piloten sind selbst verantwortlich für ihre Flugentscheidungen.</small>
@@ -527,7 +527,7 @@
                         <li><span class="feature-icon">📱</span> <strong>Offline-fähig</strong> - als PWA installierbar</li>
                         <li><span class="feature-icon">🌟</span> <strong>Anfänger-Badge</strong> - zeigt perfekte Bedingungen</li>
                         <li><span class="feature-icon">📅</span> <strong>3-Tage-Vorschau</strong> mit Tages-Ampel</li>
-                        <li><span class="feature-icon">📡</span> <strong>Live-Wind</strong> - echte Messwerte von Stationen im Umkreis</li>
+                        <li><span class="feature-icon">📡</span> <strong>Live-Wind</strong> - Messwerte von OpenWindMap + Lawinenwarndiensten (Alpen)</li>
                     </ul>
                 </div>
                 <div class="about-tab-content" id="tab-limits">
