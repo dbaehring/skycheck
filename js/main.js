@@ -73,7 +73,6 @@ import {
     toggleWindDiagram,
     loadWindDiagramState,
     initPullToRefresh,
-    renderThermicWindow,
     // Expertenmodus
     loadExpertMode,
     toggleExpertMode,

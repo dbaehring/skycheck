@@ -221,37 +221,6 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="day-diagram-card" id="thermicWindowCard" role="region" aria-label="Thermik-Zeitfenster">
-                            <div class="diagram-header">
-                                <span class="diagram-icon">🌡️</span>
-                                <span class="diagram-title">Thermik-Zeitfenster<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Zeigt das theoretische Thermik-Potenzial im Tagesverlauf. Berechnet aus: Sonneneinstrahlung, CAPE, Grenzschicht, Spread und Tageszeit. Bei Bewölkung reduziert sich das Potenzial entsprechend - bei bedecktem Himmel ist trotz "Potenzial" keine echte Thermik zu erwarten!</span></span></span>
-                                <span class="diagram-summary" id="thermicSummary">-</span>
-                            </div>
-                            <div class="thermic-bar-container">
-                                <div class="thermic-bar" id="thermicBar"></div>
-                                <div class="thermic-time-labels" id="thermicTimeLabels"></div>
-                            </div>
-                            <div class="thermic-details" id="thermicDetails">
-                                <div class="thermic-detail-item">
-                                    <span class="thermic-detail-label">📈 Max. Höhe<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Tagesmaximum der Grenzschichthöhe - höchste Höhe, die Thermik an diesem Tag erreichen kann.</span></span>:</span>
-                                    <span class="thermic-detail-value" id="thermicMaxHeight">-</span>
-                                </div>
-                                <div class="thermic-detail-item">
-                                    <span class="thermic-detail-label">⚡ Energie:</span>
-                                    <span class="thermic-detail-value" id="thermicEnergy">-</span>
-                                </div>
-                                <div class="thermic-detail-item">
-                                    <span class="thermic-detail-label">⏱️ Dauer:</span>
-                                    <span class="thermic-detail-value" id="thermicDuration">-</span>
-                                </div>
-                            </div>
-                            <div class="thermic-legend">
-                                <span class="thermic-legend-item" title="Qualität >60%"><span class="thermic-legend-color strong"></span>Stark</span>
-                                <span class="thermic-legend-item" title="Qualität 35-60%"><span class="thermic-legend-color moderate"></span>Moderat</span>
-                                <span class="thermic-legend-item" title="Qualität 15-35%"><span class="thermic-legend-color weak"></span>Schwach</span>
-                                <span class="thermic-legend-item" title="Qualität <15%"><span class="thermic-legend-color none"></span>Keine</span>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Live-Wind Stationen (OpenWindMap/Pioupiou) -->
@@ -336,7 +305,7 @@
                                 <div class="param-row"><span class="param-label">CAPE<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Energie für Konvektion (J/kg). >1000 = hohe Gewittergefahr!</span></span></span><span class="param-value" id="cape">-</span></div>
                                 <div class="param-row"><span class="param-label">Lifted Index<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Stabilitätsindex. Negativ = labil = kräftige Thermik. &lt;-4 = Gewitter!</span></span></span><span class="param-value" id="liftedIndex">-</span></div>
                                 <div class="param-row thermik-height-row"><span class="param-label">☁️ Wolkenbasis<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Geschätzte Untergrenze der Cumulus-Wolken, berechnet aus Spread × 125m + Stationshöhe.</span></span></span><span class="param-value" id="cloudBase">-</span></div>
-                                <div class="param-row thermik-height-row"><span class="param-label">📈 Max. Thermik<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Grenzschichthöhe für die aktuell gewählte Stunde - maximale Höhe, die Thermik zu diesem Zeitpunkt erreichen kann.</span></span></span><span class="param-value" id="boundaryLayer">-</span></div>
+                                <div class="param-row thermik-height-row"><span class="param-label">📈 Grenzschicht<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Atmosphärische Grenzschichthöhe - Obergrenze der bodennahen Luftmasse. Bei Thermikflügen relevant für maximale Steighöhe.</span></span></span><span class="param-value" id="boundaryLayer">-</span></div>
                             </div>
                         </div>
                         <div class="param-card expanded" data-card="clouds" role="region" aria-label="Wolken und Sicht">
@@ -369,7 +338,7 @@
                     SkyCheck v10.0 | Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="footer-link">Open-Meteo.com</a> (ICON-D2/EU) + <a href="https://www.openwindmap.org/" target="_blank" rel="noopener noreferrer" class="footer-link">OpenWindMap</a>
                 </p>
                 <p class="footer-disclaimer">
-                    <small>SkyCheck ersetzt keine professionelle Wetterberatung. Piloten sind selbst verantwortlich für ihre Flugentscheidungen.</small>
+                    <small>SkyCheck ersetzt keine fundierte Wetterberatung. Piloten sind selbst verantwortlich für ihre Flugentscheidungen.</small>
                 </p>
             </div>
         </footer>
@@ -558,7 +527,6 @@
                         <li><span class="feature-icon">📱</span> <strong>Offline-fähig</strong> - als PWA installierbar</li>
                         <li><span class="feature-icon">🌟</span> <strong>Anfänger-Badge</strong> - zeigt perfekte Bedingungen</li>
                         <li><span class="feature-icon">📅</span> <strong>3-Tage-Vorschau</strong> mit Tages-Ampel</li>
-                        <li><span class="feature-icon">🌡️</span> <strong>Thermik-Zeitfenster</strong> - beste Thermik-Stunden auf einen Blick</li>
                         <li><span class="feature-icon">📡</span> <strong>Live-Wind</strong> - echte Messwerte von Stationen im Umkreis</li>
                     </ul>
                 </div>
@@ -566,7 +534,7 @@
                     <div class="about-warning-box">
                         <h4>⚠️ Wichtige Hinweise</h4>
                         <ul class="about-limits-list">
-                            <li>SkyCheck <strong>ersetzt keine professionelle Wetterberatung</strong> und kein eigenes Urteilsvermögen.</li>
+                            <li>SkyCheck <strong>ersetzt keine fundierte Wetterberatung</strong> und kein eigenes Urteilsvermögen.</li>
                             <li><strong>Modelldaten ≠ Realität</strong> - Vorhersagen können von den tatsächlichen Bedingungen abweichen.</li>
                             <li><strong>Lokale Effekte</strong> (Talwind, Lee, Thermikauslöser) werden nicht erfasst.</li>
                             <li>Am Flugtag <strong>immer vor Ort prüfen</strong>: Windsack, Wolken, Bauchgefühl!</li>

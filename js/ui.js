@@ -13,8 +13,7 @@ import {
 } from './utils.js';
 import {
     getHourScore, findBestWindow, updateSunTimes, calculateCloudBase, validateValue,
-    calculateBeginnerSafety, getRiskExplanation, getFogRisk, analyzeThermicWindow,
-    extractWindData,
+    calculateBeginnerSafety, getRiskExplanation, getFogRisk, extractWindData,
     // Zentralisierte Bewertungsfunktionen (Single Source of Truth)
     evaluateWind, evaluateThermik, evaluateClouds, evaluatePrecip
 } from './weather.js';
@@ -253,9 +252,6 @@ export function selectDay(idx) {
 
     // Wind-Profil immer aktualisieren (ist jetzt immer sichtbar)
     renderWindDiagram(state.forecastDays[idx].date);
-
-    // Thermik-Zeitfenster aktualisieren
-    renderThermicWindow(state.forecastDays[idx].date, idx);
 
     const now = new Date(), ch = now.getHours();
     let def = state.forecastDays[idx].indices.find(i => new Date(state.hourlyData.time[i]).getHours() === (idx === 0 ? ch : 12));
@@ -1758,108 +1754,6 @@ export function toggleWindDiagram() {
  */
 export function loadWindDiagramState() {
     // Diagramm ist jetzt immer sichtbar - nichts zu tun
-}
-
-// === Thermik-Zeitfenster Visualisierung ===
-
-/**
- * Rendert das Thermik-Zeitfenster für einen Tag
- * @param {string} dayStr - Datum im Format 'YYYY-MM-DD'
- * @param {number} dayIdx - Index des Tages (0=heute, 1=morgen, etc.)
- */
-export function renderThermicWindow(dayStr, dayIdx) {
-    const card = document.getElementById('thermicWindowCard');
-    const bar = document.getElementById('thermicBar');
-    const timeLabels = document.getElementById('thermicTimeLabels');
-    const summary = document.getElementById('thermicSummary');
-    const maxHeightEl = document.getElementById('thermicMaxHeight');
-    const energyEl = document.getElementById('thermicEnergy');
-    const durationEl = document.getElementById('thermicDuration');
-
-    if (!card || !bar) return;
-
-    // Thermik-Analyse durchführen
-    const analysis = analyzeThermicWindow(dayStr, dayIdx);
-
-    if (!analysis || !analysis.hourlyData || analysis.hourlyData.length === 0) {
-        card.classList.add('no-data');
-        return;
-    }
-
-    card.classList.remove('no-data');
-
-    // Balken aufbauen
-    bar.innerHTML = '';
-    analysis.hourlyData.forEach(data => {
-        const slot = document.createElement('div');
-        slot.className = `thermic-slot ${data.intensity}`;
-        slot.dataset.hour = data.hour;
-        slot.dataset.quality = data.quality;
-        const boundaryText = data.boundaryLayer !== null ? Math.round(data.boundaryLayer) + 'm' : 'n.v.';
-        slot.title = `${data.hour}:00 - Thermik: ${data.quality}%\nCAPE: ${Math.round(data.cape)} J/kg\nGrenzschicht: ${boundaryText}`;
-
-        // Peak markieren
-        if (analysis.peak && data.hour === analysis.peak) {
-            slot.classList.add('peak');
-        }
-
-        // Klick-Handler für Stundenauswahl
-        slot.addEventListener('click', () => {
-            selectHour(data.idx);
-        });
-
-        bar.appendChild(slot);
-    });
-
-    // Zeit-Labels
-    timeLabels.innerHTML = '';
-    const labelHours = [6, 9, 12, 15, 18, 20];
-    labelHours.forEach(h => {
-        const label = document.createElement('span');
-        label.textContent = h + 'h';
-        timeLabels.appendChild(label);
-    });
-
-    // Zusammenfassung
-    if (summary) {
-        if (analysis.hasUsableThermic) {
-            summary.textContent = `${analysis.start}-${analysis.end}h (Peak ~${analysis.peak}h)`;
-            summary.style.color = 'var(--green)';
-        } else {
-            summary.textContent = 'Schwach/Keine';
-            summary.style.color = 'var(--text-muted)';
-        }
-    }
-
-    // Details - Max. Höhe nur anzeigen wenn echte Daten vorhanden
-    if (analysis.maxBoundaryLayer > 0) {
-        maxHeightEl.textContent = Math.round(analysis.maxBoundaryLayer) + 'm';
-        maxHeightEl.className = 'thermic-detail-value';
-        if (analysis.maxBoundaryLayer > 2000) maxHeightEl.style.color = 'var(--green)';
-        else if (analysis.maxBoundaryLayer > 1200) maxHeightEl.style.color = 'var(--yellow)';
-        else maxHeightEl.style.color = 'var(--text-muted)';
-    } else {
-        maxHeightEl.textContent = 'n.v.';
-        maxHeightEl.style.color = 'var(--text-muted)';
-    }
-
-    // CAPE-Energie bewerten
-    const capeLabel = analysis.maxCape > 800 ? 'Hoch ⚡' :
-                      analysis.maxCape > 300 ? 'Moderat' :
-                      analysis.maxCape > 100 ? 'Gering' : 'Minimal';
-    energyEl.textContent = capeLabel;
-    energyEl.style.color = analysis.maxCape > 800 ? 'var(--red)' :
-                           analysis.maxCape > 300 ? 'var(--yellow)' : 'var(--text-secondary)';
-
-    // Dauer
-    if (analysis.hasUsableThermic && analysis.duration > 0) {
-        durationEl.textContent = analysis.duration + 'h';
-        durationEl.style.color = analysis.duration >= 4 ? 'var(--green)' :
-                                 analysis.duration >= 2 ? 'var(--yellow)' : 'var(--text-muted)';
-    } else {
-        durationEl.textContent = '-';
-        durationEl.style.color = 'var(--text-muted)';
-    }
 }
 
 /**
