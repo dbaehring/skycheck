@@ -702,6 +702,13 @@ footer a { color: var(--accent); text-decoration: none; }
 .reason-summary.nogo { border-left: 4px solid var(--red); }
 .reason-summary-text { font-size: 0.9rem; color: var(--text-primary); line-height: 1.5; }
 .reason-summary-text strong { font-weight: 600; }
+
+/* Hinweis-Liste (alle Warnungen unter der Ampel) */
+.hints-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.hint-item { padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.85rem; line-height: 1.4; }
+.hint-item.red { background: var(--red-bg); color: var(--red); border-left: 3px solid var(--red); }
+.hint-item.yellow { background: var(--yellow-bg); color: var(--yellow); border-left: 3px solid var(--yellow); }
+
 .reason-param { font-family: 'Space Mono', monospace; font-weight: 600; padding: 0.1rem 0.3rem; border-radius: 4px; font-size: 0.85rem; }
 .reason-param.red { background: var(--red-bg); color: var(--red); }
 .reason-param.yellow { background: var(--yellow-bg); color: var(--yellow); }

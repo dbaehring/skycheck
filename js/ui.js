@@ -383,7 +383,7 @@ export function updateDisplay(i) {
 
     // KISS: Killers-Section ausblenden - Reason-Summary zeigt bereits die kritischen Werte
     document.getElementById('killerWarnings')?.classList.remove('visible');
-    updateReasonSummary(worst, ws, wg, w700, grad, cape, vis, spread, cl);
+    updateReasonSummary(worst, ws, wg, w700, grad, cape, vis, spread, cl, w850, li, prec, showers, freezing, boundaryLayer);
     updateWarnings(ws, wg, w850, w700, grad, spread, cape, li, cl, prec, vis, showers, freezing, boundaryLayer);
     updateWindrose(wdSurface, wd900, wd850, wd700, ws, w900, w850, w700);
 
@@ -536,154 +536,144 @@ function updateOverallAssessment(sc) {
     }
 }
 
-// PHASE 1 SAFETY: Kurzfassung (mit Filter-Support)
-function updateReasonSummary(score, ws, wg, w700, grad, cape, vis, spread, cloudLow) {
+// PHASE 1 SAFETY: Alle Hinweise in einer Liste (sortiert nach Schweregrad und Grenzwert-Abweichung)
+function updateReasonSummary(score, ws, wg, w700, grad, cape, vis, spread, cloudLow, w850, li, precip, showers, freezing, boundaryLayer) {
     const el = document.getElementById('reasonSummary'), textEl = document.getElementById('reasonText');
     el.className = 'reason-summary';
-    const gustSpread = wg - ws; // Böen-Differenz
-    const fogRisk = getFogRisk(spread || 10, ws, vis); // Intelligente Nebel-Erkennung
+    const gustSpread = wg - ws;
+    const fogRisk = getFogRisk(spread || 10, ws, vis);
     const filter = state.paramFilter || { wind: true, thermik: true, clouds: true, precip: true };
-
-    // Prüfen ob Filter aktiv ist (nicht alle Parameter ausgewählt)
     const filterActive = !filter.wind || !filter.thermik || !filter.clouds || !filter.precip;
-    const filterHint = filterActive ? ' <span class="filter-hint">(Filter aktiv)</span>' : '';
 
     if (score === 3) {
         el.classList.add('go');
-        textEl.innerHTML = '✓ <strong>Alle Parameter im sicheren Bereich.</strong>' + filterHint + ' Gute Bedingungen für einen Flug – dennoch vor Ort die Verhältnisse prüfen.';
-    } else if (score === 1) {
-        el.classList.add('nogo');
-        const criticals = [];
-        const inAlps = isInAlpineRegion(state.currentLocation.lat, state.currentLocation.lon);
-        // Thermik-Filter
-        if (filter.thermik && cape > LIMITS.cape.yellow) criticals.push({ name: 'CAPE', value: Math.round(cape) + ' J/kg', issue: 'Gewittergefahr' });
-        // Wind-Filter
-        if (filter.wind) {
-            if (w700 > LIMITS.wind.w700.yellow) criticals.push({ name: 'Höhenwind', value: Math.round(w700) + ' km/h', issue: inAlps ? 'Föhngefahr' : 'zu stark' });
-            if (wg > LIMITS.wind.gusts.yellow) criticals.push({ name: 'Böen', value: Math.round(wg) + ' km/h', issue: 'zu stark' });
-            if (gustSpread > LIMITS.wind.gustSpread.yellow) criticals.push({ name: 'Böigkeit', value: Math.round(gustSpread) + ' km/h', issue: 'unruhig' });
-            if (grad > LIMITS.wind.gradient.yellow) criticals.push({ name: 'Gradient', value: Math.round(grad) + ' km/h', issue: 'Windscherung' });
+        const filterHint = filterActive ? ' <span class="filter-hint">(Filter aktiv)</span>' : '';
+        textEl.innerHTML = '✓ <strong>Alle Parameter im grünen Bereich.</strong>' + filterHint + ' Gute Bedingungen – dennoch vor Ort prüfen.';
+        return;
+    }
+
+    // Alle Hinweise sammeln mit Level und Abweichung vom Grenzwert
+    const hints = [];
+
+    // Helper: Abweichung berechnen (wie viel % über dem Grenzwert)
+    const calcDeviation = (val, greenLimit, yellowLimit) => {
+        if (val > yellowLimit) return ((val - yellowLimit) / yellowLimit) * 100 + 100; // rot: +100 Basis
+        if (val > greenLimit) return ((val - greenLimit) / (yellowLimit - greenLimit)) * 100;
+        return 0;
+    };
+
+    // Wind-Parameter
+    if (filter.wind) {
+        if (ws > LIMITS.wind.surface.yellow) {
+            hints.push({ level: 'red', text: '💨 Bodenwind zu stark (' + Math.round(ws) + ' km/h)', deviation: calcDeviation(ws, LIMITS.wind.surface.green, LIMITS.wind.surface.yellow) });
+        } else if (ws > LIMITS.wind.surface.green) {
+            hints.push({ level: 'yellow', text: '💨 Bodenwind erhöht (' + Math.round(ws) + ' km/h)', deviation: calcDeviation(ws, LIMITS.wind.surface.green, LIMITS.wind.surface.yellow) });
         }
-        // Wolken-Filter (Nebel gehört zu Wolken/Sicht)
-        if (filter.clouds && fogRisk === 'severe') {
+
+        if (wg > LIMITS.wind.gusts.yellow) {
+            hints.push({ level: 'red', text: '💨 Böen gefährlich stark (' + Math.round(wg) + ' km/h)', deviation: calcDeviation(wg, LIMITS.wind.gusts.green, LIMITS.wind.gusts.yellow) });
+        } else if (wg > LIMITS.wind.gusts.green) {
+            hints.push({ level: 'yellow', text: '💨 Böen erhöht (' + Math.round(wg) + ' km/h)', deviation: calcDeviation(wg, LIMITS.wind.gusts.green, LIMITS.wind.gusts.yellow) });
+        }
+
+        if (gustSpread > LIMITS.wind.gustSpread.yellow) {
+            hints.push({ level: 'red', text: '💨 Stark böig – Differenz ' + Math.round(gustSpread) + ' km/h', deviation: calcDeviation(gustSpread, LIMITS.wind.gustSpread.green, LIMITS.wind.gustSpread.yellow) });
+        } else if (gustSpread > LIMITS.wind.gustSpread.green) {
+            hints.push({ level: 'yellow', text: '💨 Böigkeit erhöht – Differenz ' + Math.round(gustSpread) + ' km/h', deviation: calcDeviation(gustSpread, LIMITS.wind.gustSpread.green, LIMITS.wind.gustSpread.yellow) });
+        }
+
+        if (w700 > LIMITS.wind.w700.yellow) {
+            hints.push({ level: 'red', text: '🌬️ Höhenwind kritisch (' + Math.round(w700) + ' km/h)', deviation: calcDeviation(w700, LIMITS.wind.w700.green, LIMITS.wind.w700.yellow) });
+        } else if (w700 > LIMITS.wind.w700.green) {
+            hints.push({ level: 'yellow', text: '🌬️ Höhenwind erhöht (' + Math.round(w700) + ' km/h)', deviation: calcDeviation(w700, LIMITS.wind.w700.green, LIMITS.wind.w700.yellow) });
+        }
+
+        if (grad > LIMITS.wind.gradient.yellow) {
+            hints.push({ level: 'red', text: '📊 Gradient kritisch (' + Math.round(grad) + ' km/h)', deviation: calcDeviation(grad, LIMITS.wind.gradient.green, LIMITS.wind.gradient.yellow) });
+        } else if (grad > LIMITS.wind.gradient.green) {
+            hints.push({ level: 'yellow', text: '📊 Gradient erhöht (' + Math.round(grad) + ' km/h)', deviation: calcDeviation(grad, LIMITS.wind.gradient.green, LIMITS.wind.gradient.yellow) });
+        }
+    }
+
+    // Thermik-Parameter
+    if (filter.thermik) {
+        if (cape > LIMITS.cape.yellow) {
+            hints.push({ level: 'red', text: '⚡ CAPE kritisch (' + Math.round(cape) + ' J/kg) – Gewittergefahr', deviation: calcDeviation(cape, LIMITS.cape.green, LIMITS.cape.yellow) });
+        } else if (cape > LIMITS.cape.green) {
+            hints.push({ level: 'yellow', text: '🌤️ CAPE erhöht (' + Math.round(cape) + ' J/kg)', deviation: calcDeviation(cape, LIMITS.cape.green, LIMITS.cape.yellow) });
+        }
+
+        if (li !== undefined && li !== null) {
+            // LI ist negativ = labil, also invertierte Logik
+            if (li < LIMITS.liftedIndex.yellow) {
+                hints.push({ level: 'red', text: '⚡ Lifted Index ' + li.toFixed(1) + ' – stark labil', deviation: Math.abs(li - LIMITS.liftedIndex.yellow) * 20 + 100 });
+            } else if (li < LIMITS.liftedIndex.green) {
+                hints.push({ level: 'yellow', text: '⚡ Lifted Index ' + li.toFixed(1) + ' – labil', deviation: Math.abs(li - LIMITS.liftedIndex.green) * 20 });
+            }
+        }
+    }
+
+    // Wolken/Sicht-Parameter
+    if (filter.clouds) {
+        if (fogRisk === 'severe') {
             if (vis < LIMITS.fog.visibilitySevere) {
-                criticals.push({ name: 'Sicht', value: (vis/1000).toFixed(1) + ' km', issue: 'kritisch' });
+                hints.push({ level: 'red', text: '🌫️ Kritische Sicht (' + (vis/1000).toFixed(1) + ' km)', deviation: 200 });
             } else {
-                criticals.push({ name: 'Nebel', value: 'Spread ' + (spread?.toFixed(1) || '?') + '°C', issue: 'hohe Nebelgefahr' });
+                hints.push({ level: 'red', text: '🌫️ Hohe Nebelgefahr – Spread ' + (spread?.toFixed(1) || '?') + '°C', deviation: 150 });
             }
+        } else if (fogRisk === 'likely') {
+            hints.push({ level: 'yellow', text: '🌁 Nebel wahrscheinlich – Spread ' + (spread?.toFixed(1) || '?') + '°C', deviation: 80 });
+        } else if (fogRisk === 'possible' && vis < LIMITS.fog.visibilityWarning) {
+            hints.push({ level: 'yellow', text: '🌫️ Sicht eingeschränkt (' + (vis/1000).toFixed(1) + ' km)', deviation: 50 });
         }
 
-        if (criticals.length > 0) {
-            const main = criticals.slice(0, 2);
-            textEl.innerHTML = '✗ <strong>Nicht fliegbar wegen:</strong> ' + main.map(c => '<span class="reason-param red">' + escapeHtml(c.name) + ' ' + escapeHtml(c.value) + '</span> (' + escapeHtml(c.issue) + ')').join(', ') + filterHint;
-        } else {
-            textEl.innerHTML = '✗ <strong>Mehrere Parameter im kritischen Bereich.</strong>' + filterHint + ' Siehe Warnungen unten.';
+        if (cloudLow > LIMITS.clouds.low.yellow) {
+            hints.push({ level: 'red', text: '☁️ Tiefe Bewölkung ' + cloudLow + '%', deviation: calcDeviation(cloudLow, LIMITS.clouds.low.green, LIMITS.clouds.low.yellow) });
+        } else if (cloudLow > LIMITS.clouds.low.green) {
+            hints.push({ level: 'yellow', text: '☁️ Tiefe Bewölkung ' + cloudLow + '%', deviation: calcDeviation(cloudLow, LIMITS.clouds.low.green, LIMITS.clouds.low.yellow) });
         }
+    }
+
+    // Niederschlag
+    if (filter.precip) {
+        if (precip > LIMITS.precip.yellow) {
+            hints.push({ level: 'red', text: '🌧️ Niederschlag ' + precip.toFixed(1) + ' mm', deviation: calcDeviation(precip, LIMITS.precip.green, LIMITS.precip.yellow) });
+        } else if (precip > LIMITS.precip.green) {
+            hints.push({ level: 'yellow', text: '🌧️ Leichter Niederschlag möglich', deviation: calcDeviation(precip, LIMITS.precip.green, LIMITS.precip.yellow) });
+        }
+
+        if (showers > LIMITS.showers.yellow) {
+            hints.push({ level: 'red', text: '⛈️ Schauer erwartet (' + showers.toFixed(1) + ' mm)', deviation: calcDeviation(showers, LIMITS.showers.green, LIMITS.showers.yellow) });
+        } else if (showers > LIMITS.showers.green) {
+            hints.push({ level: 'yellow', text: '🌦️ Lokale Schauer möglich', deviation: calcDeviation(showers, LIMITS.showers.green, LIMITS.showers.yellow) });
+        }
+    }
+
+    // Sortieren: erst rot (level), dann nach deviation absteigend
+    hints.sort((a, b) => {
+        if (a.level === 'red' && b.level !== 'red') return -1;
+        if (a.level !== 'red' && b.level === 'red') return 1;
+        return b.deviation - a.deviation;
+    });
+
+    // Status-Klasse setzen
+    el.classList.add(score === 1 ? 'nogo' : 'caution');
+
+    // HTML generieren
+    if (hints.length === 0) {
+        const filterHint = filterActive ? ' <span class="filter-hint">(Filter aktiv)</span>' : '';
+        textEl.innerHTML = (score === 1 ? '✗' : '⚠') + ' <strong>Parameter außerhalb Grenzwerte.</strong>' + filterHint;
     } else {
-        el.classList.add('caution');
-        const elevated = [];
-        // Wind-Filter
-        if (filter.wind) {
-            if (wg > LIMITS.wind.gusts.green) elevated.push({ name: 'Böen', value: Math.round(wg) + ' km/h' });
-            if (gustSpread > LIMITS.wind.gustSpread.green) elevated.push({ name: 'Böigkeit', value: Math.round(gustSpread) + ' km/h Differenz' });
-            if (w700 > LIMITS.wind.w700.green) elevated.push({ name: 'Höhenwind', value: Math.round(w700) + ' km/h' });
-            if (ws > LIMITS.wind.surface.green) elevated.push({ name: 'Bodenwind', value: Math.round(ws) + ' km/h' });
-            if (grad > LIMITS.wind.gradient.green) elevated.push({ name: 'Gradient', value: Math.round(grad) + ' km/h' });
-        }
-        // Thermik-Filter
-        if (filter.thermik && cape > LIMITS.cape.green) elevated.push({ name: 'CAPE', value: Math.round(cape) + ' J/kg' });
-        // Wolken-Filter
-        if (filter.clouds) {
-            if (cloudLow > LIMITS.clouds.low.green) elevated.push({ name: 'Tiefe Wolken', value: cloudLow + '%' });
-            if (fogRisk === 'likely' || fogRisk === 'possible') {
-                elevated.push({ name: 'Nebelrisiko', value: 'Webcam prüfen' });
-            }
-        }
-
-        if (elevated.length > 0) {
-            const main = elevated.slice(0, 2);
-            textEl.innerHTML = '⚠ <strong>Hauptgrund:</strong> ' + main.map(e => '<span class="reason-param yellow">' + escapeHtml(e.name) + ' ' + escapeHtml(e.value) + '</span>').join(' und ') + '.' + filterHint + ' Erhöhte Aufmerksamkeit nötig.';
-        } else {
-            textEl.innerHTML = '⚠ <strong>Einige Parameter leicht erhöht.</strong>' + filterHint + ' Siehe gelbe Hinweise unten.';
-        }
+        const filterHint = filterActive ? '<div class="filter-hint" style="margin-top: 0.5rem; font-size: 0.8rem;">(Filter aktiv)</div>' : '';
+        textEl.innerHTML = '<div class="hints-list">' +
+            hints.map(h => '<div class="hint-item ' + h.level + '">' + h.text + '</div>').join('') +
+            '</div>' + filterHint;
     }
 }
 
-// Warnungen aktualisieren
-function updateWarnings(ws, wg, w850, w700, grad, spread, cape, li, cloudLow, precip, vis, showers, freezing, boundaryLayer) {
-    const warnings = [];
-    const gustFactor = getGustFactor(ws, wg);
-
-    if (ws > LIMITS.wind.surface.yellow) warnings.push({ level: 'red', text: '💨 Bodenwind zu stark (' + Math.round(ws) + ' km/h)' });
-    else if (ws > LIMITS.wind.surface.green) warnings.push({ level: 'yellow', text: '💨 Bodenwind erhöht (' + Math.round(ws) + ' km/h)' });
-
-    if (wg > LIMITS.wind.gusts.yellow) {
-        warnings.push({ level: 'red', text: '💨 Böen gefährlich stark (' + Math.round(wg) + ' km/h)' });
-    } else if (wg > LIMITS.wind.gusts.green) {
-        warnings.push({ level: 'yellow', text: '💨 Böen erhöht (' + Math.round(wg) + ' km/h)' });
-    }
-
-    // gustSpread (Böen-Differenz) - aussagekräftiger als gustFactor
-    const gustSpread = wg - ws;
-    if (gustSpread > LIMITS.wind.gustSpread.yellow) {
-        warnings.push({ level: 'red', text: '💨 Stark böig – Differenz ' + Math.round(gustSpread) + ' km/h zwischen Böen und Grundwind' });
-    } else if (gustSpread > LIMITS.wind.gustSpread.green) {
-        warnings.push({ level: 'yellow', text: '💨 Böigkeit erhöht – Differenz ' + Math.round(gustSpread) + ' km/h' });
-    }
-
-    if (w700 <= LIMITS.wind.w700.yellow && w700 > LIMITS.wind.w700.green) {
-        warnings.push({ level: 'yellow', text: '🌬️ Höhenwind erhöht (' + Math.round(w700) + ' km/h)' });
-    }
-
-    if (grad <= LIMITS.wind.gradient.yellow && grad > LIMITS.wind.gradient.green) {
-        warnings.push({ level: 'yellow', text: '📊 Gradient erhöht (' + Math.round(grad) + ' km/h)' });
-    }
-
-    if (cape <= LIMITS.cape.yellow && cape > LIMITS.cape.green) {
-        warnings.push({ level: 'yellow', text: '🌤️ CAPE erhöht (' + Math.round(cape) + ' J/kg)' });
-    }
-
-    if (li < LIMITS.liftedIndex.yellow) warnings.push({ level: 'red', text: '⚡ Lifted Index ' + li.toFixed(1) + ' – stark labil' });
-    else if (li < LIMITS.liftedIndex.green) warnings.push({ level: 'yellow', text: '⚡ Lifted Index ' + li.toFixed(1) + ' – labil' });
-
-    if (cloudLow > LIMITS.clouds.low.yellow) warnings.push({ level: 'red', text: '☁️ Tiefe Bewölkung ' + cloudLow + '%' });
-    else if (cloudLow > LIMITS.clouds.low.green) warnings.push({ level: 'yellow', text: '☁️ Tiefe Bewölkung ' + cloudLow + '%' });
-
-    // Intelligente Nebel/Sicht-Warnung (kombiniert Spread, Wind, Sichtweite)
-    const fogRisk = getFogRisk(spread || 10, ws, vis);
-    if (fogRisk === 'severe') {
-        if (vis < LIMITS.fog.visibilitySevere) {
-            warnings.push({ level: 'red', text: '🌫️ Kritische Sicht (' + (vis/1000).toFixed(1) + ' km) – VFR nicht möglich' });
-        } else {
-            warnings.push({ level: 'red', text: '🌫️ Hohe Nebelgefahr – Spread nur ' + (spread?.toFixed(1) || '?') + '°C bei wenig Wind' });
-        }
-    } else if (fogRisk === 'likely') {
-        warnings.push({ level: 'yellow', text: '🌁 Nebel wahrscheinlich – Webcams prüfen! (Spread ' + (spread?.toFixed(1) || '?') + '°C)' });
-    } else if (fogRisk === 'possible') {
-        if (vis < LIMITS.fog.visibilityWarning) {
-            warnings.push({ level: 'yellow', text: '🌫️ Sicht eingeschränkt (' + (vis/1000).toFixed(1) + ' km)' });
-        } else if (spread !== null && spread < LIMITS.fog.spreadWarning) {
-            warnings.push({ level: 'yellow', text: '💧 Hohe Luftfeuchtigkeit (Spread ' + spread.toFixed(1) + '°C) – lokale Nebelfelder möglich' });
-        }
-    }
-
-    if (precip > LIMITS.precip.yellow) warnings.push({ level: 'red', text: '🌧️ Niederschlag ' + precip.toFixed(1) + ' mm' });
-    else if (precip > LIMITS.precip.green) warnings.push({ level: 'yellow', text: '🌧️ Leichter Niederschlag möglich' });
-
-    if (showers > LIMITS.showers.yellow) warnings.push({ level: 'red', text: '⛈️ Schauer erwartet (' + showers.toFixed(1) + ' mm)' });
-    else if (showers > LIMITS.showers.green) warnings.push({ level: 'yellow', text: '🌦️ Lokale Schauer möglich' });
-
-    if (freezing < METEO_CONSTANTS.freezingLevelWarning) warnings.push({ level: 'yellow', text: '❄️ Nullgradgrenze niedrig (' + Math.round(freezing) + 'm)' });
-    // Warnung nur wenn echte Daten vorhanden (boundaryLayer > 0)
-    if (boundaryLayer > 0 && boundaryLayer < METEO_CONSTANTS.boundaryLayerWarning) warnings.push({ level: 'yellow', text: '📉 Grenzschicht aktuell nur ' + Math.round(boundaryLayer) + 'm – schwache Thermik zu dieser Stunde' });
-
-    const el = document.getElementById('warnings'), list = document.getElementById('warningsList');
-    if (warnings.length) {
-        el.classList.add('visible');
-        list.innerHTML = warnings.map(w => '<div class="warning-item ' + w.level + '">' + w.text + '</div>').join('');
-    } else {
-        el.classList.remove('visible');
-    }
+// Warnungen aktualisieren - nicht mehr verwendet (alle Hinweise jetzt in updateReasonSummary)
+function updateWarnings() {
+    // Funktion bleibt für Kompatibilität, tut aber nichts mehr
 }
 
 // Windrose aktualisieren (nutzt DOM-Cache für Performance)
