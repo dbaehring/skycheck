@@ -546,7 +546,7 @@ footer a { color: var(--accent); text-decoration: none; }
 .tooltip-content::before { content: ''; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-bottom-color: var(--text-primary); }
 .tooltip-content::after { display: none; }
 .tooltip-container:hover .tooltip-content { opacity: 1; visibility: visible; }
-@media (max-width: 600px) { .tooltip-content { max-width: 200px; left: 0; transform: none; } .tooltip-content::before { left: 16px; } }
+@media (max-width: 600px) { .tooltip-content { max-width: 200px; left: 0; transform: none; } .tooltip-content::before { left: 16px; } .live-wind-title .tooltip-content { left: auto; right: 0; } .live-wind-title .tooltip-content::before { left: auto; right: 16px; } }
 
 /* Touch-Tooltips für Mobile */
 @media (hover: none) and (pointer: coarse) {
@@ -667,7 +667,7 @@ footer a { color: var(--accent); text-decoration: none; }
 .cat-indicator.nogo { background: var(--red-bg); }
 .day-comparison-window { font-size: 0.75rem; color: var(--text-secondary); font-family: 'Space Mono', monospace; padding: 0.2rem 0.4rem; border-radius: 4px; }
 .day-comparison-window.go { background: var(--green-bg); color: var(--green); font-weight: 600; }
-@media (max-width: 500px) { .day-comparison-grid { grid-template-columns: 1fr; } .windrose-container { flex-direction: column; } }
+@media (max-width: 500px) { .day-comparison-grid { grid-template-columns: 1fr; } .windrose-container { flex-direction: column; } .windrose-wrapper.visible { max-height: 500px; } }
 .forecast-change { display: none; margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: var(--bg-dark); border-radius: 8px; font-size: 0.8rem; }
 .forecast-change.visible { display: block; }
 .forecast-change-title { font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.4rem; }
@@ -729,7 +729,7 @@ footer a { color: var(--accent); text-decoration: none; }
 .windrose-toggle:hover { border-color: var(--accent); color: var(--accent); }
 .windrose-toggle.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
 .windrose-wrapper { max-height: 0; overflow: hidden; transition: max-height 0.35s ease-out; }
-.windrose-wrapper.visible { max-height: 280px; }
+.windrose-wrapper.visible { max-height: 350px; }
 /* PHASE 2: Mobile Timeline */
 @media (max-width: 500px) {
     .timeline-slot { width: 42px; padding: 0.4rem 0.15rem; }
