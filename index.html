@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Content Security Policy (temporär deaktiviert für Debugging)
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://a.tile.opentopomap.org https://b.tile.opentopomap.org https://c.tile.opentopomap.org https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org; connect-src 'self' https://api.open-meteo.com;">
-    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.opentopomap.org https://*.tile.openstreetmap.org; connect-src 'self' https://api.open-meteo.com https://api.pioupiou.fr https://static.avalanche.report; worker-src 'self';">
 
     <!-- === SkyCheck Meta-Tags === -->
     <title>SkyCheck | Sicherer fliegen mit der Wetterampel</title>
@@ -14,11 +12,24 @@
     <meta name="keywords" content="Gleitschirm, Paragliding, Wetter, Meteo, Thermik, Flugwetter, SkyCheck">
     <meta name="author" content="SkyCheck">
 
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://www.skycheck.cloud/">
+
     <!-- Open Graph -->
     <meta property="og:title" content="SkyCheck - Paragliding Meteo">
-    <meta property="og:description" content="Sicherer fliegen mit der Wetterampel">
+    <meta property="og:description" content="Kompakte Gleitschirm-Wetteranalyse in 60 Sekunden. Wind, Thermik, Wolken und Sicht auf einen Blick.">
     <meta property="og:type" content="website">
-    <meta property="og:image" content="./img/logo.svg">
+    <meta property="og:url" content="https://www.skycheck.cloud/">
+    <meta property="og:locale" content="de_DE">
+    <meta property="og:image" content="https://www.skycheck.cloud/img/logo-512.png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="SkyCheck - Paragliding Meteo">
+    <meta name="twitter:description" content="Sicherer fliegen mit der Wetterampel. Wind, Thermik, Wolken und Sicht auf einen Blick.">
+    <meta name="twitter:image" content="https://www.skycheck.cloud/img/logo-512.png">
 
     <!-- PWA Meta-Tags -->
     <meta name="theme-color" content="#4a90d9">
@@ -29,7 +40,7 @@
 
     <!-- Favicons -->
     <link rel="icon" type="image/svg+xml" href="./img/logo.svg">
-    <link rel="apple-touch-icon" href="./img/logo.svg">
+    <link rel="apple-touch-icon" href="./img/logo-192.png">
 
     <!-- External Resources -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" />
@@ -57,7 +68,7 @@
                 </button>
                 <div class="theme-toggle">
                     <span class="theme-toggle-label">Design</span>
-                    <div class="theme-switch" id="themeToggle" title="Hell/Dunkel umschalten"></div>
+                    <div class="theme-switch" id="themeToggle" title="Hell/Dunkel umschalten" role="switch" tabindex="0" aria-checked="false" aria-label="Dunkles Design umschalten"></div>
                     <button class="contrast-toggle" id="contrastToggle" title="Hoher Kontrast">◐</button>
                 </div>
             </div>
@@ -92,12 +103,12 @@
                     <div class="spinner"></div>
                     <p>Wetterdaten werden abgerufen...</p>
                 </div>
-                <div id="resultsContainer" style="display: none;">
+                <div id="resultsContainer" class="u-hidden">
                     <div class="location-card">
                         <span class="location-name" id="locationName">-</span>
                         <div class="location-details" id="locationDetails">-</div>
                         <div class="model-info"><span>Modell:</span><strong id="modelName">ICON-D2/EU</strong></div>
-                        <div id="modelWarning" class="model-warning" style="display: none;">⚠️ Außerhalb ICON-Abdeckung - globales Modell (weniger genau)</div>
+                        <div id="modelWarning" class="model-warning u-hidden">⚠️ Außerhalb ICON-Abdeckung - globales Modell (weniger genau)</div>
                         <div class="forecast-confidence" id="forecastConfidence">
                             <span>📊 Prognose-Sicherheit:</span>
                             <span class="stars high" id="confidenceStars">⭐⭐⭐</span>
@@ -191,11 +202,11 @@
                         <div class="reason-summary" id="reasonSummary"><div class="reason-summary-text" id="reasonText"></div></div>
                     </div>
                     <!-- PHASE 2: Beginner Badge -->
-                    <div class="beginner-badge" id="beginnerBadge" style="display: none;"></div>
+                    <div class="beginner-badge u-hidden" id="beginnerBadge"></div>
                     <!-- PHASE 2: Risk Explanation -->
-                    <div class="risk-explanation" id="riskExplanation" style="display: none;"></div>
+                    <div class="risk-explanation u-hidden" id="riskExplanation"></div>
                     <div class="killer-warnings" id="killerWarnings">
-                        <div class="killer-warnings-header"><span style="font-size: 1.5rem;">🚨</span><span class="killer-warnings-title">STOPP-Kriterien</span></div>
+                        <div class="killer-warnings-header"><span class="killer-warnings-icon">🚨</span><span class="killer-warnings-title">STOPP-Kriterien</span></div>
                         <div class="killer-warnings-subtitle">Bei diesen Bedingungen NICHT fliegen:</div>
                         <div id="killerList"></div>
                     </div>
@@ -230,12 +241,12 @@
                     </div>
 
                     <!-- Live-Wind Stationen (OpenWindMap + Lawinenwarndienste) -->
-                    <div class="live-wind-card" id="liveWindCard" style="display: none;">
+                    <div class="live-wind-card u-hidden" id="liveWindCard">
                         <div class="live-wind-header">
                             <span class="live-wind-icon">📡</span>
                             <span class="live-wind-title">Live-Wind (Messstationen)<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Aktuelle Windmessungen von echten Stationen im Umkreis. Quellen: OpenWindMap/Pioupiou (OWM) + Lawinenwarndienste (LWD Tirol, Bayern, Salzburg, Südtirol). Hinweis: Messwerte können lokal von Modellprognosen abweichen!</span></span></span>
-                            <span class="live-wind-badge" id="liveWindBadge" style="display: none;">LIVE</span>
-                            <button class="live-wind-refresh" id="liveWindRefresh" title="Aktualisieren" style="display: none;">↻</button>
+                            <span class="live-wind-badge u-hidden" id="liveWindBadge">LIVE</span>
+                            <button class="live-wind-refresh u-hidden" id="liveWindRefresh" title="Aktualisieren">↻</button>
                         </div>
                         <button class="live-wind-load-btn" id="liveWindLoadBtn">
                             <span class="load-btn-icon">📡</span>
@@ -245,7 +256,7 @@
                         <div class="live-wind-stations" id="liveWindStations">
                             <!-- Wird dynamisch befüllt -->
                         </div>
-                        <div class="live-wind-footer" id="liveWindFooter" style="display: none;">
+                        <div class="live-wind-footer u-hidden" id="liveWindFooter">
                             <span class="live-wind-source">Daten: <a href="https://www.openwindmap.org/" target="_blank" rel="noopener noreferrer">OpenWindMap</a> + <a href="https://avalanche.report/" target="_blank" rel="noopener noreferrer">Lawinenwarndienste</a></span>
                             <span class="live-wind-note">⚠️ Messwerte können lokal abweichen</span>
                         </div>
@@ -361,21 +372,21 @@
                         <div class="killer-item"><span class="killer-number">5</span><span class="killer-text"><strong>Eigene Verfassung</strong><br>Müde, Druck, Zweifel?</span></div>
                     </div>
                 </div>
-                <div class="explanation-card" style="margin-bottom: 1rem;">
+                <div class="explanation-card u-mb-md">
                     <h4>🌐 Wettermodelle</h4>
-                    <table style="width: 100%; font-size: 0.85rem; margin-top: 0.5rem;">
+                    <table class="u-w-full u-text-sm u-mt-sm">
                         <tr><th>Region</th><th>Modell</th><th>Auflösung</th><th>Vorhersage</th></tr>
                         <tr><td>Mitteleuropa (D, A, CH)</td><td><strong>ICON-D2</strong></td><td>2.2 km</td><td>48h</td></tr>
                         <tr><td>Europa</td><td><strong>ICON-EU</strong></td><td>7 km</td><td>5 Tage</td></tr>
                         <tr><td>Weltweit</td><td><strong>ECMWF / GFS</strong></td><td>25-50 km</td><td>7-16 Tage</td></tr>
                     </table>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Das jeweils beste verfügbare Modell wird automatisch gewählt. Höhere Auflösung = genauere lokale Vorhersage.</p>
+                    <p class="u-text-xs u-text-muted u-mt-sm">Das jeweils beste verfügbare Modell wird automatisch gewählt. Höhere Auflösung = genauere lokale Vorhersage.</p>
                 </div>
 
-                <div class="explanation-card" style="margin-bottom: 1rem; background: var(--green-bg); border: 1px solid var(--green);">
+                <div class="explanation-card u-mb-md explanation-card-beginner">
                     <h4>⭐ Anfängerfreundliche Bedingungen</h4>
-                    <p style="font-size: 0.85rem; margin-bottom: 0.5rem;">Bei grüner Ampel UND diesen Werten erscheint das "Anfänger-freundlich"-Badge:</p>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">⚠️ <strong>Hinweis:</strong> Diese Einschätzung basiert nur auf Modelldaten. Lokale Einflüsse (Talwindsysteme, Lee-Effekte, Thermikauslöser) müssen vor Ort selbst bewertet werden!</p>
+                    <p class="u-text-sm u-mb-sm">Bei grüner Ampel UND diesen Werten erscheint das "Anfänger-freundlich"-Badge:</p>
+                    <p class="u-text-xs u-text-muted u-mb-sm">⚠️ <strong>Hinweis:</strong> Diese Einschätzung basiert nur auf Modelldaten. Lokale Einflüsse (Talwindsysteme, Lee-Effekte, Thermikauslöser) müssen vor Ort selbst bewertet werden!</p>
                     <table>
                         <tr><th>Parameter</th><th>Schwelle</th><th>Warum?</th></tr>
                         <tr><td>Bodenwind</td><td>&lt; 10 km/h</td><td>Entspanntes Aufziehen</td></tr>
@@ -390,22 +401,22 @@
                     </table>
                 </div>
 
-                <div class="explanation-card" style="margin-bottom: 1rem;">
+                <div class="explanation-card u-mb-md">
                     <h4>📅 Tagesauswahl-Ampel</h4>
-                    <p style="font-size: 0.85rem; margin-bottom: 0.5rem;">Die Ampel bei der Tagesauswahl zeigt die Flugchancen des Tages:</p>
+                    <p class="u-text-sm u-mb-sm">Die Ampel bei der Tagesauswahl zeigt die Flugchancen des Tages:</p>
                     <table>
                         <tr><th>Status</th><th>Bedeutung</th></tr>
-                        <tr><td style="color: var(--green); font-weight: bold;">GO</td><td>≥ 3 Stunden grünes Zeitfenster vorhanden</td></tr>
-                        <tr><td style="color: var(--yellow); font-weight: bold;">VORSICHT</td><td>1-2 Stunden grün ODER keine roten Stunden</td></tr>
-                        <tr><td style="color: var(--red); font-weight: bold;">NO-GO</td><td>Kein grünes Zeitfenster UND rote Stunden vorhanden</td></tr>
+                        <tr><td class="explanation-table-label-go">GO</td><td>≥ 3 Stunden grünes Zeitfenster vorhanden</td></tr>
+                        <tr><td class="explanation-table-label-caution">VORSICHT</td><td>1-2 Stunden grün ODER keine roten Stunden</td></tr>
+                        <tr><td class="explanation-table-label-nogo">NO-GO</td><td>Kein grünes Zeitfenster UND rote Stunden vorhanden</td></tr>
                     </table>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Der beste Tag wird mit goldenem Rahmen markiert (längstes grünes Zeitfenster).</p>
+                    <p class="u-text-xs u-text-muted u-mt-sm">Der beste Tag wird mit goldenem Rahmen markiert (längstes grünes Zeitfenster).</p>
                 </div>
 
                 <div class="explanation-intro" id="explanationIntro">
                     <h3>🚦 Ampel-Schwellwerte</h3>
                     <p>Hier findest du die genauen Grenzwerte für die Ampel-Bewertung.</p>
-                    <div class="traffic-light">
+                    <div class="explanation-traffic-light">
                         <span class="light green">GRÜN = Go</span>
                         <span class="light yellow">GELB = Prüfen</span>
                         <span class="light red">ROT = No-Go</span>
@@ -484,7 +495,7 @@
                 <button class="modal-btn secondary" id="cancelFavBtn">Abbrechen</button>
                 <button class="modal-btn primary" id="saveFavBtn">Speichern</button>
             </div>
-            <button class="modal-close" id="closeFavModal" aria-label="Dialog schließen" style="position: absolute; top: 0.5rem; right: 0.5rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">×</button>
+            <button class="modal-close modal-close-abs" id="closeFavModal" aria-label="Dialog schließen">×</button>
         </div>
     </div>
     <!-- Bestätigungs-Dialog für Favoriten löschen -->
@@ -494,7 +505,7 @@
             <p id="confirmModalText">Möchtest du diesen Favoriten wirklich löschen?</p>
             <div class="modal-buttons">
                 <button class="modal-btn secondary" id="confirmCancelBtn">Abbrechen</button>
-                <button class="modal-btn primary" id="confirmOkBtn" style="background: var(--red);">Löschen</button>
+                <button class="modal-btn primary confirm-delete-btn" id="confirmOkBtn">Löschen</button>
             </div>
         </div>
     </div>
@@ -699,15 +710,5 @@
     </div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
     <script type="module" src="js/main.js"></script>
-    <!-- PWA Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then((reg) => console.log('SW registered:', reg.scope))
-                    .catch((err) => console.log('SW registration failed:', err));
-            });
-        }
-    </script>
 </body>
 </html>

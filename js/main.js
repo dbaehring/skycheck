@@ -70,8 +70,6 @@ import {
     switchAboutTab,
     initTouchTooltips,
     renderWindDiagram,
-    toggleWindDiagram,
-    loadWindDiagramState,
     initPullToRefresh,
     // Expertenmodus
     loadExpertMode,
@@ -117,7 +115,6 @@ async function initApp() {
         // 6. UI-Zustände aus localStorage laden
         loadWindroseState();
         loadParamFilter();
-        loadWindDiagramState();
         loadExpertMode();
 
         // 7. Touch-Tooltips initialisieren
@@ -253,10 +250,16 @@ function registerEventListeners() {
         addFavoriteBtn.addEventListener('click', openFavoriteModal);
     }
 
-    // Theme-Toggle
+    // Theme-Toggle (accessible: click + keyboard)
     const themeToggle = document.getElementById('themeToggle');
     if (themeToggle) {
         themeToggle.addEventListener('click', toggleTheme);
+        themeToggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleTheme();
+            }
+        });
     }
 
     // High Contrast Toggle
@@ -434,12 +437,6 @@ function registerEventListeners() {
         });
     }
 
-    // Wind-Profil Toggle
-    const windProfileToggle = document.getElementById('windProfileToggle');
-    if (windProfileToggle) {
-        windProfileToggle.addEventListener('click', toggleWindDiagram);
-    }
-
     // Live-Wind Laden Button
     const liveWindLoadBtn = document.getElementById('liveWindLoadBtn');
     if (liveWindLoadBtn) {
@@ -530,6 +527,15 @@ function handleKeyboardShortcuts(e) {
 
 // App starten wenn DOM geladen
 document.addEventListener('DOMContentLoaded', initApp);
+
+// PWA Service Worker Registration
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then((reg) => console.log('SW registered:', reg.scope))
+            .catch((err) => console.log('SW registration failed:', err));
+    });
+}
 
 // Offline/Online Status überwachen
 window.addEventListener('offline', () => {

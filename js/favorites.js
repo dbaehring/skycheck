@@ -4,13 +4,15 @@
  */
 
 import { state } from './state.js';
-import { STORAGE_KEYS, LIMITS, UI_CONFIG, CACHE_CONFIG } from './config.js';
+import { STORAGE_KEYS, UI_CONFIG, CACHE_CONFIG } from './config.js';
 import { isInIconEUCoverage, escapeHtml } from './utils.js';
 import { selectLocation } from './map.js';
-import { extractWindData } from './weather.js';
+import { scoreHourFromData } from './weather.js';
+import { showToast } from './ui.js';
 
 // Rate limiting: Verzögerung zwischen API-Calls (ms)
 const API_DELAY = 200;
+const MAX_FAVORITES = 50;
 
 /**
  * Favoriten-Wetter-Cache aus localStorage laden
@@ -284,6 +286,12 @@ export function saveFavorite() {
         return;
     }
 
+    if (state.favorites.length >= MAX_FAVORITES) {
+        showToast(`Maximal ${MAX_FAVORITES} Favoriten erlaubt`, 'warning', 4000);
+        closeFavoriteModal();
+        return;
+    }
+
     state.favorites.push({
         lat: state.currentLocation.lat,
         lon: state.currentLocation.lon,
@@ -349,14 +357,14 @@ async function fetchAllFavoriteWeather() {
 }
 
 /**
- * Vollständige Wetter-Abfrage für einen Favoriten (konsistent mit Hauptampel)
+ * Vollständige Wetter-Abfrage für einen Favoriten.
+ * Nutzt scoreHourFromData() aus weather.js für konsistente Bewertung
+ * (inkl. Expert-Mode, getFogRisk, getEffectiveLimits).
  */
 async function fetchQuickWeather(lat, lon, cacheKey) {
     try {
-        // icon_seamless wählt automatisch ICON-D2 > ICON-EU > ICON-Global
         const inEU = isInIconEUCoverage(lat, lon);
         const model = inEU ? 'icon_seamless' : 'best_match';
-        // Vollständige Parameter wie bei Hauptampel
         const params = [
             'wind_speed_10m', 'wind_gusts_10m',
             'wind_speed_900hPa', 'wind_speed_850hPa', 'wind_speed_800hPa', 'wind_speed_700hPa',
@@ -373,6 +381,7 @@ async function fetchQuickWeather(lat, lon, cacheKey) {
         }
         const data = await response.json();
         const h = data.hourly;
+        if (!h || !Array.isArray(h.time)) throw new Error('Ungültige API-Antwort');
 
         // Analysiere die nächsten Stunden (6-20 Uhr heute)
         const now = new Date();
@@ -384,57 +393,9 @@ async function fetchQuickWeather(lat, lon, cacheKey) {
             const idx = h.time.findIndex(t => t === ts);
             if (idx === -1) continue;
 
-            // Alle Parameter extrahieren (zentrale Helper-Funktion)
-            const wind = extractWindData(h, idx);
-            const { ws, wg, w900, w850, w800, w700, grad, grad3000, gustSpread } = wind;
+            // Zentrale Scoring-Funktion nutzen (konsistent mit Hauptampel)
+            const score = scoreHourFromData(h, idx);
 
-            const temp = h.temperature_2m?.[idx];
-            const dew = h.dew_point_2m?.[idx];
-            const spread = (temp != null && dew != null) ? temp - dew : 10;
-            const cape = h.cape?.[idx] || 0;
-            const li = h.lifted_index?.[idx] || 0;
-
-            const vis = h.visibility?.[idx] || 50000;
-            const cloudLow = h.cloud_cover_low?.[idx] || 0;
-            const cloudTotal = h.cloud_cover?.[idx] || 0;
-
-            const precip = h.precipitation?.[idx] || 0;
-            const precipProb = h.precipitation_probability?.[idx] || 0;
-            const showers = h.showers?.[idx] || 0;
-
-            // Scoring-Logik (identisch mit getHourScore)
-            let score = 3;
-
-            // NO-GO Kriterien (Score 1)
-            if (ws > LIMITS.wind.surface.yellow || wg > LIMITS.wind.gusts.yellow ||
-                gustSpread > LIMITS.wind.gustSpread.yellow ||
-                w900 > LIMITS.wind.w900.yellow || w850 > LIMITS.wind.w850.yellow ||
-                w800 > LIMITS.wind.w800.yellow || w700 > LIMITS.wind.w700.yellow ||
-                grad > LIMITS.wind.gradient.yellow || grad3000 > LIMITS.wind.gradient3000.yellow) {
-                score = 1;
-            } else if (spread < LIMITS.fog.spreadSevere || cape > LIMITS.cape.yellow || li < LIMITS.liftedIndex.yellow) {
-                score = 1;
-            } else if (cloudLow > LIMITS.clouds.low.yellow || vis < LIMITS.visibility.yellow) {
-                score = 1;
-            } else if (precip > LIMITS.precip.yellow || showers > LIMITS.showers.yellow) {
-                score = 1;
-            }
-            // VORSICHT Kriterien (Score 2)
-            else if (ws > LIMITS.wind.surface.green || wg > LIMITS.wind.gusts.green ||
-                gustSpread > LIMITS.wind.gustSpread.green ||
-                w900 > LIMITS.wind.w900.green || w850 > LIMITS.wind.w850.green ||
-                w800 > LIMITS.wind.w800.green || w700 > LIMITS.wind.w700.green ||
-                grad > LIMITS.wind.gradient.green || grad3000 > LIMITS.wind.gradient3000.green) {
-                score = 2;
-            } else if (spread < LIMITS.fog.spreadWarning || cape > LIMITS.cape.green || li < LIMITS.liftedIndex.green) {
-                score = 2;
-            } else if (cloudTotal > LIMITS.clouds.total.yellow || cloudLow > LIMITS.clouds.low.green || vis < LIMITS.visibility.green) {
-                score = 2;
-            } else if (precip > LIMITS.precip.green || precipProb > LIMITS.precipProb.yellow || showers > LIMITS.showers.green) {
-                score = 2;
-            }
-
-            // Schlechtesten Score tracken
             if (score < worstScore) worstScore = score;
 
             // Grüne Fenster tracken

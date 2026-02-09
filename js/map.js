@@ -37,7 +37,7 @@ export function initMap() {
 
     L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
         maxZoom: 17,
-        attribution: 'Kartendaten: © <a href="https://openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>-Mitwirkende, <a href="http://viewfinderpanoramas.org" target="_blank" rel="noopener noreferrer">SRTM</a> | Kartendarstellung: © <a href="https://opentopomap.org" target="_blank" rel="noopener noreferrer">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener noreferrer">CC-BY-SA</a>)'
+        attribution: 'Kartendaten: © <a href="https://openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>-Mitwirkende, <a href="https://viewfinderpanoramas.org" target="_blank" rel="noopener noreferrer">SRTM</a> | Kartendarstellung: © <a href="https://opentopomap.org" target="_blank" rel="noopener noreferrer">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener noreferrer">CC-BY-SA</a>)'
     }).addTo(state.map);
     state.map.on('click', async (e) => await handleMapClick(e.latlng.lat, e.latlng.lng));
 }
@@ -113,11 +113,17 @@ export function flyTo(lat, lon, zoom = 11) {
  * Höhe von API abrufen
  */
 export async function getElevation(lat, lon) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
-        const r = await fetch(API_CONFIG.elevationUrl + '?latitude=' + lat + '&longitude=' + lon);
+        const r = await fetch(API_CONFIG.elevationUrl + '?latitude=' + lat + '&longitude=' + lon, {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
         const d = await r.json();
         return d.elevation?.[0] || 0;
     } catch(e) {
+        clearTimeout(timeoutId);
         return 0;
     }
 }

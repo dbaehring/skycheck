@@ -9,11 +9,12 @@ import { LIMITS, STORAGE_KEYS, UI_CONFIG, METEO_CONSTANTS, APP_INFO } from './co
 import {
     getWindDir, getColorClass, getColorClassRev, getSpreadColor,
     scoreToColor, getTrend, getGustFactor, getWeatherInfo, isInAlpineRegion,
-    escapeHtml, validateCustomLimits
+    escapeHtml, validateCustomLimits, formatAge
 } from './utils.js';
 import {
     getHourScore, findBestWindow, updateSunTimes, calculateCloudBase, validateValue,
     calculateBeginnerSafety, getRiskExplanation, getFogRisk, extractWindData,
+    getEffectiveLimits,
     // Zentralisierte Bewertungsfunktionen (Single Source of Truth)
     evaluateWind, evaluateThermik, evaluateClouds, evaluatePrecip
 } from './weather.js';
@@ -384,7 +385,6 @@ export function updateDisplay(i) {
     // KISS: Killers-Section ausblenden - Reason-Summary zeigt bereits die kritischen Werte
     document.getElementById('killerWarnings')?.classList.remove('visible');
     updateReasonSummary(worst, ws, wg, w900, w850, w800, w700, grad, grad3000, cape, vis, spread, cl, ct, li, prec, pp, showers);
-    updateWarnings();
     updateWindrose(wdSurface, wd900, wd850, wd700, ws, w900, w850, w700);
 
     // Höhen-Info (nutzt DOM-Cache) - verteilt auf Thermik-Box und Location-Card
@@ -713,10 +713,6 @@ function updateReasonSummary(score, ws, wg, w900, w850, w800, w700, grad, grad30
         '</div>' + filterHint;
 }
 
-// Warnungen aktualisieren - nicht mehr verwendet (alle Hinweise jetzt in updateReasonSummary)
-function updateWarnings() {
-    // Funktion bleibt für Kompatibilität, tut aber nichts mehr
-}
 
 // Windrose aktualisieren (nutzt DOM-Cache für Performance)
 function updateWindrose(wdSurface, wd900, wd850, wd700, wsSurface, ws900, ws850, ws700) {
@@ -755,6 +751,9 @@ export function setTheme(theme) {
     const safeTheme = validThemes.includes(theme) ? theme : 'light';
     document.documentElement.setAttribute('data-theme', safeTheme);
     localStorage.setItem(STORAGE_KEYS.THEME, safeTheme);
+    // Accessibility: aria-checked auf Theme-Toggle aktualisieren
+    const toggle = document.getElementById('themeToggle');
+    if (toggle) toggle.setAttribute('aria-checked', safeTheme === 'dark' ? 'true' : 'false');
 }
 
 export function toggleTheme() {
@@ -898,16 +897,19 @@ export function renderRiskExplanation(risks) {
     }
 
     container.style.display = 'block';
-    const risksHTML = risks.map(risk => `
-        <div class="risk-item risk-${risk.severity}">
+    const validSeverities = ['red', 'yellow', 'green'];
+    const risksHTML = risks.map(risk => {
+        const safeSeverity = validSeverities.includes(risk.severity) ? risk.severity : 'yellow';
+        return `
+        <div class="risk-item risk-${safeSeverity}">
             <div class="risk-header">
-                <span class="risk-icon">${risk.icon}</span>
-                <h4 class="risk-title">${risk.title}</h4>
+                <span class="risk-icon">${escapeHtml(risk.icon || '')}</span>
+                <h4 class="risk-title">${escapeHtml(risk.title || '')}</h4>
             </div>
-            <p class="risk-description">${risk.description}</p>
-            <p class="risk-advice"><strong>→</strong> ${risk.advice}</p>
+            <p class="risk-description">${escapeHtml(risk.description || '')}</p>
+            <p class="risk-advice"><strong>→</strong> ${escapeHtml(risk.advice || '')}</p>
         </div>
-    `).join('');
+    `}).join('');
 
     container.innerHTML = `
         <h3 class="risk-heading">
@@ -1660,13 +1662,14 @@ export function initPullToRefresh(onRefresh) {
 function getWindArrowColor(speed, level) {
     if (speed < 3) return 'calm';
 
-    // Unterschiedliche Grenzwerte je nach Höhe
+    // Limits aus Expert-Mode oder Default (konsistent mit Ampel-Bewertung)
+    const L = getEffectiveLimits();
     const limits = {
-        ground: { green: 12, yellow: 18 },
-        '900': { green: 15, yellow: 25 },
-        '850': { green: 18, yellow: 28 },
-        '800': { green: 22, yellow: 30 },
-        '700': { green: 25, yellow: 30 }
+        ground: { green: L.wind.surface.green, yellow: L.wind.surface.yellow },
+        '900': { green: L.wind.w900.green, yellow: L.wind.w900.yellow },
+        '850': { green: L.wind.w850.green, yellow: L.wind.w850.yellow },
+        '800': { green: L.wind.w800.green, yellow: L.wind.w800.yellow },
+        '700': { green: L.wind.w700.green, yellow: L.wind.w700.yellow }
     };
 
     const l = limits[level] || limits.ground;
@@ -1783,21 +1786,6 @@ export function renderWindDiagram(dayStr) {
     });
 }
 
-/**
- * Toggle Wind-Profil - nicht mehr benötigt, Diagramm ist immer sichtbar
- * Funktion bleibt für Rückwärtskompatibilität (falls Event-Listener noch existieren)
- */
-export function toggleWindDiagram() {
-    // Diagramm ist jetzt immer sichtbar - nichts zu tun
-}
-
-/**
- * Lädt den Zustand des Wind-Profils - nicht mehr benötigt
- * Diagramm ist jetzt immer sichtbar
- */
-export function loadWindDiagramState() {
-    // Diagramm ist jetzt immer sichtbar - nichts zu tun
-}
 
 /**
  * Live-Wind-Stationen rendern
@@ -1846,7 +1834,7 @@ export function renderLiveWindStations(stations) {
             sourceClass = 'source-lwd';
         } else {
             // OpenWindMap/Pioupiou - Link zur Station
-            const stationId = station.id.replace('piou-', '');
+            const stationId = String(station.id).replace('piou-', '').replace(/[^a-zA-Z0-9_-]/g, '');
             const stationUrl = `https://www.pioupiou.fr/fr/stations/${stationId}`;
             stationLink = `<a href="${stationUrl}" target="_blank" rel="noopener noreferrer" class="station-name" title="${escapeHtml(station.name)} – auf OpenWindMap öffnen">${escapeHtml(station.name)} ↗</a>`;
             sourceBadge = `<span class="station-source owm" title="OpenWindMap">OWM</span>`;
@@ -1872,17 +1860,17 @@ export function renderLiveWindStations(stations) {
                     <div class="station-meta">
                         <span class="station-distance">📍 ${station.distance} km</span>
                         ${extraInfo}
-                        <span class="station-age">⏱️ ${formatLiveWindAge(station.ageMinutes)}</span>
+                        <span class="station-age">⏱️ ${formatAge(station.ageMinutes)}</span>
                     </div>
                 </div>
-                <div class="station-wind" data-dir="${station.windDirectionText || ''}">
+                <div class="station-wind" data-dir="${escapeHtml(station.windDirectionText || '')}">
                     <span class="station-wind-value ${windClass}">${station.windSpeed !== null ? station.windSpeed : '-'}</span>
                     <span class="station-wind-unit">km/h</span>
                     ${gustHtml}
                 </div>
                 <div class="station-direction">
                     <div class="station-dir-arrow" style="${arrowRotation}">↑</div>
-                    <span class="station-dir-text">${station.windDirectionText || '-'}</span>
+                    <span class="station-dir-text">${escapeHtml(station.windDirectionText || '-')}</span>
                 </div>
             </div>
         `;
@@ -1946,13 +1934,4 @@ export function hideLiveWindButton() {
     }
 }
 
-/**
- * Formatiert Alter der Messung
- */
-function formatLiveWindAge(minutes) {
-    if (minutes < 1) return 'gerade eben';
-    if (minutes < 60) return `vor ${minutes} min`;
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return mins > 0 ? `vor ${hours}h ${mins}min` : `vor ${hours}h`;
-}
+

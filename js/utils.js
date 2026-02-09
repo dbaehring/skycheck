@@ -9,8 +9,37 @@ import { WEATHER_CODES, LIMITS } from './config.js';
  * Windrichtung in Textform (N, NO, O, etc.)
  */
 export function getWindDir(d) {
+    if (d === null || d === undefined) return '-';
     const dirs = ['N', 'NNO', 'NO', 'ONO', 'O', 'OSO', 'SO', 'SSO', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
     return dirs[Math.round(d / 22.5) % 16];
+}
+
+/**
+ * Haversine-Distanzberechnung zwischen zwei Koordinaten
+ * @returns {number} Distanz in km
+ */
+export function haversineDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+/**
+ * Formatiert das Alter einer Messung in lesbaren Text
+ * @param {number} minutes - Alter in Minuten
+ * @returns {string} z.B. "gerade eben", "vor 5 min", "vor 2h 15min"
+ */
+export function formatAge(minutes) {
+    if (minutes < 1) return 'gerade eben';
+    if (minutes < 60) return `vor ${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `vor ${hours}h ${mins}min` : `vor ${hours}h`;
 }
 
 /**
@@ -98,17 +127,7 @@ export function isInAlpineRegion(lat, lon) {
     if (inBoundingBox) return true;
 
     // Methode 2: Distanz zu Alpenzentrum < 200km
-    const alpsCenterLat = 47.0, alpsCenterLon = 11.5;
-    const R = 6371; // Erdradius in km
-    const dLat = (lat - alpsCenterLat) * Math.PI / 180;
-    const dLon = (lon - alpsCenterLon) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(alpsCenterLat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    const distance = R * c;
-
-    return distance < 200;
+    return haversineDistance(lat, lon, 47.0, 11.5) < 200;
 }
 
 /**
@@ -180,8 +199,8 @@ export function validateCustomLimits(limits) {
         return true;
     };
 
-    // Validiere nur wenn wind-Objekt vorhanden
-    if (limits.wind && !validateObject(limits, schema)) {
+    // Immer validieren - auch ohne wind-Key (Schutz vor manipuliertem localStorage)
+    if (!validateObject(limits, schema)) {
         console.warn('customLimits Schema-Validierung fehlgeschlagen');
         return null;
     }

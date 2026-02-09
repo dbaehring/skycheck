@@ -6,7 +6,7 @@
 
 import { state } from './state.js';
 import { LIMITS, BEGINNER_LIMITS, API_CONFIG, UI_CONFIG, METEO_CONSTANTS } from './config.js';
-import { isInIconD2Coverage, isInIconEUCoverage, getGustFactor, isInAlpineRegion, escapeHtml } from './utils.js';
+import { isInIconD2Coverage, isInIconEUCoverage, getGustFactor, isInAlpineRegion, escapeHtml, haversineDistance, getWindDir, formatAge } from './utils.js';
 
 /**
  * Gibt die effektiven Limits zurück (Custom wenn gesetzt, sonst Default)
@@ -25,7 +25,10 @@ export function getEffectiveLimits() {
  */
 function deepMerge(target, source) {
     const result = { ...target };
+    const BLOCKED_KEYS = ['__proto__', 'constructor', 'prototype'];
     for (const key in source) {
+        if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
+        if (BLOCKED_KEYS.includes(key)) continue;
         if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
             result[key] = deepMerge(target[key] || {}, source[key]);
         } else if (source[key] !== undefined && source[key] !== null) {
@@ -177,6 +180,11 @@ export async function fetchWeatherData() {
             throw new Error(d1.reason || 'API-Fehler');
         }
 
+        // Strukturelle Validierung der API-Response
+        if (!d1.hourly || !Array.isArray(d1.hourly.time) || d1.hourly.time.length === 0) {
+            throw new Error('Ungültige API-Antwort: Stündliche Daten fehlen');
+        }
+
         // Daten zusammenführen (nur wenn Höhenwinde verfügbar)
         if (d2?.hourly && !d2.error) {
             d1.hourly.wind_speed_900hPa = d2.hourly.wind_speed_900hPa;
@@ -303,6 +311,7 @@ export async function fetchWeatherData() {
 export async function refreshData() {
     if (!state.currentLocation.lat) return;
     const btn = document.getElementById('refreshBtn');
+    if (!btn) return;
     btn.classList.add('spinning');
     btn.disabled = true;
     await fetchWeatherData();
@@ -341,12 +350,24 @@ export function getFogRisk(spread, windSpeed, visibility) {
  * @returns {1|2|3} Score: 1=nogo (rot), 2=caution (gelb), 3=go (grün)
  */
 export function getHourScore(i) {
-    const h = state.hourlyData;
+    if (!state.hourlyData) return 1;
+    const filter = state.paramFilter || { wind: true, thermik: true, clouds: true, precip: true };
+    return scoreHourFromData(state.hourlyData, i, filter);
+}
+
+/**
+ * Zentrale Scoring-Funktion für beliebige hourly-Daten.
+ * Wird von getHourScore() (Hauptansicht) und fetchQuickWeather() (Favoriten) genutzt.
+ * @param {Object} h - Hourly-Daten-Objekt von der API
+ * @param {number} i - Stunden-Index
+ * @param {Object} [filter] - Parameter-Filter (default: alle aktiv)
+ * @returns {number} Score: 3=GO, 2=VORSICHT, 1=NO-GO
+ */
+export function scoreHourFromData(h, i, filter) {
     if (!h) return 1;
+    if (!filter) filter = { wind: true, thermik: true, clouds: true, precip: true };
 
     const L = getEffectiveLimits();
-    // Parameter-Filter aus State (standardmäßig alle aktiv)
-    const filter = state.paramFilter || { wind: true, thermik: true, clouds: true, precip: true };
 
     // Wind-Parameter (zentrale Extraktion)
     const wind = extractWindData(h, i);
@@ -914,24 +935,6 @@ let liveWindCache = {
     avalanche: { data: null, timestamp: 0 }
 };
 
-/**
- * Berechnet Distanz zwischen zwei Koordinaten (Haversine-Formel)
- * @param {number} lat1 - Breitengrad Punkt 1
- * @param {number} lon1 - Längengrad Punkt 1
- * @param {number} lat2 - Breitengrad Punkt 2
- * @param {number} lon2 - Längengrad Punkt 2
- * @returns {number} Distanz in km
- */
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Erdradius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-}
 
 /**
  * Holt alle Pioupiou/OpenWindMap Stationen (mit Cache)
@@ -1053,7 +1056,7 @@ function parseAvalancheStation(feature, targetLat, targetLon) {
     }
 
     const [lon, lat, elevation] = coords;
-    const distance = calculateDistance(targetLat, targetLon, lat, lon);
+    const distance = haversineDistance(targetLat, targetLon, lat, lon);
 
     // Wind - API liefert bereits km/h
     const windSpeed = props.WG !== null ? Math.round(props.WG) : null;
@@ -1081,7 +1084,7 @@ function parseAvalancheStation(feature, targetLat, targetLon) {
         windGust: windGust,
         windMin: null,  // Nicht verfügbar
         windDirection: props.WR,
-        windDirectionText: degToCompass(props.WR),
+        windDirectionText: getWindDir(props.WR),
         temperature: props.LT !== undefined ? Math.round(props.LT * 10) / 10 : null,
         lastUpdate: measurementDate,
         ageMinutes: ageMinutes,
@@ -1090,18 +1093,6 @@ function parseAvalancheStation(feature, targetLat, targetLon) {
     };
 }
 
-/**
- * Konvertiert Windrichtung in Grad zu Himmelsrichtung
- * @param {number} deg - Windrichtung in Grad
- * @returns {string} Himmelsrichtung (N, NE, E, etc.)
- */
-function degToCompass(deg) {
-    if (deg === null || deg === undefined) return '-';
-    const directions = ['N', 'NNO', 'NO', 'ONO', 'O', 'OSO', 'SO', 'SSO',
-                        'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-    const index = Math.round(deg / 22.5) % 16;
-    return directions[index];
-}
 
 /**
  * Holt Live-Windstationen in der Nähe eines Standorts
@@ -1139,7 +1130,7 @@ export async function fetchNearbyLiveWind(lat, lon, radiusKm = null, maxStations
                 return true;
             })
             .map(station => {
-                const distance = calculateDistance(
+                const distance = haversineDistance(
                     lat, lon,
                     station.location.latitude,
                     station.location.longitude
@@ -1157,7 +1148,7 @@ export async function fetchNearbyLiveWind(lat, lon, radiusKm = null, maxStations
                     windGust: m.wind_speed_max !== null ? Math.round(m.wind_speed_max) : null,
                     windMin: m.wind_speed_min !== null ? Math.round(m.wind_speed_min) : null,
                     windDirection: m.wind_heading,
-                    windDirectionText: degToCompass(m.wind_heading),
+                    windDirectionText: getWindDir(m.wind_heading),
                     temperature: null,
                     lastUpdate: new Date(m.date),
                     ageMinutes: Math.round((Date.now() - new Date(m.date).getTime()) / 60000),
@@ -1196,14 +1187,4 @@ export async function fetchNearbyLiveWind(lat, lon, radiusKm = null, maxStations
     return sortedStations;
 }
 
-/**
- * Formatiert das Alter einer Messung
- * @param {number} minutes - Alter in Minuten
- * @returns {string} Formatierter String
- */
-export function formatMeasurementAge(minutes) {
-    if (minutes < 1) return 'gerade eben';
-    if (minutes < 60) return `vor ${minutes} min`;
-    const hours = Math.floor(minutes / 60);
-    return `vor ${hours}h ${minutes % 60}min`;
-}
+

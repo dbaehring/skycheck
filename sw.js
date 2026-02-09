@@ -39,6 +39,9 @@ const API_PATTERNS = [
     'api.open-meteo.com'
 ];
 
+// Max-Alter für gecachte API-Responses (6 Stunden)
+const API_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+
 /**
  * Install-Event: Statische Assets cachen
  */
@@ -148,22 +151,51 @@ async function cacheFirstWithNetwork(request, cacheName) {
 
 /**
  * Network-First Strategie: Erst Netzwerk, dann Cache
+ * API-Responses werden mit Zeitstempel versehen und nach TTL verworfen
  */
 async function networkFirstWithCache(request, cacheName) {
+    const isApiRequest = API_PATTERNS.some(p => request.url.includes(p));
+
     try {
         const response = await fetch(request);
 
-        // Erfolgreiche Antwort cachen
+        // Erfolgreiche Antwort cachen (mit Zeitstempel für API-Requests)
         if (response.ok) {
             const cache = await caches.open(cacheName);
-            cache.put(request, response.clone());
+            if (isApiRequest) {
+                // API-Response klonen und Zeitstempel als Header hinzufügen
+                const headers = new Headers(response.headers);
+                headers.set('sw-cached-at', Date.now().toString());
+                const timedResponse = new Response(await response.clone().blob(), {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: headers
+                });
+                cache.put(request, timedResponse);
+            } else {
+                cache.put(request, response.clone());
+            }
         }
 
         return response;
     } catch (error) {
-        // Bei Netzwerkfehler: Cache-Fallback
+        // Bei Netzwerkfehler: Cache-Fallback (mit TTL-Prüfung für API)
         const cachedResponse = await caches.match(request);
         if (cachedResponse) {
+            if (isApiRequest) {
+                const cachedAt = cachedResponse.headers.get('sw-cached-at');
+                if (cachedAt && (Date.now() - parseInt(cachedAt)) > API_CACHE_MAX_AGE_MS) {
+                    console.log('[SW] API cache expired:', request.url);
+                    // Abgelaufene Daten trotzdem liefern, aber mit Warnung-Header
+                    const headers = new Headers(cachedResponse.headers);
+                    headers.set('sw-cache-stale', 'true');
+                    return new Response(await cachedResponse.blob(), {
+                        status: cachedResponse.status,
+                        statusText: cachedResponse.statusText,
+                        headers: headers
+                    });
+                }
+            }
             console.log('[SW] Serving from cache (offline):', request.url);
             return cachedResponse;
         }
