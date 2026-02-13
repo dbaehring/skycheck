@@ -81,57 +81,11 @@ html { overflow-x: hidden; }
 body { font-family: 'DM Sans', sans-serif; background: var(--bg-dark); color: var(--text-primary); min-height: 100vh; line-height: 1.6; transition: background 0.3s, color 0.3s; overscroll-behavior-y: auto; touch-action: pan-y pinch-zoom; -webkit-overflow-scrolling: touch; }
 body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(var(--grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--grid-color) 1px, transparent 1px); background-size: 50px 50px; pointer-events: none; z-index: 0; }
 .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem; position: relative; z-index: 1; touch-action: pan-y pinch-zoom; }
-@media (max-width: 600px) {
-    .container { padding: 0.75rem; max-width: 100%; overflow-x: hidden; }
-    html, body { overflow-x: hidden; max-width: 100vw; -webkit-overflow-scrolling: touch; }
-
-    /* iOS Scroll-Fix: Vertikales Scrollen überall erlauben */
-    .results-section,
-    .location-card,
-    .day-comparison,
-    .assessment-card,
-    .param-card,
-    .explanation-section {
-        touch-action: pan-y pinch-zoom;
-    }
-
-    /* Interaktive Elemente: Vertical scroll durchlassen */
-    .day-comparison-card,
-    .day-comparison-grid,
-    .param-header,
-    .param-body,
-    .param-row,
-    .assessment-status,
-    .weather-current,
-    .location-name,
-    .location-details,
-    .warning-item,
-    .killer-warnings,
-    .beginner-badge,
-    .risk-explanation,
-    .best-window,
-    .reason-summary,
-    .favorite-btn,
-    .coords-display {
-        touch-action: pan-y;
-    }
-
-    /* Nur Timeline darf horizontal scrollen */
-    .timeline {
-        touch-action: pan-x pan-y;
-    }
-
-    /* Timeline-Slots: Horizontal scroll durchlassen */
-    .timeline-slot {
-        touch-action: pan-x pan-y;
-    }
-}
 header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 1rem; }
 h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 .subtitle { color: var(--text-secondary); font-size: 1rem; }
 .theme-toggle { display: flex; align-items: center; gap: 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 50px; padding: 0.5rem 1rem; }
 .theme-toggle-label { font-size: 0.85rem; color: var(--text-muted); }
-@media (max-width: 600px) { .theme-toggle-label { display: none; } }
 .theme-switch { position: relative; width: 56px; height: 28px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 50px; cursor: pointer; transition: all 0.3s; }
 .theme-switch::before { content: ''; position: absolute; left: 4px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: var(--accent); border-radius: 50%; transition: all 0.3s; }
 [data-theme="dark"] .theme-switch::before { left: calc(100% - 24px); }
@@ -163,20 +117,7 @@ h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: line
 /* FIX: Explizite Grid-Platzierung verhindert "Springen" beim Laden */
 .main-layout > .map-section { grid-column: 1; grid-row: 1; }
 .main-layout > .results-section { grid-column: 2; grid-row: 1; min-height: 200px; }
-@media (max-width: 1024px) {
-    .main-layout { grid-template-columns: 1fr; max-width: 100%; overflow-x: hidden; touch-action: pan-y pinch-zoom; }
-    .main-layout > .map-section { grid-column: 1; grid-row: 1; max-width: 100%; }
-    .main-layout > .results-section { grid-column: 1; grid-row: 2; min-height: auto; max-width: 100%; overflow-x: hidden; touch-action: pan-y pinch-zoom; }
-}
 .map-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px var(--shadow); max-width: 100%; position: relative; z-index: 1; }
-@media (max-width: 600px) {
-    .map-section { width: 100%; max-width: 100%; }
-    .results-section { position: relative; z-index: 2; }
-    /* Map-Header erlaubt vertikales Scrollen */
-    .map-header { touch-action: pan-y; }
-    .favorites-section { touch-action: pan-y; }
-    .add-favorite-btn { touch-action: pan-y; }
-}
 .map-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
 .map-header h2 { font-size: 1rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
 .map-header-right { display: flex; gap: 0.5rem; align-items: center; }
@@ -185,12 +126,6 @@ h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: line
 .btn-icon:hover { border-color: var(--accent); color: var(--accent); background: var(--bg-card-hover); }
 .btn-icon:disabled { opacity: 0.5; cursor: not-allowed; }
 #map { height: 400px; width: 100%; max-width: 100%; touch-action: auto; }
-@media (max-width: 600px) {
-    #map { height: 300px; width: 100%; max-width: 100%; }
-}
-@media (max-height: 700px) {
-    #map { height: 280px; }
-}
 .favorites-section { padding: 1rem 1.25rem; border-top: 1px solid var(--border); }
 .favorites-section.hidden { display: none; }
 .favorites-label { font-size: 0.8rem; color: var(--yellow); font-weight: 600; margin-bottom: 0.5rem; }
@@ -437,7 +372,6 @@ h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: line
 .slot-icon { font-size: 1rem; margin-top: 0.15rem; }
 .slot-weather { font-size: 1.2rem; margin-top: 0.15rem; }
 .params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-@media (max-width: 600px) { .params-grid { grid-template-columns: 1fr; } .param-card.full-width { grid-column: span 1 !important; } }
 .param-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: visible; box-shadow: 0 1px 3px var(--shadow); }
 .param-card.full-width { grid-column: span 2; }
 .param-header { padding: 0.6rem 0.9rem; background: var(--bg-dark); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
@@ -463,7 +397,6 @@ h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: line
 .wind-height { font-size: 0.8rem; color: var(--text-secondary); }
 .wind-gradient-row { background: var(--bg-dark); margin: 0.5rem -0.9rem 0; padding: 0.5rem 0.9rem; border-radius: 0 0 8px 8px; }
 .wind-gradient-row:first-of-type { border-radius: 0; margin-bottom: -0.5rem; }
-@media (max-width: 500px) { .wind-table-header, .wind-table-row { grid-template-columns: 1fr 70px 70px; } .wind-table-header { font-size: 0.65rem; } }
 .initial-state { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 3rem 2rem; text-align: center; }
 .initial-state-icon { font-size: 3rem; margin-bottom: 1rem; }
 .initial-state h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
@@ -471,19 +404,12 @@ h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: line
 footer { text-align: center; padding: 1.5rem; color: var(--text-muted); font-size: 0.8rem; border-top: 1px solid var(--border); margin-top: 1.5rem; }
 footer a { color: var(--accent); text-decoration: none; }
 .explanation-section { margin-top: 2rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
-@media (max-width: 600px) {
-    .explanation-section { margin-top: 1rem; }
-}
 .explanation-toggle { width: 100%; padding: 1rem 1.5rem; background: var(--bg-dark); border: none; color: var(--text-primary); font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
 .explanation-toggle:hover { background: var(--bg-card-hover); }
 .toggle-icon { transition: transform 0.3s; }
 .toggle-icon.open { transform: rotate(180deg); }
 .explanation-content { display: none; padding: 1.5rem; }
 .explanation-content.open { display: block; }
-@media (max-width: 600px) {
-    .explanation-content { padding: 1rem 0.75rem; }
-    .explanation-toggle { padding: 1rem; }
-}
 .explanation-intro { margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
 .explanation-intro h3, .explanation-footer h3, .killer-section h3 { font-size: 1.1rem; margin-bottom: 0.75rem; color: var(--text-primary); }
 .explanation-intro p { color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.7; }
@@ -546,34 +472,7 @@ footer a { color: var(--accent); text-decoration: none; }
 .tooltip-content::before { content: ''; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-bottom-color: var(--text-primary); }
 .tooltip-content::after { display: none; }
 .tooltip-container:hover .tooltip-content { opacity: 1; visibility: visible; }
-@media (max-width: 600px) { .tooltip-content { max-width: 200px; left: 0; transform: none; } .tooltip-content::before { left: 16px; } .live-wind-title .tooltip-content { left: auto; right: 0; } .live-wind-title .tooltip-content::before { left: auto; right: 16px; } }
-
 /* Touch-Tooltips für Mobile */
-@media (hover: none) and (pointer: coarse) {
-    .tooltip-container .tooltip-content {
-        opacity: 0;
-        visibility: hidden;
-    }
-    .tooltip-container.touch-active .tooltip-content {
-        opacity: 1;
-        visibility: visible;
-    }
-    .tooltip-container:hover .tooltip-content {
-        opacity: 0;
-        visibility: hidden;
-    }
-    .tooltip-container.touch-active:hover .tooltip-content {
-        opacity: 1;
-        visibility: visible;
-    }
-    /* Größere Touch-Targets */
-    .info-icon {
-        width: 20px;
-        height: 20px;
-        font-size: 0.7rem;
-    }
-}
-
 /* === Z-Index Hierarchie (SkyCheck v9) === */
 /* Karten-Container dürfen NICHT höher sein */
 .map-container, #map, .leaflet-container { z-index: var(--z-base) !important; }
@@ -667,7 +566,6 @@ footer a { color: var(--accent); text-decoration: none; }
 .cat-indicator.nogo { background: var(--red-bg); }
 .day-comparison-window { font-size: 0.75rem; color: var(--text-secondary); font-family: 'Space Mono', monospace; padding: 0.2rem 0.4rem; border-radius: 4px; }
 .day-comparison-window.go { background: var(--green-bg); color: var(--green); font-weight: 600; }
-@media (max-width: 500px) { .day-comparison-grid { grid-template-columns: 1fr; } .windrose-container { flex-direction: column; } .windrose-wrapper.visible { max-height: 500px; } }
 .forecast-change { display: none; margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: var(--bg-dark); border-radius: 8px; font-size: 0.8rem; }
 .forecast-change.visible { display: block; }
 .forecast-change-title { font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.4rem; }
@@ -731,18 +629,6 @@ footer a { color: var(--accent); text-decoration: none; }
 .windrose-wrapper { max-height: 0; overflow: hidden; transition: max-height 0.35s ease-out; }
 .windrose-wrapper.visible { max-height: 350px; }
 /* PHASE 2: Mobile Timeline */
-@media (max-width: 500px) {
-    .timeline-slot { width: 42px; padding: 0.4rem 0.15rem; }
-    .slot-time { font-size: 0.7rem; }
-    .slot-weather { font-size: 1rem; }
-    .timeline {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scroll-snap-type: x mandatory;
-        padding-bottom: 8px;
-    }
-    .timeline-slot { scroll-snap-align: start; flex-shrink: 0; }
-}
 /* PHASE 2: Schnell-Erklärung */
 .quick-explain-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer; margin-left: 0.75rem; transition: all 0.2s; }
 .quick-explain-btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -835,13 +721,6 @@ footer a { color: var(--accent); text-decoration: none; }
     opacity: 0.95;
     font-weight: 300;
 }
-@media (max-width: 768px) {
-    .beginner-badge { padding: 0.875rem 1rem; }
-    .badge-icon { width: 28px; height: 28px; }
-    .badge-text strong { font-size: 1rem; }
-    .badge-text small { font-size: 0.8125rem; }
-}
-
 /* === PHASE 2: Risk Explanation === */
 .risk-explanation {
     background: var(--bg-card);
@@ -993,12 +872,6 @@ footer a { color: var(--accent); text-decoration: none; }
 .sky-header .theme-switch::before {
     background: white;
 }
-@media (max-width: 768px) {
-    .sky-logo { width: 36px; height: 36px; }
-    .sky-title { font-size: 1.5rem; }
-    .sky-slogan { font-size: 0.75rem; }
-    .sky-header { padding: var(--spacing-sm) var(--spacing-md); touch-action: pan-y; }
-}
 [data-theme="dark"] .sky-header {
     background: linear-gradient(135deg, #1565C0 0%, #1E88E5 100%);
 }
@@ -1070,10 +943,6 @@ footer a { color: var(--accent); text-decoration: none; }
 .footer-content {
     max-width: 800px;
     margin: 0 auto;
-}
-@media (max-width: 600px) {
-    .footer-content { max-width: 100%; }
-    .sky-footer { padding: 1rem 0.75rem; margin-top: 1rem; }
 }
 .footer-text {
     color: var(--text-secondary);
@@ -1154,13 +1023,8 @@ footer a { color: var(--accent); text-decoration: none; }
 }
 .param-filter-options {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 0.5rem;
-}
-@media (min-width: 500px) {
-    .param-filter-options {
-        grid-template-columns: repeat(4, 1fr);
-    }
 }
 .param-filter-option {
     display: flex;
@@ -1346,18 +1210,6 @@ footer a { color: var(--accent); text-decoration: none; }
     font-size: 1rem;
     font-style: italic;
 }
-@media (max-width: 500px) {
-    .header-logo { display: none; }
-    header h1 { font-size: 1.5rem; }
-    .subtitle { font-size: 0.85rem; }
-    .header-right { gap: 0.5rem; }
-    .logo-text { gap: 0; }
-}
-@media (max-width: 360px) {
-    header h1 { font-size: 1.25rem; }
-    .subtitle { display: none; }
-}
-
 /* === Phase 6: About-Modal === */
 .about-modal {
     max-width: 550px;
@@ -1609,36 +1461,6 @@ footer a { color: var(--accent); text-decoration: none; }
 }
 
 /* About Modal - Mobile Fullscreen */
-@media (max-width: 500px) {
-    .about-modal {
-        max-width: 100%;
-        max-height: 100%;
-        height: 100%;
-        width: 100%;
-        border-radius: 0;
-        display: flex;
-        flex-direction: column;
-    }
-    .about-content {
-        flex: 1;
-        max-height: none;
-    }
-    .about-tab {
-        font-size: 0.75rem;
-        padding: 0.6rem 0.25rem;
-    }
-    .about-header {
-        padding: 1rem;
-    }
-    .about-logo {
-        width: 48px;
-        height: 48px;
-    }
-    .about-header h2 {
-        font-size: 1.5rem;
-    }
-}
-
 /* === Expertenmodus Modal === */
 .expert-modal {
     max-width: 500px;
@@ -1800,120 +1622,12 @@ footer a { color: var(--accent); text-decoration: none; }
     font-size: 1.5rem;
     cursor: pointer;
 }
-
-@media (max-width: 500px) {
-    .expert-modal {
-        max-width: 100%;
-        border-radius: 16px 16px 0 0;
-        margin-top: auto;
-    }
-    .expert-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
 /* === Phase 6: Mobile-Optimierungen === */
 
 /* Modals - Fullscreen auf Mobile */
-@media (max-width: 500px) {
-    .modal-overlay {
-        padding: 0;
-    }
-    .modal:not(.about-modal) {
-        border-radius: 12px 12px 0 0;
-        margin-top: auto;
-        max-width: 100%;
-        width: 100%;
-    }
-}
-
 /* Timeline - verbesserte Touch-Targets und Scroll-Snap */
-@media (max-width: 600px) {
-    .timeline {
-        scroll-snap-type: x mandatory;
-        -webkit-overflow-scrolling: touch;
-        padding: 0.5rem 0;
-        margin: 0 -0.5rem;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-    }
-    .timeline-slot {
-        scroll-snap-align: start;
-        min-width: 48px;
-        min-height: 60px;
-    }
-    .timeline-card {
-        position: relative;
-    }
-    /* Swipe-Hinweis - dezent */
-    .timeline-card::after {
-        content: '← Wischen →';
-        display: block;
-        text-align: center;
-        font-size: 0.7rem;
-        color: var(--text-muted);
-        opacity: 0.6;
-        margin-top: 0.25rem;
-    }
-}
-
 /* Kompaktere Cards auf Mobile */
-@media (max-width: 500px) {
-    .location-card {
-        padding: 0.75rem;
-    }
-    .param-card .param-body {
-        padding-left: 0.6rem;
-        padding-right: 0.6rem;
-    }
-    .param-card .param-header {
-        padding: 0.5rem 0.6rem;
-    }
-    .assessment-card {
-        padding: 1rem;
-    }
-    .day-comparison {
-        padding: 0.75rem;
-    }
-    .day-comparison-card {
-        padding: 0.5rem;
-    }
-    .day-comparison-date {
-        font-size: 0.85rem;
-    }
-    /* Weniger Padding in Tabellen */
-    .wind-table-row {
-        padding: 0.35rem 0;
-    }
-    .param-row {
-        padding: 0.25rem 0;
-    }
-}
-
 /* Bessere Touch-Targets für interaktive Elemente */
-@media (hover: none) and (pointer: coarse) {
-    .btn-icon {
-        min-width: 44px;
-        min-height: 44px;
-    }
-    .timeline-slot {
-        min-height: 64px;
-    }
-    .day-comparison-card {
-        min-height: 60px;
-    }
-    .favorite-btn {
-        padding: 0.6rem 1rem;
-        min-height: 44px;
-    }
-    .param-header {
-        min-height: 48px;
-    }
-    .about-tab {
-        min-height: 44px;
-    }
-}
-
 /* === Phase 7: Wind-Höhenprofil (integriert in Wind-Card) === */
 .wind-profile-toggle {
     display: flex;
@@ -2108,54 +1822,6 @@ footer a { color: var(--accent); text-decoration: none; }
 }
 
 /* Wind-Profil Mobile Responsive */
-@media (max-width: 600px) {
-    .wind-profile-y-axis {
-        width: 35px;
-    }
-    .wind-profile-y-axis .y-label {
-        font-size: 0.55rem;
-    }
-    .wind-profile-x-axis {
-        margin-left: 39px;
-    }
-    .wind-profile-x-axis .x-label {
-        font-size: 0.5rem;
-    }
-    .wind-profile-legend {
-        margin-left: 39px;
-        gap: 0.4rem;
-    }
-    .wind-profile-grid .wind-arrow {
-        width: 14px;
-        height: 14px;
-    }
-    .wind-profile-grid .wind-arrow::before {
-        height: 8px;
-        width: 2px;
-    }
-    .wind-profile-grid .wind-arrow::after {
-        border-left-width: 3px;
-        border-right-width: 3px;
-        border-bottom-width: 4px;
-    }
-    .wind-cell {
-        min-height: 26px;
-        padding: 3px 1px;
-    }
-    .wind-profile-grid {
-        min-height: 140px;
-        grid-template-rows: repeat(5, minmax(24px, 1fr));
-    }
-    .wind-profile-wrapper.visible {
-        max-height: 250px;
-    }
-}
-@media (max-width: 400px) {
-    .wind-profile-x-axis .x-label:nth-child(even) {
-        visibility: hidden;
-    }
-}
-
 /* === Pull-to-Refresh === */
 .pull-refresh-indicator {
     position: absolute;
@@ -2450,104 +2116,8 @@ footer a { color: var(--accent); text-decoration: none; }
 }
 
 /* Mobile: Kompaktere Stationen */
-@media (max-width: 500px) {
-    .live-wind-station {
-        grid-template-columns: 1fr auto;
-        gap: 0.5rem;
-    }
-    .station-direction {
-        display: none;
-    }
-    .station-wind::after {
-        content: attr(data-dir);
-        font-size: 0.7rem;
-        color: var(--text-muted);
-        margin-left: 0.25rem;
-    }
-}
-
 /* === Landscape Optimierung === */
-@media (orientation: landscape) and (max-height: 500px) {
-    /* Kompakterer Header */
-    header {
-        padding: 0.5rem 1rem;
-    }
-    header h1 {
-        font-size: 1.1rem;
-    }
-    .subtitle {
-        display: none;
-    }
-
-    /* Zweispalten-Layout für Content */
-    .container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-        max-width: 100%;
-        padding: 0 0.75rem;
-    }
-    .map-section {
-        grid-column: 1;
-        height: calc(100vh - 80px);
-    }
-    .results-section {
-        grid-column: 2;
-        max-height: calc(100vh - 80px);
-        overflow-y: auto;
-    }
-
-    /* Kompaktere Cards */
-    .assessment-card {
-        padding: 0.75rem;
-    }
-    .assessment-wrapper {
-        gap: 0.75rem;
-        margin-bottom: 0.5rem;
-    }
-    .traffic-light {
-        padding: 4px;
-        gap: 3px;
-    }
-    .traffic-light .light {
-        width: 16px;
-        height: 16px;
-    }
-    .assessment-status {
-        padding: 0.5rem 1rem;
-    }
-    .day-comparison {
-        padding: 0.5rem;
-    }
-    .day-comparison-card {
-        padding: 0.5rem;
-    }
-
-    /* Timeline horizontal scrollbar immer sichtbar */
-    .timeline {
-        padding-bottom: 0.5rem;
-    }
-
-    /* Modals anpassen */
-    .modal {
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-    .about-modal, .expert-modal, .compare-modal {
-        max-height: 90vh;
-    }
-}
-
 /* Extra breite Landscape-Screens (Tablets) */
-@media (orientation: landscape) and (min-width: 800px) and (max-height: 600px) {
-    .container {
-        grid-template-columns: 350px 1fr;
-    }
-    .parameter-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
 /* === Accessibility: Focus-Styles (WCAG 2.4.7) === */
 *:focus-visible {
     outline: 2px solid var(--accent);
@@ -2607,6 +2177,427 @@ input:focus-visible,
 .explanation-table-label-nogo { color: var(--red); font-weight: bold; }
 
 /* === Accessibility: Reduced Motion (WCAG 2.3.3) === */
+
+/* ============================
+   RESPONSIVE BREAKPOINTS
+   ============================ */
+
+/* --- Desktop → Single-Column (≤ 1024px) --- */
+@media (max-width: 1024px) {
+    .main-layout { grid-template-columns: 1fr; max-width: 100%; overflow-x: hidden; touch-action: pan-y pinch-zoom; }
+    .main-layout > .map-section { grid-column: 1; grid-row: 1; max-width: 100%; }
+    .main-layout > .results-section { grid-column: 1; grid-row: 2; min-height: auto; max-width: 100%; overflow-x: hidden; touch-action: pan-y pinch-zoom; }
+}
+
+/* --- Tablet (≤ 768px) --- */
+@media (max-width: 768px) {
+    .beginner-badge { padding: 0.875rem 1rem; }
+    .badge-icon { width: 28px; height: 28px; }
+    .badge-text strong { font-size: 1rem; }
+    .badge-text small { font-size: 0.8125rem; }
+
+    .sky-logo { width: 36px; height: 36px; }
+    .sky-title { font-size: 1.5rem; }
+    .sky-slogan { font-size: 0.75rem; }
+    .sky-header { padding: var(--spacing-sm) var(--spacing-md); touch-action: pan-y; }
+}
+
+/* --- Mobile (≤ 600px) --- */
+@media (max-width: 600px) {
+    .container { padding: 0.75rem; max-width: 100%; overflow-x: hidden; }
+    html, body { overflow-x: hidden; max-width: 100vw; -webkit-overflow-scrolling: touch; }
+    /* iOS Scroll-Fix: Vertikales Scrollen überall erlauben */
+    .results-section,
+    .location-card,
+    .day-comparison,
+    .assessment-card,
+    .param-card,
+    .explanation-section {
+        touch-action: pan-y pinch-zoom;
+    }
+    /* Interaktive Elemente: Vertical scroll durchlassen */
+    .day-comparison-card,
+    .day-comparison-grid,
+    .param-header,
+    .param-body,
+    .param-row,
+    .assessment-status,
+    .weather-current,
+    .location-name,
+    .location-details,
+    .warning-item,
+    .killer-warnings,
+    .beginner-badge,
+    .risk-explanation,
+    .best-window,
+    .reason-summary,
+    .favorite-btn,
+    .coords-display {
+        touch-action: pan-y;
+    }
+    /* Nur Timeline darf horizontal scrollen */
+    .timeline {
+        touch-action: pan-x pan-y;
+    }
+    /* Timeline-Slots: Horizontal scroll durchlassen */
+    .timeline-slot {
+        touch-action: pan-x pan-y;
+    }
+
+    .theme-toggle-label { display: none; }
+
+    .map-section { width: 100%; max-width: 100%; }
+    .results-section { position: relative; z-index: 2; }
+    /* Map-Header erlaubt vertikales Scrollen */
+    .map-header { touch-action: pan-y; }
+    .favorites-section { touch-action: pan-y; }
+    .add-favorite-btn { touch-action: pan-y; }
+
+    #map { height: 300px; width: 100%; max-width: 100%; }
+
+    .params-grid { grid-template-columns: 1fr; } .param-card.full-width { grid-column: span 1 !important; }
+
+    .explanation-section { margin-top: 1rem; }
+
+    .explanation-content { padding: 1rem 0.75rem; }
+    .explanation-toggle { padding: 1rem; }
+
+    .tooltip-content { max-width: 200px; left: 0; transform: none; } .tooltip-content::before { left: 16px; } .live-wind-title .tooltip-content { left: auto; right: 0; } .live-wind-title .tooltip-content::before { left: auto; right: 16px; }
+
+    .footer-content { max-width: 100%; }
+    .sky-footer { padding: 1rem 0.75rem; margin-top: 1rem; }
+
+    .timeline {
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        padding: 0.5rem 0;
+        margin: 0 -0.5rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .timeline-slot {
+        scroll-snap-align: start;
+        min-width: 48px;
+        min-height: 60px;
+    }
+    .timeline-card {
+        position: relative;
+    }
+    /* Swipe-Hinweis - dezent */
+    .timeline-card::after {
+        content: '← Wischen →';
+        display: block;
+        text-align: center;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        opacity: 0.6;
+        margin-top: 0.25rem;
+    }
+
+    .wind-profile-y-axis {
+        width: 35px;
+    }
+    .wind-profile-y-axis .y-label {
+        font-size: 0.55rem;
+    }
+    .wind-profile-x-axis {
+        margin-left: 39px;
+    }
+    .wind-profile-x-axis .x-label {
+        font-size: 0.5rem;
+    }
+    .wind-profile-legend {
+        margin-left: 39px;
+        gap: 0.4rem;
+    }
+    .wind-profile-grid .wind-arrow {
+        width: 14px;
+        height: 14px;
+    }
+    .wind-profile-grid .wind-arrow::before {
+        height: 8px;
+        width: 2px;
+    }
+    .wind-profile-grid .wind-arrow::after {
+        border-left-width: 3px;
+        border-right-width: 3px;
+        border-bottom-width: 4px;
+    }
+    .wind-cell {
+        min-height: 26px;
+        padding: 3px 1px;
+    }
+    .wind-profile-grid {
+        min-height: 140px;
+        grid-template-rows: repeat(5, minmax(24px, 1fr));
+    }
+    .wind-profile-wrapper.visible {
+        max-height: 250px;
+    }
+}
+
+/* --- Kleine Phones (≤ 500px) --- */
+@media (max-width: 500px) {
+    /* Mobile: 2 Spalten statt 4 für Filter-Optionen */
+    .param-filter-options { grid-template-columns: repeat(2, 1fr); }
+
+    .wind-table-header, .wind-table-row { grid-template-columns: 1fr 70px 70px; } .wind-table-header { font-size: 0.65rem; }
+
+    .day-comparison-grid { grid-template-columns: 1fr; } .windrose-container { flex-direction: column; } .windrose-wrapper.visible { max-height: 500px; }
+
+    .timeline-slot { width: 42px; padding: 0.4rem 0.15rem; }
+    .slot-time { font-size: 0.7rem; }
+    .slot-weather { font-size: 1rem; }
+    .timeline {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+        padding-bottom: 8px;
+    }
+    .timeline-slot { scroll-snap-align: start; flex-shrink: 0; }
+
+    .header-logo { display: none; }
+    header h1 { font-size: 1.5rem; }
+    .subtitle { font-size: 0.85rem; }
+    .header-right { gap: 0.5rem; }
+    .logo-text { gap: 0; }
+
+    .about-modal {
+        max-width: 100%;
+        max-height: 100%;
+        height: 100%;
+        width: 100%;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    .about-content {
+        flex: 1;
+        max-height: none;
+    }
+    .about-tab {
+        font-size: 0.75rem;
+        padding: 0.6rem 0.25rem;
+    }
+    .about-header {
+        padding: 1rem;
+    }
+    .about-logo {
+        width: 48px;
+        height: 48px;
+    }
+    .about-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .expert-modal {
+        max-width: 100%;
+        border-radius: 16px 16px 0 0;
+        margin-top: auto;
+    }
+    .expert-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-overlay {
+        padding: 0;
+    }
+    .modal:not(.about-modal) {
+        border-radius: 12px 12px 0 0;
+        margin-top: auto;
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .location-card {
+        padding: 0.75rem;
+    }
+    .param-card .param-body {
+        padding-left: 0.6rem;
+        padding-right: 0.6rem;
+    }
+    .param-card .param-header {
+        padding: 0.5rem 0.6rem;
+    }
+    .assessment-card {
+        padding: 1rem;
+    }
+    .day-comparison {
+        padding: 0.75rem;
+    }
+    .day-comparison-card {
+        padding: 0.5rem;
+    }
+    .day-comparison-date {
+        font-size: 0.85rem;
+    }
+    /* Weniger Padding in Tabellen */
+    .wind-table-row {
+        padding: 0.35rem 0;
+    }
+    .param-row {
+        padding: 0.25rem 0;
+    }
+
+    .live-wind-station {
+        grid-template-columns: 1fr auto;
+        gap: 0.5rem;
+    }
+    .station-direction {
+        display: none;
+    }
+    .station-wind::after {
+        content: attr(data-dir);
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        margin-left: 0.25rem;
+    }
+}
+
+/* --- Sehr kleine Phones (≤ 400px) --- */
+@media (max-width: 400px) {
+    .wind-profile-x-axis .x-label:nth-child(even) {
+        visibility: hidden;
+    }
+}
+
+/* --- Minimale Phones (≤ 360px) --- */
+@media (max-width: 360px) {
+    header h1 { font-size: 1.25rem; }
+    .subtitle { display: none; }
+}
+
+/* --- Kurze Viewports --- */
+@media (max-height: 700px) {
+    #map { height: 280px; }
+}
+
+/* --- Touch-Geräte --- */
+@media (hover: none) and (pointer: coarse) {
+    .tooltip-container .tooltip-content {
+        opacity: 0;
+        visibility: hidden;
+    }
+    .tooltip-container.touch-active .tooltip-content {
+        opacity: 1;
+        visibility: visible;
+    }
+    .tooltip-container:hover .tooltip-content {
+        opacity: 0;
+        visibility: hidden;
+    }
+    .tooltip-container.touch-active:hover .tooltip-content {
+        opacity: 1;
+        visibility: visible;
+    }
+    /* Größere Touch-Targets */
+    .info-icon {
+        width: 20px;
+        height: 20px;
+        font-size: 0.7rem;
+    }
+
+    .btn-icon {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    .timeline-slot {
+        min-height: 64px;
+    }
+    .day-comparison-card {
+        min-height: 60px;
+    }
+    .favorite-btn {
+        padding: 0.6rem 1rem;
+        min-height: 44px;
+    }
+    .param-header {
+        min-height: 48px;
+    }
+    .about-tab {
+        min-height: 44px;
+    }
+}
+
+/* --- Landscape (kurze Viewports) --- */
+@media (orientation: landscape) and (max-height: 500px) {
+    /* Kompakterer Header */
+    header {
+        padding: 0.5rem 1rem;
+    }
+    header h1 {
+        font-size: 1.1rem;
+    }
+    .subtitle {
+        display: none;
+    }
+    /* Zweispalten-Layout für Content */
+    .container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        max-width: 100%;
+        padding: 0 0.75rem;
+    }
+    .map-section {
+        grid-column: 1;
+        height: calc(100vh - 80px);
+    }
+    .results-section {
+        grid-column: 2;
+        max-height: calc(100vh - 80px);
+        overflow-y: auto;
+    }
+    /* Kompaktere Cards */
+    .assessment-card {
+        padding: 0.75rem;
+    }
+    .assessment-wrapper {
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+    .traffic-light {
+        padding: 4px;
+        gap: 3px;
+    }
+    .traffic-light .light {
+        width: 16px;
+        height: 16px;
+    }
+    .assessment-status {
+        padding: 0.5rem 1rem;
+    }
+    .day-comparison {
+        padding: 0.5rem;
+    }
+    .day-comparison-card {
+        padding: 0.5rem;
+    }
+    /* Timeline horizontal scrollbar immer sichtbar */
+    .timeline {
+        padding-bottom: 0.5rem;
+    }
+    /* Modals anpassen */
+    .modal {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    .about-modal, .expert-modal, .compare-modal {
+        max-height: 90vh;
+    }
+}
+
+/* --- Landscape (breite Tablets) --- */
+@media (orientation: landscape) and (min-width: 800px) and (max-height: 600px) {
+    .container {
+        grid-template-columns: 350px 1fr;
+    }
+    .parameter-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* --- Accessibility --- */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation-duration: 0.01ms !important;
@@ -2615,3 +2606,4 @@ input:focus-visible,
         scroll-behavior: auto !important;
     }
 }
+
