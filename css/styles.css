@@ -395,7 +395,7 @@ h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: line
 .wind-table-row { display: grid; grid-template-columns: 1fr 90px 90px; gap: 0.5rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); align-items: center; }
 .wind-table-row:last-child { border-bottom: none; }
 .wind-height { font-size: 0.8rem; color: var(--text-secondary); }
-.wind-gradient-row { background: var(--bg-dark); margin: 0.5rem -0.9rem 0; padding: 0.5rem 0.9rem; border-radius: 0 0 8px 8px; }
+.wind-gradient-row { background: var(--bg-dark); margin: 0.5rem -0.9rem 0; padding: 0.5rem 0.9rem; border-radius: 0 0 8px 8px; overflow: hidden; }
 .wind-gradient-row:first-of-type { border-radius: 0; margin-bottom: -0.5rem; }
 .initial-state { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 3rem 2rem; text-align: center; }
 .initial-state-icon { font-size: 3rem; margin-bottom: 1rem; }
@@ -1013,7 +1013,7 @@ footer a { color: var(--accent); text-decoration: none; }
     padding: 0 1rem;
 }
 .param-filter-card.expanded .param-filter-body {
-    max-height: 250px;
+    max-height: 500px;
     padding: 0 1rem 1rem;
 }
 .param-filter-hint {
@@ -2342,6 +2342,8 @@ input:focus-visible,
     .param-filter-options { grid-template-columns: repeat(2, 1fr); }
 
     .wind-table-header, .wind-table-row { grid-template-columns: 1fr 70px 70px; } .wind-table-header { font-size: 0.65rem; }
+    .wind-gradient-row { margin: 0.5rem -0.5rem 0; padding: 0.5rem 0.5rem; }
+    .wind-gradient-row .wind-height { font-size: 0.7rem; overflow-wrap: break-word; word-break: break-word; min-width: 0; }
 
     .day-comparison-grid { grid-template-columns: 1fr; } .windrose-container { flex-direction: column; } .windrose-wrapper.visible { max-height: 500px; }
 
