@@ -562,8 +562,60 @@
                 </div>
             </div>
             <div class="about-footer">
+                <a href="#" id="showWelcomeFromAbout" class="about-welcome-link">🎓 Einführung nochmal anzeigen</a>
                 <a href="#" id="feedbackEmailLink" class="about-feedback-link">📧 Feedback senden</a>
                 <p class="about-credits">Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a></p>
+            </div>
+        </div>
+    </div>
+    <!-- Welcome Modal -->
+    <div class="modal-overlay" id="welcomeModal" role="dialog" aria-modal="true" aria-labelledby="welcomeModalTitle">
+        <div class="modal welcome-modal">
+            <button class="modal-close" id="closeWelcomeModal" aria-label="Dialog schließen">×</button>
+            <div class="welcome-header">
+                <img src="./img/logo.svg" alt="SkyCheck Logo" class="welcome-logo">
+                <h2 id="welcomeModalTitle">Willkommen bei SkyCheck!</h2>
+                <p class="welcome-tagline">Dein Flugwetter-Assistent für Gleitschirmflieger</p>
+            </div>
+            <div class="welcome-content">
+                <div class="welcome-section">
+                    <div class="welcome-section-icon">📍</div>
+                    <div class="welcome-section-text">
+                        <h3>Standort wählen</h3>
+                        <p>Klicke auf die Karte oder nutze GPS, um deinen Startplatz zu wählen. Du kannst auch Koordinaten per Link teilen.</p>
+                    </div>
+                </div>
+                <div class="welcome-section">
+                    <div class="welcome-section-icon">🚦</div>
+                    <div class="welcome-section-text">
+                        <h3>Die Ampel</h3>
+                        <p>Grün = fliegbar, Gelb = eingeschränkt, Rot = ungeeignet. Basiert auf Wind, Thermik, Sicht und Niederschlag.</p>
+                    </div>
+                </div>
+                <div class="welcome-section">
+                    <div class="welcome-section-icon">⏱️</div>
+                    <div class="welcome-section-text">
+                        <h3>Tagesverlauf</h3>
+                        <p>Die Timeline zeigt dir stündlich, wie sich die Bedingungen entwickeln. Tippe auf eine Stunde für Details.</p>
+                    </div>
+                </div>
+                <div class="welcome-section">
+                    <div class="welcome-section-icon">⭐</div>
+                    <div class="welcome-section-text">
+                        <h3>Favoriten</h3>
+                        <p>Speichere deine Lieblingsplätze für schnellen Zugriff und vergleiche das Wetter an mehreren Standorten.</p>
+                    </div>
+                </div>
+                <div class="welcome-section">
+                    <div class="welcome-section-icon">⚙️</div>
+                    <div class="welcome-section-text">
+                        <h3>Expertenmodus</h3>
+                        <p>Passe die Grenzwerte der Ampel an dein Können und deine Erfahrung an.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="welcome-footer">
+                <button class="welcome-start-btn" id="welcomeStartBtn">Los geht's!</button>
             </div>
         </div>
     </div>

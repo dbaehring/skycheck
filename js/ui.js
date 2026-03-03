@@ -1500,6 +1500,33 @@ export function closeAboutModal() {
 }
 
 /**
+ * Öffnet das Welcome-Modal
+ */
+export function openWelcomeModal() {
+    const modal = document.getElementById('welcomeModal');
+    if (modal) {
+        modal.classList.add('visible');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+/**
+ * Schließt das Welcome-Modal und setzt Onboarding-Flag
+ */
+export function closeWelcomeModal() {
+    const modal = document.getElementById('welcomeModal');
+    if (modal) {
+        modal.classList.remove('visible');
+        document.body.style.overflow = '';
+    }
+    try {
+        localStorage.setItem(STORAGE_KEYS.ONBOARDING_DONE, '1');
+    } catch (e) {
+        // localStorage nicht verfügbar
+    }
+}
+
+/**
  * Wechselt den aktiven Tab im About-Modal
  * @param {string} tabId - ID des Tabs ('about', 'features', 'limits')
  */

@@ -84,7 +84,10 @@ import {
     renderLiveWindStations,
     showLiveWindLoading,
     hideLiveWindCard,
-    showLiveWindButton
+    showLiveWindButton,
+    // Welcome-Modal
+    openWelcomeModal,
+    closeWelcomeModal
 } from './ui.js';
 
 /**
@@ -126,7 +129,12 @@ async function initApp() {
         // 9. App-Version global verfügbar machen (für About-Modal)
         window.APP_VERSION = APP_INFO.version;
 
-        // 10. URL-Parameter prüfen
+        // 10. Welcome-Modal bei Erstbesuch anzeigen
+        if (!localStorage.getItem(STORAGE_KEYS.ONBOARDING_DONE)) {
+            openWelcomeModal();
+        }
+
+        // 11. URL-Parameter prüfen
         const params = checkURLParams();
         if (!isNaN(params.lat) && !isNaN(params.lon)) {
             await handleMapClick(params.lat, params.lon, params.name);
@@ -395,6 +403,7 @@ function registerEventListeners() {
         if (e.key === 'Escape') {
             closeFavoriteModal();
             closeAboutModal();
+            closeWelcomeModal();
         }
     });
 
@@ -425,6 +434,21 @@ function registerEventListeners() {
         aboutBtn.addEventListener('click', openAboutModal);
     }
     setupModalClose('aboutModal', closeAboutModal, 'closeAboutModal');
+
+    // === Welcome-Modal Event-Listener ===
+    setupModalClose('welcomeModal', closeWelcomeModal, 'closeWelcomeModal');
+    const welcomeStartBtn = document.getElementById('welcomeStartBtn');
+    if (welcomeStartBtn) {
+        welcomeStartBtn.addEventListener('click', closeWelcomeModal);
+    }
+    const showWelcomeFromAbout = document.getElementById('showWelcomeFromAbout');
+    if (showWelcomeFromAbout) {
+        showWelcomeFromAbout.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeAboutModal();
+            openWelcomeModal();
+        });
+    }
 
     // About-Tabs (Event-Delegation)
     const aboutTabs = document.querySelector('.about-tabs');
