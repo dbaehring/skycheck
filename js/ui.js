@@ -660,8 +660,12 @@ function updateReasonSummary(score, ws, wg, w900, w850, w800, w700, grad, grad30
             }
         } else if (fogRisk === 'likely') {
             hints.push({ level: 'yellow', text: '🌁 Nebel wahrscheinlich – Spread ' + (spread?.toFixed(1) || '?') + '°C', deviation: 80 });
-        } else if (fogRisk === 'possible' && vis < LIMITS.fog.visibilityWarning) {
-            hints.push({ level: 'yellow', text: '🌫️ Sicht eingeschränkt (' + (vis/1000).toFixed(1) + ' km)', deviation: 50 });
+        } else if (fogRisk === 'possible') {
+            if (vis < LIMITS.fog.visibilityWarning) {
+                hints.push({ level: 'yellow', text: '🌫️ Sicht eingeschränkt (' + (vis/1000).toFixed(1) + ' km)', deviation: 50 });
+            } else {
+                hints.push({ level: 'yellow', text: '🌁 Nebelrisiko möglich – Spread ' + (spread?.toFixed(1) || '?') + '°C', deviation: 40 });
+            }
         }
 
         if (cloudLow > LIMITS.clouds.low.yellow) {
