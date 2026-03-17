@@ -664,6 +664,19 @@ footer a { color: var(--accent); text-decoration: none; }
     color: var(--text-secondary);
     font-family: 'Space Mono', monospace;
 }
+.diagram-time-hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-left: auto;
+    white-space: nowrap;
+}
+.param-time-hint {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin: 0 0.45rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
 /* Wind-Diagramm im Container */
 .day-diagram-card .wind-profile-wrapper {
     max-height: none;

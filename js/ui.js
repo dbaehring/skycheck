@@ -487,6 +487,22 @@ export function updateDisplay(i) {
     document.getElementById('precipStatus').className = 'param-status ' + scoreToColor(precSc);
 
     autoExpandRedCards();
+
+    // Zeit-Hinweis in Param-Boxen (Tag + Uhrzeit)
+    const timeStr = state.hourlyData.time[i]; // z.B. "2026-03-17T14:00"
+    if (timeStr) {
+        const dateObj = new Date(timeStr);
+        const dayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+        const dayName = dayNames[dateObj.getDay()];
+        const day = dateObj.getDate();
+        const month = dateObj.getMonth() + 1;
+        const hour = dateObj.getHours().toString().padStart(2, '0');
+        const timeLabel = `${dayName} ${day}.${month}. · ${hour}:00`;
+        ['windTimeHint', 'thermikTimeHint', 'cloudTimeHint', 'precipTimeHint'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = timeLabel;
+        });
+    }
 }
 
 // Bewertungsfunktionen werden jetzt aus weather.js importiert (Single Source of Truth)
@@ -1717,6 +1733,20 @@ export function renderWindDiagram(dayStr) {
     const grid = document.getElementById('windProfileGrid');
     const xAxis = document.getElementById('windProfileXAxis');
     if (!grid || !state.hourlyData) return;
+
+    // Tag-Hinweis im Diagramm-Header
+    const diagramDayHint = document.getElementById('windDiagramDayHint');
+    if (diagramDayHint) {
+        const d = new Date(dayStr);
+        const dayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+        const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+        let label;
+        if (dayStr === today) label = 'Heute';
+        else if (dayStr === tomorrow) label = 'Morgen';
+        else label = dayNames[d.getDay()] + ' ' + d.getDate() + '.' + (d.getMonth() + 1) + '.';
+        diagramDayHint.textContent = label;
+    }
 
     grid.innerHTML = '';
     xAxis.innerHTML = '';

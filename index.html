@@ -217,6 +217,7 @@
                             <div class="diagram-header">
                                 <span class="diagram-icon">💨</span>
                                 <span class="diagram-title">Wind nach Höhe</span>
+                                <span class="diagram-time-hint" id="windDiagramDayHint"></span>
                             </div>
                             <div class="wind-profile-wrapper visible" id="windProfileWrapper">
                                 <div class="wind-profile-container">
@@ -269,7 +270,7 @@
 
                     <div class="params-grid parameter-grid" role="region" aria-label="Wetterparameter">
                         <div class="param-card full-width expanded" data-card="wind" role="region" aria-label="Windparameter">
-                            <div class="param-header"><span class="param-title">💨 Wind (Details)<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Detaillierte Windwerte für die ausgewählte Stunde. Großer Gradient = Turbulenz. Höhenwind >30 km/h = Föhngefahr!</span></span></span><span class="param-status" id="windStatus"></span><span class="toggle-icon">▼</span></div>
+                            <div class="param-header"><span class="param-title">💨 Wind (Details)<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Detaillierte Windwerte für die ausgewählte Stunde. Großer Gradient = Turbulenz. Höhenwind >30 km/h = Föhngefahr!</span></span></span><span class="param-time-hint" id="windTimeHint"></span><span class="param-status" id="windStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
                                 <div class="wind-table">
                                     <div class="wind-table-header"><span>Höhe</span><span>Geschw.</span><span>Richtung</span></div>
@@ -314,7 +315,7 @@
                             </div>
                         </div>
                         <div class="param-card expanded" data-card="thermik" role="region" aria-label="Thermikparameter">
-                            <div class="param-header"><span class="param-title">🌡️ Thermik<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">CAPE zeigt Thermik-Energie. >1000 J/kg = Gewittergefahr! Lifted Index negativ = labile Luft.</span></span></span><span class="param-status" id="thermikStatus"></span><span class="toggle-icon">▼</span></div>
+                            <div class="param-header"><span class="param-title">🌡️ Thermik<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">CAPE zeigt Thermik-Energie. >1000 J/kg = Gewittergefahr! Lifted Index negativ = labile Luft.</span></span></span><span class="param-time-hint" id="thermikTimeHint"></span><span class="param-status" id="thermikStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
                                 <div class="param-row"><span class="param-label">Temperatur</span><span class="param-value" id="temp2m">-</span></div>
                                 <div class="param-row"><span class="param-label">Taupunkt</span><span class="param-value" id="dewpoint">-</span></div>
@@ -326,7 +327,7 @@
                             </div>
                         </div>
                         <div class="param-card expanded" data-card="clouds" role="region" aria-label="Wolken und Sicht">
-                            <div class="param-header"><span class="param-title">☁️ Wolken & Sicht<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Tiefe Wolken (&lt;2000m) sind kritisch - dämpfen Thermik und können Start eindecken.</span></span></span><span class="param-status" id="cloudStatus"></span><span class="toggle-icon">▼</span></div>
+                            <div class="param-header"><span class="param-title">☁️ Wolken & Sicht<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Tiefe Wolken (&lt;2000m) sind kritisch - dämpfen Thermik und können Start eindecken.</span></span></span><span class="param-time-hint" id="cloudTimeHint"></span><span class="param-status" id="cloudStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
                                 <div class="param-row"><span class="param-label">Gesamt</span><span class="param-value" id="cloudTotal">-</span></div>
                                 <div class="param-row"><span class="param-label">Tief (&lt;2km)</span><span class="param-value" id="cloudLow">-</span></div>
@@ -337,7 +338,7 @@
                             </div>
                         </div>
                         <div class="param-card expanded" data-card="precip" role="region" aria-label="Niederschlag">
-                            <div class="param-header"><span class="param-title">🌧️ Niederschlag<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Jeder Niederschlag ist problematisch - nasser Schirm hat schlechtere Flugeigenschaften!</span></span></span><span class="param-status" id="precipStatus"></span><span class="toggle-icon">▼</span></div>
+                            <div class="param-header"><span class="param-title">🌧️ Niederschlag<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Jeder Niederschlag ist problematisch - nasser Schirm hat schlechtere Flugeigenschaften!</span></span></span><span class="param-time-hint" id="precipTimeHint"></span><span class="param-status" id="precipStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
                                 <div class="param-row"><span class="param-label">Menge (gesamt)</span><span class="param-value" id="precip">-</span></div>
                                 <div class="param-row"><span class="param-label">Schauer (konvektiv)<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Konvektiver Niederschlag aus Quellwolken/Gewittern - oft lokal und heftig!</span></span></span><span class="param-value" id="convPrecip">-</span></div>
