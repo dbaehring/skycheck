@@ -542,7 +542,7 @@ function handleKeyboardShortcuts(e) {
             }
             break;
         case 'ArrowRight':
-            if (state.selectedHourIndex !== null) {
+            if (state.selectedHourIndex !== null && state.selectedHourIndex + 1 < state.hourlyData.time.length) {
                 selectHour(state.selectedHourIndex + 1);
             }
             break;

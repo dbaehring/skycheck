@@ -384,8 +384,9 @@ async function fetchQuickWeather(lat, lon, cacheKey) {
         if (!h || !Array.isArray(h.time)) throw new Error('Ungültige API-Antwort');
 
         // Analysiere die nächsten Stunden (6-20 Uhr heute)
-        const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
+        // todayStr aus der API-Antwort ableiten (lokale Zeitzone des Orts via timezone=auto),
+        // NICHT aus new Date().toISOString() (UTC) - sonst Mismatch nahe Mitternacht/Zeitzonen-Offset
+        const todayStr = h.time[0].split('T')[0];
         let worstScore = 3, bestWindow = null, currentWindow = null;
 
         for (let hour = 6; hour <= 20; hour++) {

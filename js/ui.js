@@ -208,7 +208,7 @@ export function buildDayComparison() {
 
     // Besten Tag ermitteln (Tag mit längstem grünen Fenster)
     let bestDayIdx = -1;
-    let longestWindow = 0;
+    let longestWindow = -1;
     state.forecastDays.forEach((day, i) => {
         const win = findBestWindow(day.date);
         if (win) {
@@ -289,7 +289,9 @@ export function buildTimeline(dayStr) {
     if (bwEl) bwEl.classList.remove('visible', 'yellow');
 
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    // todayStr aus hourlyData (lokale Zeitzone des Orts) ableiten, nicht aus UTC -
+    // sonst Mismatch nahe Mitternacht/Zeitzonen-Offset (siehe favorites.js fetchQuickWeather)
+    const todayStr = state.hourlyData.time[0].split('T')[0];
     const currentHour = now.getHours();
     const isToday = dayStr === todayStr;
 
@@ -557,7 +559,7 @@ function updateReasonSummary(score, ws, wg, w900, w850, w800, w700, grad, grad30
     const el = document.getElementById('reasonSummary'), textEl = document.getElementById('reasonText');
     el.className = 'reason-summary';
     const gustSpread = wg - ws;
-    const gustFactor = ws > 0 ? (wg - ws) / ws : 0;
+    const gustFactor = getGustFactor(ws, wg);
     const fogRisk = getFogRisk(spread || 10, ws, vis);
     const filter = state.paramFilter || { wind: true, thermik: true, clouds: true, precip: true };
     const filterActive = !filter.wind || !filter.thermik || !filter.clouds || !filter.precip;
@@ -1739,8 +1741,9 @@ export function renderWindDiagram(dayStr) {
     if (diagramDayHint) {
         const d = new Date(dayStr);
         const dayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
-        const today = new Date().toISOString().split('T')[0];
-        const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+        // today/tomorrow aus forecastDays (lokale Zeitzone des Orts) ableiten, nicht aus UTC
+        const today = state.forecastDays[0]?.date;
+        const tomorrow = state.forecastDays[1]?.date;
         let label;
         if (dayStr === today) label = 'Heute';
         else if (dayStr === tomorrow) label = 'Morgen';

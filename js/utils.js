@@ -162,14 +162,20 @@ export function validateCustomLimits(limits) {
         wind: {
             surface: { min: 0, max: 50 },
             gusts: { min: 0, max: 80 },
+            gustSpread: { min: 0, max: 60 },
             w900: { min: 0, max: 60 },
             w850: { min: 0, max: 60 },
             w800: { min: 0, max: 70 },
             w700: { min: 0, max: 80 },
             gradient: { min: 0, max: 50 }
         },
+        clouds: {
+            low: { min: 0, max: 100 }
+        },
         cape: { min: 0, max: 5000 },
-        visibility: { min: 100, max: 50000 }
+        visibility: { min: 100, max: 50000 },
+        precip: { min: 0, max: 50 },
+        precipProb: { min: 0, max: 100 }
     };
 
     // Validierungsfunktion für einzelne Werte

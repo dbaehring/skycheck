@@ -392,6 +392,7 @@ export function scoreHourFromData(h, i, filter) {
 
     // Nebel-Risiko (intelligente Kombination statt nur Spread)
     const fogRisk = getFogRisk(spread, ws, vis);
+    const gustFactor = getGustFactor(ws, wg);
 
     // === NO-GO Kriterien (Score 1) ===
     // Wind (nur wenn Filter aktiv)
@@ -400,7 +401,8 @@ export function scoreHourFromData(h, i, filter) {
             gustSpread > L.wind.gustSpread.yellow ||
             w900 > L.wind.w900.yellow || w850 > L.wind.w850.yellow ||
             w800 > L.wind.w800.yellow || w700 > L.wind.w700.yellow ||
-            grad > L.wind.gradient.yellow || grad3000 > L.wind.gradient3000.yellow) return 1;
+            grad > L.wind.gradient.yellow || grad3000 > L.wind.gradient3000.yellow ||
+            (gustFactor > L.wind.gustFactor.yellow && wg > L.wind.gustFactorMinWind.yellow)) return 1;
     }
     // Thermik (nur wenn Filter aktiv) - CAPE und Lifted Index, NICHT Nebel
     if (filter.thermik) {
@@ -422,7 +424,8 @@ export function scoreHourFromData(h, i, filter) {
             gustSpread > L.wind.gustSpread.green ||
             w900 > L.wind.w900.green || w850 > L.wind.w850.green ||
             w800 > L.wind.w800.green || w700 > L.wind.w700.green ||
-            grad > L.wind.gradient.green || grad3000 > L.wind.gradient3000.green) return 2;
+            grad > L.wind.gradient.green || grad3000 > L.wind.gradient3000.green ||
+            (gustFactor > L.wind.gustFactor.green && wg > L.wind.gustFactorMinWind.green)) return 2;
     }
     // Thermik (nur wenn Filter aktiv) - CAPE, Lifted Index, sehr trockene Luft
     if (filter.thermik) {
