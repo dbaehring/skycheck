@@ -1,12 +1,19 @@
 /**
- * Reine v10-Bewertungslogik auf Basis normalisierter Stundenwerte.
+ * Zentrales Stunden-Assessment auf Basis normalisierter Wetterwerte.
  *
- * Dieses Modul enthält bewusst noch keine v11-Safety- oder XC-Logik. Es
- * konserviert die bestehende 1/2/3-Ampel, trennt aber unveränderliche rote
- * Extremregeln (Hard Blocker) von filterbaren Komfortwarnungen.
+ * Die bestehende 1/2/3-Ampel bleibt als Legacy-Ergebnis erhalten. Phase 2a
+ * ergänzt daneben die eigenständige Safety-/Komfortbewertung. Eine
+ * Thermik-/XC-Engine ist weiterhin nicht enthalten.
  */
 
 import { LIMITS } from './config.js';
+import { assessSafety } from './safety-engine.js';
+import {
+    deriveHourMetrics,
+    getFogRiskFromValues
+} from './weather-metrics.js';
+
+export { deriveHourMetrics, getFogRiskFromValues, getPressureLevel } from './weather-metrics.js';
 
 export const ALL_COMFORT_FILTERS = Object.freeze({
     wind: true,
@@ -41,53 +48,6 @@ export function deepMergeLimits(target, source) {
 
 export function resolveEffectiveLimits(customLimits = null, expertMode = false) {
     return expertMode && customLimits ? deepMergeLimits(LIMITS, customLimits) : LIMITS;
-}
-
-export function getPressureLevel(hour, pressureHpa) {
-    return hour?.wind?.levels?.find(level => level.pressureHpa === pressureHpa) || null;
-}
-
-export function deriveHourMetrics(hour) {
-    const ws = hour?.surface?.windSpeedKmh ?? null;
-    const wg = hour?.surface?.gustsKmh ?? null;
-    const w900 = getPressureLevel(hour, 900)?.speedKmh ?? null;
-    const w850 = getPressureLevel(hour, 850)?.speedKmh ?? null;
-    const w800 = getPressureLevel(hour, 800)?.speedKmh ?? null;
-    const w700 = getPressureLevel(hour, 700)?.speedKmh ?? null;
-    const temperature = hour?.surface?.temperatureC ?? null;
-    const dewPoint = hour?.surface?.dewPointC ?? null;
-
-    return {
-        ws,
-        wg,
-        w900,
-        w850,
-        w800,
-        w700,
-        gustSpread: ws !== null && wg !== null ? wg - ws : null,
-        gustFactor: ws !== null && wg !== null && ws >= 5 ? (wg - ws) / ws : 0,
-        gradient1500: ws !== null && w850 !== null ? Math.abs(w850 - ws) : null,
-        gradient3000: ws !== null && w700 !== null ? Math.abs(w700 - ws) : null,
-        spread: temperature !== null && dewPoint !== null ? temperature - dewPoint : null,
-        cape: hour?.convection?.capeJkg ?? null,
-        liftedIndex: hour?.convection?.liftedIndex ?? null,
-        visibility: hour?.surface?.visibilityM ?? null,
-        cloudLow: hour?.clouds?.lowPct ?? null,
-        cloudTotal: hour?.clouds?.totalPct ?? null,
-        precipitation: hour?.precipitation?.amountMm ?? null,
-        precipitationProbability: hour?.precipitation?.probabilityPct ?? null,
-        showers: hour?.precipitation?.showersMm ?? null
-    };
-}
-
-export function getFogRiskFromValues(spread, windSpeed, visibility, limits = LIMITS) {
-    if (spread === null || windSpeed === null || visibility === null) return 'unknown';
-    if (visibility < limits.fog.visibilitySevere) return 'severe';
-    if (spread <= limits.fog.spreadSevere && windSpeed < limits.fog.windThreshold) return 'severe';
-    if (spread <= 2.0 && windSpeed < limits.fog.windDisperse && visibility < limits.fog.visibilityWarning) return 'likely';
-    if (visibility < limits.fog.visibilityWarning) return 'possible';
-    if (spread < limits.fog.spreadWarning && windSpeed < limits.fog.windDisperse) return 'possible';
-    return 'unlikely';
 }
 
 function compareHigh(value, thresholds) {
@@ -240,6 +200,10 @@ export function assessNormalizedHour(hour, options = {}) {
     const limits = options.limits || LIMITS;
     const comfortFilters = { ...ALL_COMFORT_FILTERS, ...(options.comfortFilters || {}) };
     const metrics = deriveHourMetrics(hour);
+    const safety = assessSafety(hour, {
+        limits,
+        comfortFilters
+    });
     const reasons = [];
     const hardBlockers = [];
 
@@ -291,6 +255,7 @@ export function assessNormalizedHour(hour, options = {}) {
         effectiveLimits: limits,
         metrics,
         reasons: filteredReasons,
-        dataQuality: hour.dataQuality
+        dataQuality: safety.dataQuality,
+        safety
     };
 }

@@ -645,7 +645,7 @@
                     <button class="expert-preset-btn active" data-preset="standard">⚖️ Standard</button>
                     <button class="expert-preset-btn" data-preset="pro">🏆 Profi</button>
                 </div>
-                <p class="expert-info">NO-GO Schwellenwerte anpassen. Grün-Schwellen werden automatisch berechnet.</p>
+                <p class="expert-info">Persönliche Komfortschwellen anpassen. Kritische Hard Blocker bleiben fest und profilunabhängig.</p>
 
                 <div class="expert-section">
                     <h3>💨 Wind</h3>
@@ -679,6 +679,13 @@
                             </div>
                         </label>
                         <label class="expert-field">
+                            <span class="expert-label">Richtungsscherung max</span>
+                            <div class="expert-input-wrap">
+                                <input type="number" id="expertDirectionShear" min="10" max="180" step="5">
+                                <span class="expert-unit">°</span>
+                            </div>
+                        </label>
+                        <label class="expert-field">
                             <span class="expert-label">Wind 1000m max</span>
                             <div class="expert-input-wrap">
                                 <input type="number" id="expertWind900" min="10" max="50" step="1">
@@ -703,7 +710,7 @@
                 </div>
 
                 <div class="expert-section">
-                    <h3>🌡️ Thermik</h3>
+                    <h3>🌡️ Bestehende v10-Ampel</h3>
                     <div class="expert-grid">
                         <label class="expert-field">
                             <span class="expert-label">CAPE max</span>

@@ -1010,6 +1010,7 @@ function countCustomChanges() {
     if (state.customLimits.wind?.gusts?.yellow !== LIMITS.wind.gusts.yellow) count++;
     if (state.customLimits.wind?.gustSpread?.yellow !== LIMITS.wind.gustSpread.yellow) count++;
     if (state.customLimits.wind?.gradient?.yellow !== LIMITS.wind.gradient.yellow) count++;
+    if (state.customLimits.wind?.directionShear?.yellow !== 60) count++;
     if (state.customLimits.wind?.w850?.yellow !== LIMITS.wind.w850.yellow) count++;
     if (state.customLimits.wind?.w700?.yellow !== LIMITS.wind.w700.yellow) count++;
 
@@ -1063,6 +1064,7 @@ function populateExpertForm() {
     setInputValue('expertWindGusts', currentLimits.wind?.gusts?.yellow, LIMITS.wind.gusts.yellow);
     setInputValue('expertGustSpread', currentLimits.wind?.gustSpread?.yellow, LIMITS.wind.gustSpread.yellow);
     setInputValue('expertGradient', currentLimits.wind?.gradient?.yellow, LIMITS.wind.gradient.yellow);
+    setInputValue('expertDirectionShear', currentLimits.wind?.directionShear?.yellow, 60);
     setInputValue('expertWind900', currentLimits.wind?.w900?.yellow, LIMITS.wind.w900.yellow);
     setInputValue('expertWind850', currentLimits.wind?.w850?.yellow, LIMITS.wind.w850.yellow);
     setInputValue('expertWind700', currentLimits.wind?.w700?.yellow, LIMITS.wind.w700.yellow);
@@ -1096,6 +1098,7 @@ export function saveExpertSettings() {
     const windGustsYellow = getInputNumber('expertWindGusts', LIMITS.wind.gusts.yellow);
     const gustSpreadYellow = getInputNumber('expertGustSpread', LIMITS.wind.gustSpread.yellow);
     const gradientYellow = getInputNumber('expertGradient', LIMITS.wind.gradient.yellow);
+    const directionShearYellow = getInputNumber('expertDirectionShear', 60);
     const w900Yellow = getInputNumber('expertWind900', LIMITS.wind.w900.yellow);
     const w850Yellow = getInputNumber('expertWind850', LIMITS.wind.w850.yellow);
     const w700Yellow = getInputNumber('expertWind700', LIMITS.wind.w700.yellow);
@@ -1110,6 +1113,7 @@ export function saveExpertSettings() {
         windGusts: windGustsYellow,
         gustSpread: gustSpreadYellow,
         gradient: gradientYellow,
+        directionShear: directionShearYellow,
         w900: w900Yellow,
         w850: w850Yellow,
         w700: w700Yellow,
@@ -1165,6 +1169,7 @@ export function applyExpertPreset(presetName) {
     setInputValue('expertWindGusts', preset.values.windGusts, LIMITS.wind.gusts.yellow);
     setInputValue('expertGustSpread', preset.values.gustSpread, LIMITS.wind.gustSpread.yellow);
     setInputValue('expertGradient', preset.values.gradient, LIMITS.wind.gradient.yellow);
+    setInputValue('expertDirectionShear', preset.values.directionShear, 60);
     setInputValue('expertWind900', preset.values.w900, LIMITS.wind.w900.yellow);
     setInputValue('expertWind850', preset.values.w850, LIMITS.wind.w850.yellow);
     setInputValue('expertWind700', preset.values.w700, LIMITS.wind.w700.yellow);

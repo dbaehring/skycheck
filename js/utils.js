@@ -167,7 +167,8 @@ export function validateCustomLimits(limits) {
             w850: { min: 0, max: 60 },
             w800: { min: 0, max: 70 },
             w700: { min: 0, max: 80 },
-            gradient: { min: 0, max: 50 }
+            gradient: { min: 0, max: 50 },
+            directionShear: { min: 0, max: 180 }
         },
         clouds: {
             low: { min: 0, max: 100 }
