@@ -7,7 +7,9 @@ export const state = {
     map: null,
     marker: null,
     currentLocation: {},
-    hourlyData: null,
+    // Providerunabhängige, normalisierte Stundenwerte und zentrale Assessments
+    hourlyWeather: [],
+    hourlyAssessments: [],
     dailyData: null,
     selectedDay: 0,
     selectedHourIndex: null,

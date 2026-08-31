@@ -5,19 +5,19 @@
  */
 
 import { state } from './state.js';
-import { LIMITS, STORAGE_KEYS, UI_CONFIG, METEO_CONSTANTS, APP_INFO } from './config.js';
+import { LIMITS, STORAGE_KEYS, UI_CONFIG, APP_INFO } from './config.js';
 import {
     getWindDir, getColorClass, getColorClassRev, getSpreadColor,
-    scoreToColor, getTrend, getGustFactor, getWeatherInfo, isInAlpineRegion,
+    scoreToColor, getTrend, getWeatherInfo,
     escapeHtml, validateCustomLimits, formatAge
 } from './utils.js';
 import {
-    getHourScore, findBestWindow, updateSunTimes, calculateCloudBase, validateValue,
-    calculateBeginnerSafety, getRiskExplanation, getFogRisk, extractWindData,
-    getEffectiveLimits,
-    // Zentralisierte Bewertungsfunktionen (Single Source of Truth)
-    evaluateWind, evaluateThermik, evaluateClouds, evaluatePrecip
+    getHourScore, findBestWindow, updateSunTimes, calculateCloudBase,
+    calculateBeginnerSafety, getFogRisk, extractWindData,
+    getEffectiveLimits, getHourAssessment, rebuildHourlyAssessments
 } from './weather.js';
+import { getDayTrafficLightFromAssessments, V10_TIME_WINDOWS } from './aggregation.js';
+import { EXPERT_PRESETS, buildCustomLimits } from './expert-profiles.js';
 
 // DOM-Cache für Performance (vermeidet wiederholte getElementById-Aufrufe)
 let domCache = null;
@@ -110,7 +110,7 @@ export function formatValue(value, unit = '', decimals = 0) {
  */
 export function setupDays() {
     state.forecastDays = [];
-    const times = state.hourlyData.time;
+    const times = state.hourlyWeather.map(hour => hour.time);
     const uniqueDays = [...new Set(times.map(t => t.split('T')[0]))].slice(0, 3);
 
     uniqueDays.forEach((dayStr) => {
@@ -118,40 +118,17 @@ export function setupDays() {
         times.forEach((t, i) => { if (t.startsWith(dayStr)) indices.push(i); });
 
         let worst = 3, windScore = 3, thermikScore = 3, cloudScore = 3, precipScore = 3;
-        const h = state.hourlyData;
-
         indices.forEach(i => {
             const hour = new Date(times[i]).getHours();
-            if (hour >= 8 && hour <= 18) {
-                const s = getHourScore(i);
+            if (hour >= V10_TIME_WINDOWS.categorySummary.start && hour <= V10_TIME_WINDOWS.categorySummary.end) {
+                const assessment = getHourAssessment(i);
+                const s = assessment?.score ?? 2;
                 if (s < worst) worst = s;
-
-                // Kategorie-Scores berechnen (schlechtester Wert zählt)
-                const wind = extractWindData(h, i);
-                const { ws, wg, w900, w850, w800, w700, grad, grad3000 } = wind;
-                const wScore = evaluateWind(ws, wg, w900, w850, w800, w700, grad, grad3000);
-                if (wScore < windScore) windScore = wScore;
-
-                const temp = h.temperature_2m?.[i];
-                const dew = h.dew_point_2m?.[i];
-                const spread = (temp != null && dew != null) ? temp - dew : 10;
-                const cape = h.cape?.[i] || 0;
-                const li = h.lifted_index?.[i] || 0;
-                const tScore = evaluateThermik(spread, cape, li);
-                if (tScore < thermikScore) thermikScore = tScore;
-
-                const ct = h.cloud_cover?.[i] || 0;
-                const cl = h.cloud_cover_low?.[i] || 0;
-                const vis = h.visibility?.[i] || 50000;
-                // FIX: Mit spread und ws für intelligente Nebel-Erkennung
-                const cScore = evaluateClouds(ct, cl, vis, spread, ws);
-                if (cScore < cloudScore) cloudScore = cScore;
-
-                const prec = h.precipitation?.[i] || 0;
-                const pp = h.precipitation_probability?.[i] || 0;
-                const showers = h.showers?.[i] || 0;
-                const pScore = evaluatePrecip(prec, pp, cape, showers);
-                if (pScore < precipScore) precipScore = pScore;
+                const category = assessment?.categories || {};
+                windScore = Math.min(windScore, category.wind ?? 2);
+                thermikScore = Math.min(thermikScore, category.thermik ?? 2);
+                cloudScore = Math.min(cloudScore, category.clouds ?? 2);
+                precipScore = Math.min(precipScore, category.precip ?? 2);
             }
         });
 
@@ -176,27 +153,7 @@ export function setupDays() {
  * - NO-GO: Kein grünes Fenster UND mindestens eine rote Stunde
  */
 function getDayTrafficLight(dayStr) {
-    const bestWin = findBestWindow(dayStr);
-    const greenDuration = bestWin ? (bestWin.end - bestWin.start + 1) : 0;
-
-    // Prüfe ob es rote Stunden gibt (6-20 Uhr)
-    let hasRedHour = false;
-    for (let h = 6; h <= 20; h++) {
-        const ts = dayStr + 'T' + h.toString().padStart(2, '0') + ':00';
-        const idx = state.hourlyData.time.findIndex(t => t === ts);
-        if (idx !== -1 && getHourScore(idx) === 1) {
-            hasRedHour = true;
-            break;
-        }
-    }
-
-    if (greenDuration >= 3) {
-        return { status: 'go', label: 'GO' };
-    } else if (greenDuration >= 1 || !hasRedHour) {
-        return { status: 'caution', label: 'VORSICHT' };
-    } else {
-        return { status: 'nogo', label: 'NO-GO' };
-    }
+    return getDayTrafficLightFromAssessments(state.hourlyWeather, state.hourlyAssessments, dayStr);
 }
 
 /**
@@ -255,8 +212,8 @@ export function selectDay(idx) {
     renderWindDiagram(state.forecastDays[idx].date);
 
     const now = new Date(), ch = now.getHours();
-    let def = state.forecastDays[idx].indices.find(i => new Date(state.hourlyData.time[i]).getHours() === (idx === 0 ? ch : 12));
-    if (!def) def = state.forecastDays[idx].indices.find(i => new Date(state.hourlyData.time[i]).getHours() === 12) || state.forecastDays[idx].indices[Math.floor(state.forecastDays[idx].indices.length / 2)];
+    let def = state.forecastDays[idx].indices.find(i => new Date(state.hourlyWeather[i].time).getHours() === (idx === 0 ? ch : 12));
+    if (def === undefined) def = state.forecastDays[idx].indices.find(i => new Date(state.hourlyWeather[i].time).getHours() === 12) ?? state.forecastDays[idx].indices[Math.floor(state.forecastDays[idx].indices.length / 2)];
     selectHour(def);
 }
 
@@ -289,15 +246,15 @@ export function buildTimeline(dayStr) {
     if (bwEl) bwEl.classList.remove('visible', 'yellow');
 
     const now = new Date();
-    // todayStr aus hourlyData (lokale Zeitzone des Orts) ableiten, nicht aus UTC -
+    // todayStr aus normalisierten Stunden (lokale Zeitzone des Orts) ableiten, nicht aus UTC -
     // sonst Mismatch nahe Mitternacht/Zeitzonen-Offset (siehe favorites.js fetchQuickWeather)
-    const todayStr = state.hourlyData.time[0].split('T')[0];
+    const todayStr = state.hourlyWeather[0].time.split('T')[0];
     const currentHour = now.getHours();
     const isToday = dayStr === todayStr;
 
     for (let h = 6; h <= 20; h++) {
         const ts = dayStr + 'T' + h.toString().padStart(2, '0') + ':00';
-        const idx = state.hourlyData.time.findIndex(t => t === ts);
+        const idx = state.hourlyWeather.findIndex(hour => hour.time === ts);
         if (idx === -1) continue;
 
         const sc = getHourScore(idx);
@@ -314,7 +271,7 @@ export function buildTimeline(dayStr) {
             slot.classList.add('now');
         }
 
-        const weatherCode = state.hourlyData.weather_code?.[idx] || 0;
+        const weatherCode = state.hourlyWeather[idx]?.weatherCode ?? 0;
         const weatherInfo = getWeatherInfo(weatherCode);
         const isMobile = window.innerWidth < UI_CONFIG.mobileBreakpoint;
         const timeText = isMobile ? h : h + ':00';
@@ -339,174 +296,166 @@ export function selectHour(idx) {
  * v9: updateDisplay (750hPa entfernt)
  */
 export function updateDisplay(i) {
-    const h = state.hourlyData, pi = i > 0 ? i - 1 : null;
-    const ws = validateValue(h.wind_speed_10m[i], 0), wg = validateValue(h.wind_gusts_10m[i], 0);
-    const w900 = validateValue(h.wind_speed_900hPa?.[i], 0);
-    const w850 = validateValue(h.wind_speed_850hPa?.[i], 0), w800 = validateValue(h.wind_speed_800hPa?.[i], 0);
-    const w700 = validateValue(h.wind_speed_700hPa?.[i], 0);
-    const wdSurface = validateValue(h.wind_direction_10m[i], 0);
-    const wd900 = validateValue(h.wind_direction_900hPa?.[i], 0);
-    const wd850 = validateValue(h.wind_direction_850hPa?.[i], 0), wd800 = validateValue(h.wind_direction_800hPa?.[i], 0);
-    const wd700 = validateValue(h.wind_direction_700hPa?.[i], 0);
-    const grad = Math.abs(w850 - ws), grad3000 = Math.abs(w700 - ws);  // Beide Gradienten zu Boden
-    const temp = validateValue(h.temperature_2m?.[i], null), dew = validateValue(h.dew_point_2m?.[i], null);
-    const spread = (temp !== null && dew !== null) ? temp - dew : null;
-    const cape = validateValue(h.cape?.[i], 0), li = validateValue(h.lifted_index?.[i], 0);
-    const ct = validateValue(h.cloud_cover?.[i], 0), cl = validateValue(h.cloud_cover_low?.[i], 0);
-    const cm = validateValue(h.cloud_cover_mid?.[i], 0), cloudHigh = validateValue(h.cloud_cover_high?.[i], 0);
-    const vis = validateValue(h.visibility?.[i], 10000), prec = validateValue(h.precipitation?.[i], 0);
-    const pp = validateValue(h.precipitation_probability?.[i], 0);
-    const freezing = validateValue(h.freezing_level_height?.[i], 0), boundaryLayer = validateValue(h.boundary_layer_height?.[i], 0);
-    const showers = validateValue(h.showers?.[i], 0), weatherCode = validateValue(h.weather_code?.[i], 0);
-    const cloudBase = (temp !== null && dew !== null) ? calculateCloudBase(temp, dew, state.currentLocation.elevation) : null;
+    const hour = state.hourlyWeather[i];
+    const assessment = getHourAssessment(i);
+    if (!hour || !assessment) return;
 
-    const windSc = evaluateWind(ws, wg, w900, w850, w800, w700, grad, grad3000);
-    const thermSc = evaluateThermik(spread, cape, li);
-    const cloudSc = evaluateClouds(ct, cl, vis, spread, ws);  // Mit intelligenter Nebel-Erkennung
-    const precSc = evaluatePrecip(prec, pp, cape, showers);
+    const previousAssessment = i > 0 ? getHourAssessment(i - 1) : null;
+    const previous = previousAssessment?.metrics || {};
+    const L = assessment.effectiveLimits;
+    const {
+        ws, wg, w900, w850, w800, w700, gustSpread,
+        gradient1500: grad, gradient3000: grad3000, spread,
+        cape, liftedIndex: li, visibility: vis, cloudLow: cl,
+        cloudTotal: ct, precipitation: prec,
+        precipitationProbability: pp, showers
+    } = assessment.metrics;
+    const wind = extractWindData(hour);
+    const temp = hour.surface.temperatureC;
+    const dew = hour.surface.dewPointC;
+    const cm = hour.clouds.midPct;
+    const cloudHigh = hour.clouds.highPct;
+    const freezing = hour.freezingLevelM;
+    const boundaryLayer = hour.boundaryLayer.heightM;
+    const weatherCode = hour.weatherCode ?? 0;
+    const elevation = state.currentLocation.elevation;
+    const cloudBase = temp !== null && dew !== null && Number.isFinite(elevation)
+        ? calculateCloudBase(temp, dew, elevation)
+        : null;
 
-    // Filter anwenden: nur gefilterte Parameter in Bewertung einbeziehen
-    const filter = state.paramFilter || { wind: true, thermik: true, clouds: true, precip: true };
-    const scores = [];
-    if (filter.wind) scores.push(windSc);
-    if (filter.thermik) scores.push(thermSc);
-    if (filter.clouds) scores.push(cloudSc);
-    if (filter.precip) scores.push(precSc);
-    const worst = scores.length > 0 ? Math.min(...scores) : 3;
+    const windSc = assessment.categories.wind ?? 2;
+    const thermSc = assessment.categories.thermik ?? 2;
+    const cloudSc = assessment.categories.clouds ?? 2;
+    const precSc = assessment.categories.precip ?? 2;
+    const worst = assessment.score;
 
     updateOverallAssessment(worst);
 
-    // PHASE 2: Beginner-Badge und Risk-Explanation
-    // Beginner-Badge NUR anzeigen wenn Gesamtstatus GO ist (worst === 3)
-    const beginnerAssessment = worst === 3 ? calculateBeginnerSafety(i) : { isBeginner: false };
+    const beginnerAssessment = worst === 3 && assessment.dataQuality?.level === 'good'
+        ? calculateBeginnerSafety(i)
+        : { isBeginner: false };
     renderBeginnerBadge(beginnerAssessment);
-
-    // KISS: Risk-Explanation komplett ausblenden - Reason-Summary zeigt bereits Hauptgrund + weitere Hinweise
     renderRiskExplanation(null);
-
-    // KISS: Killers-Section ausblenden - Reason-Summary zeigt bereits die kritischen Werte
     document.getElementById('killerWarnings')?.classList.remove('visible');
-    updateReasonSummary(worst, ws, wg, w900, w850, w800, w700, grad, grad3000, cape, vis, spread, cl, ct, li, prec, pp, showers);
-    updateWindrose(wdSurface, wd900, wd850, wd700, ws, w900, w850, w700);
+    updateReasonSummary(assessment);
+    updateWindrose(
+        wind.wd10m, wind.wd900, wind.wd850, wind.wd700,
+        ws, w900, w850, w700
+    );
 
-    // Höhen-Info (nutzt DOM-Cache) - verteilt auf Thermik-Box und Location-Card
     const dom = getDomCache();
     dom.cloudBase.textContent = cloudBase !== null ? cloudBase + ' m' : 'N/A';
-    dom.boundaryLayer.textContent = boundaryLayer > 0 ? Math.round(boundaryLayer) + ' m' : 'n.v.';
-    dom.freezingLevel.textContent = Math.round(freezing) + ' m';
-    dom.stationElevation.textContent = Math.round(state.currentLocation.elevation) + ' m';
+    dom.boundaryLayer.textContent = boundaryLayer !== null ? Math.round(boundaryLayer) + ' m' : 'n.v.';
+    dom.freezingLevel.textContent = freezing !== null ? Math.round(freezing) + ' m' : 'N/A';
+    dom.stationElevation.textContent = Number.isFinite(elevation) ? Math.round(elevation) + ' m' : 'N/A';
     const weatherInfo = getWeatherInfo(weatherCode);
     dom.weatherDesc.textContent = weatherInfo.icon + ' ' + weatherInfo.text;
     dom.currentTemp.textContent = temp !== null ? Math.round(temp) + '°C' : '-';
 
-    // Trends (750hPa entfernt)
-    const wt = getTrend(ws, pi !== null ? h.wind_speed_10m[pi] : null);
-    const gt = getTrend(wg, pi !== null ? h.wind_gusts_10m[pi] : null);
-    const t900 = getTrend(w900, pi !== null ? h.wind_speed_900hPa?.[pi] : null);
-    const t850 = getTrend(w850, pi !== null ? h.wind_speed_850hPa?.[pi] : null);
-    const t800 = getTrend(w800, pi !== null ? h.wind_speed_800hPa?.[pi] : null);
-    const t700 = getTrend(w700, pi !== null ? h.wind_speed_700hPa?.[pi] : null);
-    const ct2 = getTrend(cape, pi !== null ? h.cape?.[pi] : null);
+    const safeTrend = (current, prior) => current === null
+        ? { symbol: '', cls: 'stable' }
+        : getTrend(current, prior ?? null);
+    const formatNumber = (value, decimals = 0) => value === null ? 'N/A' : value.toFixed(decimals);
+    const formatDirection = value => value === null ? 'N/A' : Math.round(value) + '° ' + getWindDir(value);
+    const valueClass = (value, limits, reverse = false) => value === null
+        ? 'no-data'
+        : (reverse ? getColorClassRev(value, limits) : getColorClass(value, limits));
+    const setWindValue = (id, value, trend, limits) => {
+        const el = document.getElementById(id);
+        el.innerHTML = value === null
+            ? '<span class="no-data">N/A</span>'
+            : Math.round(value) + ' km/h <span class="trend ' + trend.cls + '">' + trend.symbol + '</span>';
+        el.className = 'param-value ' + valueClass(value, limits);
+    };
 
-    // Wind-Werte
-    document.getElementById('windSurface').innerHTML = Math.round(ws) + ' km/h <span class="trend ' + wt.cls + '">' + wt.symbol + '</span>';
-    document.getElementById('windSurface').className = 'param-value ' + getColorClass(ws, LIMITS.wind.surface);
-    document.getElementById('windDirSurface').textContent = Math.round(wdSurface) + '° ' + getWindDir(wdSurface);
-    document.getElementById('windGusts').innerHTML = Math.round(wg) + ' km/h <span class="trend ' + gt.cls + '">' + gt.symbol + '</span>';
-    document.getElementById('windGusts').className = 'param-value ' + getColorClass(wg, LIMITS.wind.gusts);
+    setWindValue('windSurface', ws, safeTrend(ws, previous.ws), L.wind.surface);
+    document.getElementById('windDirSurface').textContent = formatDirection(wind.wd10m);
+    setWindValue('windGusts', wg, safeTrend(wg, previous.wg), L.wind.gusts);
 
-    // gustSpread (Böigkeit - Differenz zwischen Böen und Grundwind)
-    const gustSpread = wg - ws;
-    document.getElementById('gustSpread').textContent = Math.round(gustSpread) + ' km/h';
-    document.getElementById('gustSpread').className = 'param-value ' + getColorClass(gustSpread, LIMITS.wind.gustSpread);
-    // 900hPa (~1000m) - typische Flughöhe Hügel/Mittelgebirge
-    document.getElementById('wind900').innerHTML = Math.round(w900) + ' km/h <span class="trend ' + t900.cls + '">' + t900.symbol + '</span>';
-    document.getElementById('wind900').className = 'param-value ' + getColorClass(w900, LIMITS.wind.w900);
-    document.getElementById('windDir900').textContent = Math.round(wd900) + '° ' + getWindDir(wd900);
-    document.getElementById('wind850').innerHTML = Math.round(w850) + ' km/h <span class="trend ' + t850.cls + '">' + t850.symbol + '</span>';
-    document.getElementById('wind850').className = 'param-value ' + getColorClass(w850, LIMITS.wind.w850);
-    document.getElementById('windDir850').textContent = Math.round(wd850) + '° ' + getWindDir(wd850);
-    document.getElementById('wind800').innerHTML = Math.round(w800) + ' km/h <span class="trend ' + t800.cls + '">' + t800.symbol + '</span>';
-    document.getElementById('wind800').className = 'param-value ' + getColorClass(w800, LIMITS.wind.w800);
-    document.getElementById('windDir800').textContent = Math.round(wd800) + '° ' + getWindDir(wd800);
-    // 750hPa entfernt - nicht zuverlässig verfügbar
-    document.getElementById('wind700').innerHTML = Math.round(w700) + ' km/h <span class="trend ' + t700.cls + '">' + t700.symbol + '</span>';
-    document.getElementById('wind700').className = 'param-value ' + getColorClass(w700, LIMITS.wind.w700);
-    document.getElementById('windDir700').textContent = Math.round(wd700) + '° ' + getWindDir(wd700);
-    document.getElementById('windGradient').textContent = Math.round(grad) + ' km/h';
-    document.getElementById('windGradient').className = 'param-value ' + getColorClass(grad, LIMITS.wind.gradient);
-    document.getElementById('windGradient3000').textContent = Math.round(grad3000) + ' km/h';
-    document.getElementById('windGradient3000').className = 'param-value ' + getColorClass(grad3000, LIMITS.wind.gradient3000);
+    document.getElementById('gustSpread').textContent = gustSpread === null ? 'N/A' : Math.round(gustSpread) + ' km/h';
+    document.getElementById('gustSpread').className = 'param-value ' + valueClass(gustSpread, L.wind.gustSpread);
+    setWindValue('wind900', w900, safeTrend(w900, previous.w900), L.wind.w900);
+    document.getElementById('windDir900').textContent = formatDirection(wind.wd900);
+    setWindValue('wind850', w850, safeTrend(w850, previous.w850), L.wind.w850);
+    document.getElementById('windDir850').textContent = formatDirection(wind.wd850);
+    setWindValue('wind800', w800, safeTrend(w800, previous.w800), L.wind.w800);
+    document.getElementById('windDir800').textContent = formatDirection(wind.wd800);
+    setWindValue('wind700', w700, safeTrend(w700, previous.w700), L.wind.w700);
+    document.getElementById('windDir700').textContent = formatDirection(wind.wd700);
+
+    document.getElementById('windGradient').textContent = grad === null ? 'N/A' : Math.round(grad) + ' km/h';
+    document.getElementById('windGradient').className = 'param-value ' + valueClass(grad, L.wind.gradient);
+    document.getElementById('windGradient3000').textContent = grad3000 === null ? 'N/A' : Math.round(grad3000) + ' km/h';
+    document.getElementById('windGradient3000').className = 'param-value ' + valueClass(grad3000, L.wind.gradient3000);
     document.getElementById('windStatus').className = 'param-status ' + scoreToColor(windSc);
 
-    // Thermik-Werte (null-safe)
     document.getElementById('temp2m').textContent = temp !== null ? temp.toFixed(1) + '°C' : 'N/A';
     document.getElementById('dewpoint').textContent = dew !== null ? dew.toFixed(1) + '°C' : 'N/A';
     document.getElementById('spread').textContent = spread !== null ? spread.toFixed(1) + '°C' : 'N/A';
-    document.getElementById('spread').className = 'param-value ' + getSpreadColor(spread);
-    document.getElementById('cape').innerHTML = Math.round(cape) + ' J/kg <span class="trend ' + ct2.cls + '">' + ct2.symbol + '</span>';
-    document.getElementById('cape').className = 'param-value ' + getColorClass(cape, LIMITS.cape);
-    document.getElementById('liftedIndex').textContent = li.toFixed(1);
-    document.getElementById('liftedIndex').className = 'param-value ' + (li < -4 ? 'red' : li < -2 ? 'yellow' : 'green');
+    document.getElementById('spread').className = 'param-value ' + (spread === null ? 'no-data' : getSpreadColor(spread, L));
+    const capeTrend = safeTrend(cape, previous.cape);
+    document.getElementById('cape').innerHTML = cape === null
+        ? '<span class="no-data">N/A</span>'
+        : Math.round(cape) + ' J/kg <span class="trend ' + capeTrend.cls + '">' + capeTrend.symbol + '</span>';
+    document.getElementById('cape').className = 'param-value ' + valueClass(cape, L.cape);
+    document.getElementById('liftedIndex').textContent = formatNumber(li, 1);
+    document.getElementById('liftedIndex').className = 'param-value ' + (li === null ? 'no-data' : li < L.liftedIndex.yellow ? 'red' : li < L.liftedIndex.green ? 'yellow' : 'green');
     document.getElementById('thermikStatus').className = 'param-status ' + scoreToColor(thermSc);
 
-    // Wolken-Werte (niedrigere Bewölkung ist besser, daher getColorClass)
-    document.getElementById('cloudTotal').textContent = ct + '%';
-    document.getElementById('cloudTotal').className = 'param-value ' + getColorClass(ct, LIMITS.clouds.total);
-    document.getElementById('cloudLow').textContent = cl + '%';
-    document.getElementById('cloudLow').className = 'param-value ' + getColorClass(cl, LIMITS.clouds.low);
-    document.getElementById('cloudMid').textContent = cm + '%';
-    document.getElementById('cloudHigh').textContent = cloudHigh + '%';
-    document.getElementById('visibility').textContent = (vis / 1000).toFixed(1) + ' km';
-    document.getElementById('visibility').className = 'param-value ' + getColorClassRev(vis, LIMITS.visibility);
+    document.getElementById('cloudTotal').textContent = ct === null ? 'N/A' : Math.round(ct) + '%';
+    document.getElementById('cloudTotal').className = 'param-value ' + valueClass(ct, L.clouds.total);
+    document.getElementById('cloudLow').textContent = cl === null ? 'N/A' : Math.round(cl) + '%';
+    document.getElementById('cloudLow').className = 'param-value ' + valueClass(cl, L.clouds.low);
+    document.getElementById('cloudMid').textContent = cm === null ? 'N/A' : Math.round(cm) + '%';
+    document.getElementById('cloudHigh').textContent = cloudHigh === null ? 'N/A' : Math.round(cloudHigh) + '%';
+    document.getElementById('visibility').textContent = vis === null ? 'N/A' : (vis / 1000).toFixed(1) + ' km';
+    document.getElementById('visibility').className = 'param-value ' + valueClass(vis, L.visibility, true);
     document.getElementById('cloudStatus').className = 'param-status ' + scoreToColor(cloudSc);
 
-    // Nebelrisiko anzeigen (basiert auf Spread, Wind, Sichtweite)
-    const fogRiskLevel = getFogRisk(spread || 10, ws, vis);
+    const fogRiskLevel = getFogRisk(spread, ws, vis);
     const fogRiskEl = document.getElementById('fogRisk');
     if (fogRiskEl) {
         const fogLabels = {
-            'severe': { text: 'Hoch 🌫️', class: 'red' },
-            'likely': { text: 'Wahrscheinlich ⚠️', class: 'yellow' },
-            'possible': { text: 'Möglich', class: 'yellow' },
-            'unlikely': { text: 'Gering ✓', class: 'green' }
+            severe: { text: 'Hoch 🌫️', class: 'red' },
+            likely: { text: 'Wahrscheinlich ⚠️', class: 'yellow' },
+            possible: { text: 'Möglich', class: 'yellow' },
+            unlikely: { text: 'Gering ✓', class: 'green' },
+            unknown: { text: 'Unbekannt', class: 'no-data' }
         };
-        const fog = fogLabels[fogRiskLevel] || fogLabels.unlikely;
+        const fog = fogLabels[fogRiskLevel] || fogLabels.unknown;
         fogRiskEl.textContent = fog.text;
         fogRiskEl.className = 'param-value ' + fog.class;
     }
 
-    // Niederschlag-Werte
-    document.getElementById('precip').textContent = prec.toFixed(1) + ' mm';
-    document.getElementById('precip').className = 'param-value ' + (prec < 0.1 ? 'green' : prec < 1 ? 'yellow' : 'red');
-    document.getElementById('convPrecip').textContent = showers.toFixed(1) + ' mm';
-    document.getElementById('convPrecip').className = 'param-value ' + (showers < 0.1 ? 'green' : showers < 0.5 ? 'yellow' : 'red');
-    document.getElementById('precipProb').textContent = pp + '%';
-    document.getElementById('precipProb').className = 'param-value ' + (pp < 20 ? 'green' : pp < 50 ? 'yellow' : 'red');
-    const tr = cape > LIMITS.cape.yellow ? 'Hoch ⛈️' : cape > LIMITS.cape.green ? 'Moderat ⚠️' : 'Gering ✓';
-    document.getElementById('thunderRisk').textContent = tr;
-    document.getElementById('thunderRisk').className = 'param-value ' + getColorClass(cape, LIMITS.cape);
+    document.getElementById('precip').textContent = prec === null ? 'N/A' : prec.toFixed(1) + ' mm';
+    document.getElementById('precip').className = 'param-value ' + valueClass(prec, L.precip);
+    document.getElementById('convPrecip').textContent = showers === null ? 'N/A' : showers.toFixed(1) + ' mm';
+    document.getElementById('convPrecip').className = 'param-value ' + valueClass(showers, L.showers);
+    document.getElementById('precipProb').textContent = pp === null ? 'N/A' : Math.round(pp) + '%';
+    document.getElementById('precipProb').className = 'param-value ' + (pp === null ? 'no-data' : pp > L.precipProb.yellow ? 'yellow' : 'green');
+    const thunderRisk = cape === null
+        ? { text: 'Unbekannt', cls: 'no-data' }
+        : cape > L.cape.yellow
+            ? { text: 'Hoch ⛈️', cls: 'red' }
+            : cape > L.cape.green
+                ? { text: 'Moderat ⚠️', cls: 'yellow' }
+                : { text: 'Gering ✓', cls: 'green' };
+    document.getElementById('thunderRisk').textContent = thunderRisk.text;
+    document.getElementById('thunderRisk').className = 'param-value ' + thunderRisk.cls;
     document.getElementById('precipStatus').className = 'param-status ' + scoreToColor(precSc);
 
     autoExpandRedCards();
 
-    // Zeit-Hinweis in Param-Boxen (Tag + Uhrzeit)
-    const timeStr = state.hourlyData.time[i]; // z.B. "2026-03-17T14:00"
-    if (timeStr) {
-        const dateObj = new Date(timeStr);
+    if (hour.time) {
+        const dateObj = new Date(hour.time);
         const dayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
-        const dayName = dayNames[dateObj.getDay()];
-        const day = dateObj.getDate();
-        const month = dateObj.getMonth() + 1;
-        const hour = dateObj.getHours().toString().padStart(2, '0');
-        const timeLabel = `${dayName} ${day}.${month}. · ${hour}:00`;
+        const timeLabel = `${dayNames[dateObj.getDay()]} ${dateObj.getDate()}.${dateObj.getMonth() + 1}. · ${dateObj.getHours().toString().padStart(2, '0')}:00`;
         ['windTimeHint', 'thermikTimeHint', 'cloudTimeHint', 'precipTimeHint'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.textContent = timeLabel;
         });
     }
 }
-
 // Bewertungsfunktionen werden jetzt aus weather.js importiert (Single Source of Truth)
 
 let lastAssessmentScore = null;
@@ -555,205 +504,62 @@ function updateOverallAssessment(sc) {
 }
 
 // PHASE 1 SAFETY: Alle Hinweise in einer Liste (sortiert nach Schweregrad und Grenzwert-Abweichung)
-function updateReasonSummary(score, ws, wg, w900, w850, w800, w700, grad, grad3000, cape, vis, spread, cloudLow, cloudTotal, li, precip, precipProb, showers) {
-    const el = document.getElementById('reasonSummary'), textEl = document.getElementById('reasonText');
-    el.className = 'reason-summary';
-    const gustSpread = wg - ws;
-    const gustFactor = getGustFactor(ws, wg);
-    const fogRisk = getFogRisk(spread || 10, ws, vis);
-    const filter = state.paramFilter || { wind: true, thermik: true, clouds: true, precip: true };
+function updateReasonSummary(assessment) {
+    const el = document.getElementById('reasonSummary');
+    const textEl = document.getElementById('reasonText');
+    const score = assessment.score;
+    const filter = assessment.comfortFilters;
     const filterActive = !filter.wind || !filter.thermik || !filter.clouds || !filter.precip;
 
+    el.className = 'reason-summary';
     if (score === 3) {
         el.classList.add('go');
-        const filterHint = filterActive ? ' <span class="filter-hint">(Filter aktiv)</span>' : '';
-        textEl.innerHTML = '✓ <strong>Alle Parameter im grünen Bereich.</strong>' + filterHint + ' Gute Bedingungen – dennoch vor Ort prüfen.';
+        const filterHint = filterActive ? ' <span class="filter-hint">(Komfortfilter aktiv; Hard Blocker bleiben aktiv)</span>' : '';
+        textEl.innerHTML = '✓ <strong>Alle verfügbaren Parameter im grünen Bereich.</strong>' + filterHint + ' Gute Bedingungen – dennoch vor Ort prüfen.';
         return;
     }
 
-    // Alle Hinweise sammeln mit Level und Abweichung vom Grenzwert
-    const hints = [];
-
-    // Helper: Abweichung berechnen (wie viel % über dem Grenzwert)
-    const calcDeviation = (val, greenLimit, yellowLimit) => {
-        if (val > yellowLimit) return ((val - yellowLimit) / yellowLimit) * 100 + 100;
-        if (val > greenLimit) return ((val - greenLimit) / (yellowLimit - greenLimit)) * 100;
-        return 0;
-    };
-
-    // Wind-Parameter
-    if (filter.wind) {
-        if (ws > LIMITS.wind.surface.yellow) {
-            hints.push({ level: 'red', text: '💨 Bodenwind zu stark (' + Math.round(ws) + ' km/h)', deviation: calcDeviation(ws, LIMITS.wind.surface.green, LIMITS.wind.surface.yellow) });
-        } else if (ws > LIMITS.wind.surface.green) {
-            hints.push({ level: 'yellow', text: '💨 Bodenwind erhöht (' + Math.round(ws) + ' km/h)', deviation: calcDeviation(ws, LIMITS.wind.surface.green, LIMITS.wind.surface.yellow) });
-        }
-
-        if (wg > LIMITS.wind.gusts.yellow) {
-            hints.push({ level: 'red', text: '💨 Böen gefährlich stark (' + Math.round(wg) + ' km/h)', deviation: calcDeviation(wg, LIMITS.wind.gusts.green, LIMITS.wind.gusts.yellow) });
-        } else if (wg > LIMITS.wind.gusts.green) {
-            hints.push({ level: 'yellow', text: '💨 Böen erhöht (' + Math.round(wg) + ' km/h)', deviation: calcDeviation(wg, LIMITS.wind.gusts.green, LIMITS.wind.gusts.yellow) });
-        }
-
-        if (gustSpread > LIMITS.wind.gustSpread.yellow) {
-            hints.push({ level: 'red', text: '💨 Stark böig – Differenz ' + Math.round(gustSpread) + ' km/h', deviation: calcDeviation(gustSpread, LIMITS.wind.gustSpread.green, LIMITS.wind.gustSpread.yellow) });
-        } else if (gustSpread > LIMITS.wind.gustSpread.green) {
-            hints.push({ level: 'yellow', text: '💨 Böigkeit erhöht – Differenz ' + Math.round(gustSpread) + ' km/h', deviation: calcDeviation(gustSpread, LIMITS.wind.gustSpread.green, LIMITS.wind.gustSpread.yellow) });
-        }
-
-        // Höhenwinde auf verschiedenen Leveln
-        if (w900 > LIMITS.wind.w900.yellow) {
-            hints.push({ level: 'red', text: '🌬️ Wind 1000m kritisch (' + Math.round(w900) + ' km/h)', deviation: calcDeviation(w900, LIMITS.wind.w900.green, LIMITS.wind.w900.yellow) });
-        } else if (w900 > LIMITS.wind.w900.green) {
-            hints.push({ level: 'yellow', text: '🌬️ Wind 1000m erhöht (' + Math.round(w900) + ' km/h)', deviation: calcDeviation(w900, LIMITS.wind.w900.green, LIMITS.wind.w900.yellow) });
-        }
-
-        if (w850 > LIMITS.wind.w850.yellow) {
-            hints.push({ level: 'red', text: '🌬️ Wind 1500m kritisch (' + Math.round(w850) + ' km/h)', deviation: calcDeviation(w850, LIMITS.wind.w850.green, LIMITS.wind.w850.yellow) });
-        } else if (w850 > LIMITS.wind.w850.green) {
-            hints.push({ level: 'yellow', text: '🌬️ Wind 1500m erhöht (' + Math.round(w850) + ' km/h)', deviation: calcDeviation(w850, LIMITS.wind.w850.green, LIMITS.wind.w850.yellow) });
-        }
-
-        if (w800 > LIMITS.wind.w800.yellow) {
-            hints.push({ level: 'red', text: '🌬️ Wind 2000m kritisch (' + Math.round(w800) + ' km/h)', deviation: calcDeviation(w800, LIMITS.wind.w800.green, LIMITS.wind.w800.yellow) });
-        } else if (w800 > LIMITS.wind.w800.green) {
-            hints.push({ level: 'yellow', text: '🌬️ Wind 2000m erhöht (' + Math.round(w800) + ' km/h)', deviation: calcDeviation(w800, LIMITS.wind.w800.green, LIMITS.wind.w800.yellow) });
-        }
-
-        if (w700 > LIMITS.wind.w700.yellow) {
-            hints.push({ level: 'red', text: '🌬️ Wind 3000m kritisch (' + Math.round(w700) + ' km/h)', deviation: calcDeviation(w700, LIMITS.wind.w700.green, LIMITS.wind.w700.yellow) });
-        } else if (w700 > LIMITS.wind.w700.green) {
-            hints.push({ level: 'yellow', text: '🌬️ Wind 3000m erhöht (' + Math.round(w700) + ' km/h)', deviation: calcDeviation(w700, LIMITS.wind.w700.green, LIMITS.wind.w700.yellow) });
-        }
-
-        if (grad > LIMITS.wind.gradient.yellow) {
-            hints.push({ level: 'red', text: '📊 Gradient kritisch (' + Math.round(grad) + ' km/h)', deviation: calcDeviation(grad, LIMITS.wind.gradient.green, LIMITS.wind.gradient.yellow) });
-        } else if (grad > LIMITS.wind.gradient.green) {
-            hints.push({ level: 'yellow', text: '📊 Gradient erhöht (' + Math.round(grad) + ' km/h)', deviation: calcDeviation(grad, LIMITS.wind.gradient.green, LIMITS.wind.gradient.yellow) });
-        }
-
-        if (grad3000 > LIMITS.wind.gradient3000.yellow) {
-            hints.push({ level: 'red', text: '📊 Gradient 3000m kritisch (' + Math.round(grad3000) + ' km/h)', deviation: calcDeviation(grad3000, LIMITS.wind.gradient3000.green, LIMITS.wind.gradient3000.yellow) });
-        } else if (grad3000 > LIMITS.wind.gradient3000.green) {
-            hints.push({ level: 'yellow', text: '📊 Gradient 3000m erhöht (' + Math.round(grad3000) + ' km/h)', deviation: calcDeviation(grad3000, LIMITS.wind.gradient3000.green, LIMITS.wind.gradient3000.yellow) });
-        }
-
-        // Böenfaktor (nur wenn Böen stark genug)
-        if (gustFactor > LIMITS.wind.gustFactor.yellow && wg > LIMITS.wind.gustFactorMinWind.yellow) {
-            hints.push({ level: 'red', text: '💨 Böenfaktor kritisch (' + gustFactor.toFixed(1) + 'x)', deviation: 120 });
-        } else if (gustFactor > LIMITS.wind.gustFactor.green && wg > LIMITS.wind.gustFactorMinWind.green) {
-            hints.push({ level: 'yellow', text: '💨 Böenfaktor erhöht (' + gustFactor.toFixed(1) + 'x)', deviation: 60 });
-        }
-    }
-
-    // Thermik-Parameter
-    if (filter.thermik) {
-        if (cape > LIMITS.cape.yellow) {
-            hints.push({ level: 'red', text: '⚡ CAPE kritisch (' + Math.round(cape) + ' J/kg) – Gewittergefahr', deviation: calcDeviation(cape, LIMITS.cape.green, LIMITS.cape.yellow) });
-        } else if (cape > LIMITS.cape.green) {
-            hints.push({ level: 'yellow', text: '🌤️ CAPE erhöht (' + Math.round(cape) + ' J/kg)', deviation: calcDeviation(cape, LIMITS.cape.green, LIMITS.cape.yellow) });
-        }
-
-        if (li !== undefined && li !== null) {
-            if (li < LIMITS.liftedIndex.yellow) {
-                hints.push({ level: 'red', text: '⚡ Lifted Index ' + li.toFixed(1) + ' – stark labil', deviation: Math.abs(li - LIMITS.liftedIndex.yellow) * 20 + 100 });
-            } else if (li < LIMITS.liftedIndex.green) {
-                hints.push({ level: 'yellow', text: '⚡ Lifted Index ' + li.toFixed(1) + ' – labil', deviation: Math.abs(li - LIMITS.liftedIndex.green) * 20 });
-            }
-        }
-
-        // Spread für Thermik-Qualität (zu trocken = schlechte Thermik)
-        if (spread !== null && spread > LIMITS.spread.max) {
-            hints.push({ level: 'yellow', text: '💧 Sehr trockene Luft (Spread ' + spread.toFixed(1) + '°C) – schwache Thermik', deviation: 30 });
-        }
-    }
-
-    // Wolken/Sicht-Parameter
-    if (filter.clouds) {
-        if (fogRisk === 'severe') {
-            if (vis < LIMITS.fog.visibilitySevere) {
-                hints.push({ level: 'red', text: '🌫️ Kritische Sicht (' + (vis/1000).toFixed(1) + ' km)', deviation: 200 });
-            } else {
-                hints.push({ level: 'red', text: '🌫️ Hohe Nebelgefahr – Spread ' + (spread?.toFixed(1) || '?') + '°C', deviation: 150 });
-            }
-        } else if (fogRisk === 'likely') {
-            hints.push({ level: 'yellow', text: '🌁 Nebel wahrscheinlich – Spread ' + (spread?.toFixed(1) || '?') + '°C', deviation: 80 });
-        } else if (fogRisk === 'possible') {
-            if (vis < LIMITS.fog.visibilityWarning) {
-                hints.push({ level: 'yellow', text: '🌫️ Sicht eingeschränkt (' + (vis/1000).toFixed(1) + ' km)', deviation: 50 });
-            } else {
-                hints.push({ level: 'yellow', text: '🌁 Nebelrisiko möglich – Spread ' + (spread?.toFixed(1) || '?') + '°C', deviation: 40 });
-            }
-        }
-
-        if (cloudLow > LIMITS.clouds.low.yellow) {
-            hints.push({ level: 'red', text: '☁️ Tiefe Bewölkung ' + cloudLow + '%', deviation: calcDeviation(cloudLow, LIMITS.clouds.low.green, LIMITS.clouds.low.yellow) });
-        } else if (cloudLow > LIMITS.clouds.low.green) {
-            hints.push({ level: 'yellow', text: '☁️ Tiefe Bewölkung ' + cloudLow + '%', deviation: calcDeviation(cloudLow, LIMITS.clouds.low.green, LIMITS.clouds.low.yellow) });
-        }
-
-        if (cloudTotal > LIMITS.clouds.total.yellow) {
-            hints.push({ level: 'red', text: '☁️ Starke Bewölkung ' + cloudTotal + '%', deviation: calcDeviation(cloudTotal, LIMITS.clouds.total.green, LIMITS.clouds.total.yellow) });
-        } else if (cloudTotal > LIMITS.clouds.total.green) {
-            hints.push({ level: 'yellow', text: '☁️ Bewölkung ' + cloudTotal + '%', deviation: calcDeviation(cloudTotal, LIMITS.clouds.total.green, LIMITS.clouds.total.yellow) });
-        }
-    }
-
-    // Niederschlag
-    if (filter.precip) {
-        if (precip > LIMITS.precip.yellow) {
-            hints.push({ level: 'red', text: '🌧️ Niederschlag ' + precip.toFixed(1) + ' mm', deviation: calcDeviation(precip, LIMITS.precip.green, LIMITS.precip.yellow) });
-        } else if (precip > LIMITS.precip.green) {
-            hints.push({ level: 'yellow', text: '🌧️ Leichter Niederschlag möglich', deviation: calcDeviation(precip, LIMITS.precip.green, LIMITS.precip.yellow) });
-        }
-
-        if (showers > LIMITS.showers.yellow) {
-            hints.push({ level: 'red', text: '⛈️ Schauer erwartet (' + showers.toFixed(1) + ' mm)', deviation: calcDeviation(showers, LIMITS.showers.green, LIMITS.showers.yellow) });
-        } else if (showers > LIMITS.showers.green) {
-            hints.push({ level: 'yellow', text: '🌦️ Lokale Schauer möglich', deviation: calcDeviation(showers, LIMITS.showers.green, LIMITS.showers.yellow) });
-        }
-
-        if (precipProb > LIMITS.precipProb.yellow) {
-            hints.push({ level: 'yellow', text: '🌧️ Regenwahrscheinlichkeit ' + Math.round(precipProb) + '%', deviation: precipProb - LIMITS.precipProb.yellow });
-        }
-    }
-
-    // Sortieren: erst rot (level), dann nach deviation absteigend
-    hints.sort((a, b) => {
-        if (a.level === 'red' && b.level !== 'red') return -1;
-        if (a.level !== 'red' && b.level === 'red') return 1;
-        return b.deviation - a.deviation;
-    });
-
-    // Status-Klasse setzen
     el.classList.add(score === 1 ? 'nogo' : 'caution');
+    const hints = assessment.reasons.length > 0
+        ? assessment.reasons
+        : [{ level: 'yellow', text: '⚠️ Bewertung aufgrund unvollständiger Daten eingeschränkt' }];
+    const filterHint = filterActive
+        ? '<div class="filter-hint" style="margin-top: 0.5rem; font-size: 0.8rem;">Komfortfilter aktiv; kritische Hard Blocker werden weiterhin berücksichtigt.</div>'
+        : '';
 
-    // HTML generieren
-    const filterHint = filterActive ? '<div class="filter-hint" style="margin-top: 0.5rem; font-size: 0.8rem;">(Filter aktiv)</div>' : '';
     textEl.innerHTML = '<div class="hints-list">' +
-        hints.map(h => '<div class="hint-item ' + h.level + '">' + h.text + '</div>').join('') +
+        hints.map(hint => '<div class="hint-item ' + hint.level + '">' + escapeHtml(hint.text) + '</div>').join('') +
         '</div>' + filterHint;
 }
-
-
 // Windrose aktualisieren (nutzt DOM-Cache für Performance)
 function updateWindrose(wdSurface, wd900, wd850, wd700, wsSurface, ws900, ws850, ws700) {
     const dom = getDomCache();
 
-    dom.windArrowSurface.style.transform = 'translate(-50%, -100%) rotate(' + wdSurface + 'deg)';
-    dom.windArrow900.style.transform = 'translate(-50%, -100%) rotate(' + wd900 + 'deg)';
-    dom.windArrow850.style.transform = 'translate(-50%, -100%) rotate(' + wd850 + 'deg)';
-    dom.windArrow700.style.transform = 'translate(-50%, -100%) rotate(' + wd700 + 'deg)';
-    dom.windroseSurface.textContent = Math.round(wsSurface) + ' km/h ' + getWindDir(wdSurface);
-    dom.windrose900.textContent = Math.round(ws900) + ' km/h ' + getWindDir(wd900);
-    dom.windrose850.textContent = Math.round(ws850) + ' km/h ' + getWindDir(wd850);
-    dom.windrose700.textContent = Math.round(ws700) + ' km/h ' + getWindDir(wd700);
+    const setLevel = (arrow, label, direction, speed) => {
+        arrow.style.transform = direction === null
+            ? 'translate(-50%, -100%)'
+            : 'translate(-50%, -100%) rotate(' + direction + 'deg)';
+        label.textContent = speed === null || direction === null
+            ? 'N/A'
+            : Math.round(speed) + ' km/h ' + getWindDir(direction);
+    };
+    setLevel(dom.windArrowSurface, dom.windroseSurface, wdSurface, wsSurface);
+    setLevel(dom.windArrow900, dom.windrose900, wd900, ws900);
+    setLevel(dom.windArrow850, dom.windrose850, wd850, ws850);
+    setLevel(dom.windArrow700, dom.windrose700, wd700, ws700);
 
     // Windscherung prüfen (inkl. 900hPa)
-    const diff900 = Math.abs(wdSurface - wd900), norm900 = diff900 > 180 ? 360 - diff900 : diff900;
-    const diff850 = Math.abs(wdSurface - wd850), norm850 = diff850 > 180 ? 360 - diff850 : diff850;
-    const diff700 = Math.abs(wdSurface - wd700), norm700 = diff700 > 180 ? 360 - diff700 : diff700;
-    if ((norm900 > 30 && ws900 > 12) || (norm850 > 45 && ws850 > 15) || (norm700 > 60 && ws700 > 20)) {
+    const normalizedDifference = (a, b) => {
+        if (a === null || b === null) return null;
+        const difference = Math.abs(a - b);
+        return difference > 180 ? 360 - difference : difference;
+    };
+    const norm900 = normalizedDifference(wdSurface, wd900);
+    const norm850 = normalizedDifference(wdSurface, wd850);
+    const norm700 = normalizedDifference(wdSurface, wd700);
+    if ((norm900 !== null && norm900 > 30 && ws900 > 12) ||
+        (norm850 !== null && norm850 > 45 && ws850 > 15) ||
+        (norm700 !== null && norm700 > 60 && ws700 > 20)) {
         dom.windroseShearWarning.classList.add('visible');
     } else {
         dom.windroseShearWarning.classList.remove('visible');
@@ -1061,7 +867,8 @@ export function handleFilterChange() {
     updateFilterOptionStyles();
 
     // Anzeige aktualisieren wenn Daten vorhanden
-    if (state.hourlyData && state.selectedHourIndex !== null && state.forecastDays?.length > 0) {
+    if (state.hourlyWeather.length > 0 && state.selectedHourIndex !== null && state.forecastDays?.length > 0) {
+        rebuildHourlyAssessments();
         updateDisplay(state.selectedHourIndex);
         if (state.forecastDays[state.selectedDay]) {
             buildTimeline(state.forecastDays[state.selectedDay].date);
@@ -1085,7 +892,8 @@ export function resetParamFilter() {
     updateFilterOptionStyles();
 
     // Anzeige aktualisieren wenn Daten vorhanden
-    if (state.hourlyData && state.selectedHourIndex !== null && state.forecastDays?.length > 0) {
+    if (state.hourlyWeather.length > 0 && state.selectedHourIndex !== null && state.forecastDays?.length > 0) {
+        rebuildHourlyAssessments();
         updateDisplay(state.selectedHourIndex);
         if (state.forecastDays[state.selectedDay]) {
             buildTimeline(state.forecastDays[state.selectedDay].date);
@@ -1151,7 +959,8 @@ export function toggleExpertMode() {
     updateExpertModeUI();
 
     // Anzeige aktualisieren wenn Daten vorhanden
-    if (state.hourlyData && state.selectedHourIndex !== null && state.forecastDays?.length > 0) {
+    if (state.hourlyWeather.length > 0 && state.selectedHourIndex !== null && state.forecastDays?.length > 0) {
+        rebuildHourlyAssessments();
         updateDisplay(state.selectedHourIndex);
         if (state.forecastDays[state.selectedDay]) {
             buildTimeline(state.forecastDays[state.selectedDay].date);
@@ -1279,15 +1088,6 @@ function setInputValue(id, value, fallback) {
 }
 
 /**
- * Berechnet Grün-Schwelle aus Gelb-Schwelle (ca. 66%)
- */
-function calcGreenThreshold(yellow, defaultGreen, defaultYellow) {
-    // Verhältnis aus Default beibehalten
-    const ratio = defaultGreen / defaultYellow;
-    return Math.round(yellow * ratio);
-}
-
-/**
  * Speichert die Expertenmodus-Einstellungen
  */
 export function saveExpertSettings() {
@@ -1305,60 +1105,20 @@ export function saveExpertSettings() {
     const precipYellow = getInputNumber('expertPrecip', LIMITS.precip.yellow);
     const precipProbYellow = getInputNumber('expertPrecipProb', LIMITS.precipProb.yellow);
 
-    // Custom Limits mit automatisch berechneten Grün-Schwellen
-    const customLimits = {
-        wind: {
-            surface: {
-                yellow: windSurfaceYellow,
-                green: calcGreenThreshold(windSurfaceYellow, LIMITS.wind.surface.green, LIMITS.wind.surface.yellow)
-            },
-            gusts: {
-                yellow: windGustsYellow,
-                green: calcGreenThreshold(windGustsYellow, LIMITS.wind.gusts.green, LIMITS.wind.gusts.yellow)
-            },
-            gustSpread: {
-                yellow: gustSpreadYellow,
-                green: calcGreenThreshold(gustSpreadYellow, LIMITS.wind.gustSpread.green, LIMITS.wind.gustSpread.yellow)
-            },
-            gradient: {
-                yellow: gradientYellow,
-                green: calcGreenThreshold(gradientYellow, LIMITS.wind.gradient.green, LIMITS.wind.gradient.yellow)
-            },
-            w900: {
-                yellow: w900Yellow,
-                green: calcGreenThreshold(w900Yellow, LIMITS.wind.w900.green, LIMITS.wind.w900.yellow)
-            },
-            w850: {
-                yellow: w850Yellow,
-                green: calcGreenThreshold(w850Yellow, LIMITS.wind.w850.green, LIMITS.wind.w850.yellow)
-            },
-            w700: {
-                yellow: w700Yellow,
-                green: calcGreenThreshold(w700Yellow, LIMITS.wind.w700.green, LIMITS.wind.w700.yellow)
-            }
-        },
-        cape: {
-            yellow: capeYellow,
-            green: calcGreenThreshold(capeYellow, LIMITS.cape.green, LIMITS.cape.yellow)
-        },
-        clouds: {
-            low: {
-                yellow: cloudLowYellow,
-                green: calcGreenThreshold(cloudLowYellow, LIMITS.clouds.low.green, LIMITS.clouds.low.yellow)
-            }
-        },
-        visibility: {
-            green: visibilityGreen,
-            yellow: Math.round(visibilityGreen * 0.5)  // Gelb = 50% von Grün
-        },
-        precip: {
-            yellow: precipYellow,
-            green: Math.round(precipYellow * 0.1 * 10) / 10  // Grün = 10% von Gelb
-        },
-        precipProb: {
-            yellow: precipProbYellow
-        }
-    };
+    const customLimits = buildCustomLimits({
+        windSurface: windSurfaceYellow,
+        windGusts: windGustsYellow,
+        gustSpread: gustSpreadYellow,
+        gradient: gradientYellow,
+        w900: w900Yellow,
+        w850: w850Yellow,
+        w700: w700Yellow,
+        cape: capeYellow,
+        cloudLow: cloudLowYellow,
+        visibility: visibilityGreen,
+        precip: precipYellow,
+        precipProb: precipProbYellow
+    });
 
     state.customLimits = customLimits;
     saveExpertMode();
@@ -1366,7 +1126,8 @@ export function saveExpertSettings() {
     closeExpertSettings();
 
     // Anzeige aktualisieren
-    if (state.hourlyData && state.selectedHourIndex !== null && state.forecastDays?.length > 0) {
+    if (state.hourlyWeather.length > 0 && state.selectedHourIndex !== null && state.forecastDays?.length > 0) {
+        rebuildHourlyAssessments();
         updateDisplay(state.selectedHourIndex);
         if (state.forecastDays[state.selectedDay]) {
             buildTimeline(state.forecastDays[state.selectedDay].date);
@@ -1392,67 +1153,6 @@ export function resetExpertSettings() {
     updateExpertModeUI();
     updatePresetButtons('standard');
 }
-
-/**
- * Preset-Profile für Expertenmodus
- */
-const EXPERT_PRESETS = {
-    beginner: {
-        label: 'Anfänger',
-        description: 'Konservative Limits für Flugschüler und Genussflieger',
-        values: {
-            windSurface: 12,
-            windGusts: 18,
-            gustSpread: 10,
-            gradient: 12,
-            w900: 18,
-            w850: 20,
-            w700: 22,
-            cape: 500,
-            cloudLow: 40,
-            visibility: 15000,
-            precip: 0.5,
-            precipProb: 20
-        }
-    },
-    standard: {
-        label: 'Standard',
-        description: 'Ausgewogene Limits für erfahrene Freizeitpiloten',
-        values: {
-            windSurface: LIMITS.wind.surface.yellow,
-            windGusts: LIMITS.wind.gusts.yellow,
-            gustSpread: LIMITS.wind.gustSpread.yellow,
-            gradient: LIMITS.wind.gradient.yellow,
-            w900: LIMITS.wind.w900.yellow,
-            w850: LIMITS.wind.w850.yellow,
-            w700: LIMITS.wind.w700.yellow,
-            cape: LIMITS.cape.yellow,
-            cloudLow: LIMITS.clouds.low.yellow,
-            visibility: LIMITS.visibility.green,
-            precip: LIMITS.precip.yellow,
-            precipProb: LIMITS.precipProb.yellow
-        }
-    },
-    pro: {
-        label: 'Profi',
-        description: 'Erweiterte Limits für erfahrene Piloten mit guter Ortskenntnis',
-        values: {
-            windSurface: 22,
-            windGusts: 32,
-            gustSpread: 18,
-            gradient: 22,
-            w900: 30,
-            w850: 35,
-            w700: 40,
-            cape: 1500,
-            cloudLow: 70,
-            visibility: 8000,
-            precip: 2,
-            precipProb: 40
-        }
-    }
-};
-
 /**
  * Wendet ein Preset an
  */
@@ -1734,7 +1434,7 @@ function getWindArrowColor(speed, level) {
 export function renderWindDiagram(dayStr) {
     const grid = document.getElementById('windProfileGrid');
     const xAxis = document.getElementById('windProfileXAxis');
-    if (!grid || !state.hourlyData) return;
+    if (!grid || state.hourlyWeather.length === 0) return;
 
     // Tag-Hinweis im Diagramm-Header
     const diagramDayHint = document.getElementById('windDiagramDayHint');
@@ -1754,16 +1454,15 @@ export function renderWindDiagram(dayStr) {
     grid.innerHTML = '';
     xAxis.innerHTML = '';
 
-    const h = state.hourlyData;
-    const times = h.time;
+    const times = state.hourlyWeather.map(hour => hour.time);
 
     // Höhenlevel von oben nach unten (700hPa = 3000m ist oben)
     const levels = [
-        { key: '700', speedKey: 'wind_speed_700hPa', dirKey: 'wind_direction_700hPa', label: '3000m' },
-        { key: '800', speedKey: 'wind_speed_800hPa', dirKey: 'wind_direction_800hPa', label: '2000m' },
-        { key: '850', speedKey: 'wind_speed_850hPa', dirKey: 'wind_direction_850hPa', label: '1500m' },
-        { key: '900', speedKey: 'wind_speed_900hPa', dirKey: 'wind_direction_900hPa', label: '1000m' },
-        { key: 'ground', speedKey: 'wind_speed_10m', dirKey: 'wind_direction_10m', label: 'Boden' }
+        { key: '700', pressureHpa: 700, label: '3000m' },
+        { key: '800', pressureHpa: 800, label: '2000m' },
+        { key: '850', pressureHpa: 850, label: '1500m' },
+        { key: '900', pressureHpa: 900, label: '1000m' },
+        { key: 'ground', pressureHpa: null, label: 'Boden' }
     ];
 
     // Stunden von 6-20 Uhr (15 Stunden)
@@ -1789,8 +1488,16 @@ export function renderWindDiagram(dayStr) {
             }
 
             // Prüfe ob Daten wirklich vorhanden sind
-            const speedData = h[level.speedKey]?.[idx];
-            const dirData = h[level.dirKey]?.[idx];
+            const hourData = state.hourlyWeather[idx];
+            const pressureData = level.pressureHpa === null
+                ? null
+                : hourData.wind.levels.find(item => item.pressureHpa === level.pressureHpa);
+            const speedData = level.pressureHpa === null
+                ? hourData.surface.windSpeedKmh
+                : pressureData?.speedKmh;
+            const dirData = level.pressureHpa === null
+                ? hourData.surface.windDirectionDeg
+                : pressureData?.directionDeg;
             const hasData = speedData !== null && speedData !== undefined && !isNaN(speedData);
 
             if (!hasData) {
@@ -1999,3 +1706,8 @@ export function hideLiveWindButton() {
 }
 
 
+
+
+/**
+ * Preset-Profile für Expertenmodus
+ */

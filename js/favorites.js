@@ -7,8 +7,11 @@ import { state } from './state.js';
 import { STORAGE_KEYS, UI_CONFIG, CACHE_CONFIG } from './config.js';
 import { isInIconEUCoverage, escapeHtml } from './utils.js';
 import { selectLocation } from './map.js';
-import { scoreHourFromData } from './weather.js';
+import { getEffectiveLimits } from './weather.js';
 import { showToast } from './ui.js';
+import { OPEN_METEO_FAVORITE_HOURLY_FIELDS, normalizeOpenMeteoHourly } from './open-meteo-adapter.js';
+import { ALL_COMFORT_FILTERS, assessNormalizedHour } from './assessment.js';
+import { summarizeFavoriteDay } from './aggregation.js';
 
 // Rate limiting: Verzögerung zwischen API-Calls (ms)
 const API_DELAY = 200;
@@ -365,54 +368,30 @@ async function fetchQuickWeather(lat, lon, cacheKey) {
     try {
         const inEU = isInIconEUCoverage(lat, lon);
         const model = inEU ? 'icon_seamless' : 'best_match';
-        const params = [
-            'wind_speed_10m', 'wind_gusts_10m',
-            'wind_speed_900hPa', 'wind_speed_850hPa', 'wind_speed_800hPa', 'wind_speed_700hPa',
-            'temperature_2m', 'dew_point_2m',
-            'cape', 'lifted_index',
-            'cloud_cover', 'cloud_cover_low', 'visibility',
-            'precipitation', 'precipitation_probability', 'showers'
-        ].join(',');
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=${params}&models=${model}&forecast_days=1&timezone=auto`;
+        const params = OPEN_METEO_FAVORITE_HOURLY_FIELDS.join(',');
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=${params}&models=${model}&forecast_days=1&wind_speed_unit=kmh&timezone=auto`;
 
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
         const data = await response.json();
-        const h = data.hourly;
-        if (!h || !Array.isArray(h.time)) throw new Error('Ungültige API-Antwort');
+        const hours = normalizeOpenMeteoHourly(data.hourly, null, {
+            location: { lat, lon },
+            stale: response.headers.get('sw-cache-stale') === 'true'
+        });
+        if (hours.length === 0) throw new Error('Ungültige API-Antwort');
 
         // Analysiere die nächsten Stunden (6-20 Uhr heute)
         // todayStr aus der API-Antwort ableiten (lokale Zeitzone des Orts via timezone=auto),
         // NICHT aus new Date().toISOString() (UTC) - sonst Mismatch nahe Mitternacht/Zeitzonen-Offset
-        const todayStr = h.time[0].split('T')[0];
-        let worstScore = 3, bestWindow = null, currentWindow = null;
-
-        for (let hour = 6; hour <= 20; hour++) {
-            const ts = todayStr + 'T' + hour.toString().padStart(2, '0') + ':00';
-            const idx = h.time.findIndex(t => t === ts);
-            if (idx === -1) continue;
-
-            // Zentrale Scoring-Funktion nutzen (konsistent mit Hauptampel)
-            const score = scoreHourFromData(h, idx);
-
-            if (score < worstScore) worstScore = score;
-
-            // Grüne Fenster tracken
-            if (score === 3) {
-                if (!currentWindow) currentWindow = { start: hour, end: hour };
-                else currentWindow.end = hour;
-            } else {
-                if (currentWindow && (!bestWindow || (currentWindow.end - currentWindow.start) > (bestWindow.end - bestWindow.start))) {
-                    bestWindow = currentWindow;
-                }
-                currentWindow = null;
-            }
-        }
-        if (currentWindow && (!bestWindow || (currentWindow.end - currentWindow.start) > (bestWindow.end - bestWindow.start))) {
-            bestWindow = currentWindow;
-        }
+        const todayStr = hours[0].time.split('T')[0];
+        const limits = getEffectiveLimits();
+        const assessments = hours.map(hour => assessNormalizedHour(hour, {
+            limits,
+            comfortFilters: ALL_COMFORT_FILTERS
+        }));
+        const { worstScore, bestWindow } = summarizeFavoriteDay(hours, assessments, todayStr);
 
         const statusMap = { 3: 'go', 2: 'caution', 1: 'nogo' };
         const labelMap = { 3: 'GO', 2: 'Vorsicht', 1: 'No-Go' };

@@ -5,37 +5,28 @@
  */
 
 import { state } from './state.js';
-import { LIMITS, BEGINNER_LIMITS, API_CONFIG, UI_CONFIG, METEO_CONSTANTS } from './config.js';
-import { isInIconD2Coverage, isInIconEUCoverage, getGustFactor, isInAlpineRegion, escapeHtml, haversineDistance, getWindDir, formatAge } from './utils.js';
+import { BEGINNER_LIMITS, API_CONFIG, UI_CONFIG, METEO_CONSTANTS } from './config.js';
+import { isInIconD2Coverage, isInIconEUCoverage, getGustFactor, escapeHtml, haversineDistance, getWindDir } from './utils.js';
+import {
+    OPEN_METEO_DAILY_FIELDS,
+    OPEN_METEO_MAIN_HOURLY_FIELDS,
+    OPEN_METEO_PRESSURE_HOURLY_FIELDS,
+    normalizeOpenMeteoHourly
+} from './open-meteo-adapter.js';
+import {
+    assessNormalizedHour,
+    deriveHourMetrics,
+    getFogRiskFromValues,
+    resolveEffectiveLimits
+} from './assessment.js';
+import { findBestWindowForHours } from './aggregation.js';
 
 /**
  * Gibt die effektiven Limits zurück (Custom wenn gesetzt, sonst Default)
  * @returns {Object} Limits-Objekt
  */
 export function getEffectiveLimits() {
-    if (!state.expertMode || !state.customLimits) {
-        return LIMITS;
-    }
-    // Deep-Merge: Custom überschreibt Default
-    return deepMerge(LIMITS, state.customLimits);
-}
-
-/**
- * Deep-Merge für verschachtelte Objekte
- */
-function deepMerge(target, source) {
-    const result = { ...target };
-    const BLOCKED_KEYS = ['__proto__', 'constructor', 'prototype'];
-    for (const key in source) {
-        if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
-        if (BLOCKED_KEYS.includes(key)) continue;
-        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-            result[key] = deepMerge(target[key] || {}, source[key]);
-        } else if (source[key] !== undefined && source[key] !== null) {
-            result[key] = source[key];
-        }
-    }
-    return result;
+    return resolveEffectiveLimits(state.customLimits, state.expertMode);
 }
 
 /**
@@ -53,31 +44,43 @@ export function validateValue(value, fallback = null) {
 }
 
 /**
- * Extrahiert Wind-Daten aus hourlyData für einen bestimmten Index
+ * Extrahiert Wind-Daten aus einem normalisierten Stundenwert.
  * Zentrale Funktion um Code-Duplikation zu vermeiden
- * @param {Object} h - hourlyData Objekt
- * @param {number} i - Stunden-Index
+ * @param {Object} hour - Normalisierter Stundenwert
  * @returns {Object} Wind-Daten mit allen relevanten Werten
  */
-export function extractWindData(h, i) {
-    const ws = h.wind_speed_10m?.[i] || 0;
-    const wg = h.wind_gusts_10m?.[i] || 0;
-    const w900 = h.wind_speed_900hPa?.[i] || 0;
-    const w850 = h.wind_speed_850hPa?.[i] || 0;
-    const w800 = h.wind_speed_800hPa?.[i] || 0;
-    const w700 = h.wind_speed_700hPa?.[i] || 0;
-    const wd10m = h.wind_direction_10m?.[i] || 0;
-    const wd900 = h.wind_direction_900hPa?.[i] || 0;
-    const wd850 = h.wind_direction_850hPa?.[i] || 0;
-    const wd700 = h.wind_direction_700hPa?.[i] || 0;
-
+export function extractWindData(hour) {
+    const metrics = deriveHourMetrics(hour);
+    const directionFor = pressureHpa => hour?.wind?.levels?.find(level => level.pressureHpa === pressureHpa)?.directionDeg ?? null;
     return {
-        ws, wg, w900, w850, w800, w700,
-        wd10m, wd900, wd850, wd700,
-        grad: Math.abs(w850 - ws),
-        grad3000: Math.abs(w700 - ws),
-        gustSpread: wg - ws
+        ws: metrics.ws,
+        wg: metrics.wg,
+        w900: metrics.w900,
+        w850: metrics.w850,
+        w800: metrics.w800,
+        w700: metrics.w700,
+        wd10m: hour?.surface?.windDirectionDeg ?? null,
+        wd900: directionFor(900),
+        wd850: directionFor(850),
+        wd800: directionFor(800),
+        wd700: directionFor(700),
+        grad: metrics.gradient1500,
+        grad3000: metrics.gradient3000,
+        gustSpread: metrics.gustSpread
     };
+}
+
+export function rebuildHourlyAssessments() {
+    const limits = getEffectiveLimits();
+    state.hourlyAssessments = state.hourlyWeather.map(hour => assessNormalizedHour(hour, {
+        limits,
+        comfortFilters: state.paramFilter
+    }));
+    return state.hourlyAssessments;
+}
+
+export function getHourAssessment(index) {
+    return state.hourlyAssessments[index] || null;
 }
 
 // Callback für UI-Updates (wird von main.js gesetzt)
@@ -118,8 +121,8 @@ export async function fetchWeatherData() {
         const params = new URLSearchParams({
             latitude: lat,
             longitude: lon,
-            hourly: 'temperature_2m,dew_point_2m,precipitation,precipitation_probability,showers,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cape,lifted_index,freezing_level_height,weather_code',
-            daily: 'sunrise,sunset',
+            hourly: OPEN_METEO_MAIN_HOURLY_FIELDS.join(','),
+            daily: OPEN_METEO_DAILY_FIELDS.join(','),
             wind_speed_unit: 'kmh',
             timezone: timezone,
             forecast_days: 3,
@@ -130,7 +133,7 @@ export async function fetchWeatherData() {
         const pressureParams = new URLSearchParams({
             latitude: lat,
             longitude: lon,
-            hourly: 'wind_speed_900hPa,wind_speed_850hPa,wind_speed_800hPa,wind_speed_700hPa,wind_direction_900hPa,wind_direction_850hPa,wind_direction_800hPa,wind_direction_700hPa,boundary_layer_height',
+            hourly: OPEN_METEO_PRESSURE_HOURLY_FIELDS.join(','),
             wind_speed_unit: 'kmh',
             timezone: timezone,
             forecast_days: 3,
@@ -142,6 +145,7 @@ export async function fetchWeatherData() {
         const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
 
         let d1, d2 = null;
+        let mainResponse = null, pressureResponse = null;
         try {
             // Promise.allSettled für graceful degradation:
             // Hauptdaten sind kritisch, Höhenwinde sind optional
@@ -155,12 +159,20 @@ export async function fetchWeatherData() {
             if (mainResult.status === 'rejected') {
                 throw mainResult.reason;
             }
-            d1 = await mainResult.value.json();
+            mainResponse = mainResult.value;
+            if (!mainResponse.ok) {
+                throw new Error(`Wetter-API HTTP ${mainResponse.status}`);
+            }
+            d1 = await mainResponse.json();
 
             // Höhenwinde sind optional - App funktioniert auch ohne
             if (pressureResult.status === 'fulfilled') {
                 try {
-                    d2 = await pressureResult.value.json();
+                    pressureResponse = pressureResult.value;
+                    if (!pressureResponse.ok) {
+                        throw new Error(`Höhenwind-API HTTP ${pressureResponse.status}`);
+                    }
+                    d2 = await pressureResponse.json();
                 } catch (e) {
                     console.warn('Höhenwinde-Daten konnten nicht geparst werden:', e);
                 }
@@ -185,23 +197,18 @@ export async function fetchWeatherData() {
             throw new Error('Ungültige API-Antwort: Stündliche Daten fehlen');
         }
 
-        // Daten zusammenführen (nur wenn Höhenwinde verfügbar)
-        if (d2?.hourly && !d2.error) {
-            d1.hourly.wind_speed_900hPa = d2.hourly.wind_speed_900hPa;
-            d1.hourly.wind_speed_850hPa = d2.hourly.wind_speed_850hPa;
-            d1.hourly.wind_speed_800hPa = d2.hourly.wind_speed_800hPa;
-            d1.hourly.wind_speed_700hPa = d2.hourly.wind_speed_700hPa;
-            d1.hourly.wind_direction_900hPa = d2.hourly.wind_direction_900hPa;
-            d1.hourly.wind_direction_850hPa = d2.hourly.wind_direction_850hPa;
-            d1.hourly.wind_direction_800hPa = d2.hourly.wind_direction_800hPa;
-            d1.hourly.wind_direction_700hPa = d2.hourly.wind_direction_700hPa;
-            d1.hourly.boundary_layer_height = d2.hourly.boundary_layer_height;
-        } else if (!d2?.hourly) {
+        if (!d2?.hourly) {
             // Höhenwinde nicht verfügbar - Warnung in Konsole
             console.warn('⚠️ Höhenwinde nicht verfügbar - Gradient-Bewertung eingeschränkt');
         }
 
-        state.hourlyData = d1.hourly;
+        const stale = mainResponse?.headers?.get('sw-cache-stale') === 'true' ||
+            pressureResponse?.headers?.get('sw-cache-stale') === 'true';
+        state.hourlyWeather = normalizeOpenMeteoHourly(d1.hourly, d2?.hourly, {
+            location: state.currentLocation,
+            stale
+        });
+        rebuildHourlyAssessments();
         state.dailyData = d1.daily;
         state.lastUpdate = new Date();
 
@@ -325,34 +332,17 @@ export async function refreshData() {
  * @returns {'severe'|'likely'|'possible'|'unlikely'} Nebel-Risiko-Level
  */
 export function getFogRisk(spread, windSpeed, visibility) {
-    const L = getEffectiveLimits();
-    // SEVERE: Echte "Waschküche" - fast gesättigt + windstill + schlechte Sicht
-    // Oder: Sichtweite unter VFR-Minimum
-    if (visibility < L.fog.visibilitySevere) return 'severe';
-    if (spread <= L.fog.spreadSevere && windSpeed < L.fog.windThreshold) return 'severe';
-
-    // LIKELY: Hohe Nebelwahrscheinlichkeit - feucht + wenig Wind + mäßige Sicht
-    if (spread <= 2.0 && windSpeed < L.fog.windDisperse && visibility < L.fog.visibilityWarning) return 'likely';
-
-    // POSSIBLE: Nebelrisiko besteht - hohe Feuchtigkeit ODER eingeschränkte Sicht
-    // Aber: Bei Wind > 12 km/h bildet sich selten Bodennebel
-    if (visibility < L.fog.visibilityWarning) return 'possible';
-    if (spread < L.fog.spreadWarning && windSpeed < L.fog.windDisperse) return 'possible';
-
-    // UNLIKELY: Gute Sicht und/oder ausreichend trocken
-    return 'unlikely';
+    return getFogRiskFromValues(spread, windSpeed, visibility, getEffectiveLimits());
 }
 
 /**
  * Gesamt-Score für eine Stunde berechnen
  * Kombiniert Wind, Thermik, Wolken und Niederschlag
- * @param {number} i - Index in state.hourlyData
+ * @param {number} i - Index in state.hourlyWeather
  * @returns {1|2|3} Score: 1=nogo (rot), 2=caution (gelb), 3=go (grün)
  */
 export function getHourScore(i) {
-    if (!state.hourlyData) return 1;
-    const filter = state.paramFilter || { wind: true, thermik: true, clouds: true, precip: true };
-    return scoreHourFromData(state.hourlyData, i, filter);
+    return getHourAssessment(i)?.score ?? 2;
 }
 
 /**
@@ -363,86 +353,13 @@ export function getHourScore(i) {
  * @param {Object} [filter] - Parameter-Filter (default: alle aktiv)
  * @returns {number} Score: 3=GO, 2=VORSICHT, 1=NO-GO
  */
-export function scoreHourFromData(h, i, filter) {
-    if (!h) return 1;
-    if (!filter) filter = { wind: true, thermik: true, clouds: true, precip: true };
-
-    const L = getEffectiveLimits();
-
-    // Wind-Parameter (zentrale Extraktion)
-    const wind = extractWindData(h, i);
-    const { ws, wg, w900, w850, w800, w700, grad, grad3000, gustSpread } = wind;
-
-    // Thermik-Parameter
-    const temp = h.temperature_2m?.[i];
-    const dew = h.dew_point_2m?.[i];
-    const spread = (temp != null && dew != null) ? temp - dew : 10;
-    const cape = h.cape?.[i] || 0;
-    const li = h.lifted_index?.[i] || 0;
-
-    // Wolken/Sicht-Parameter
-    const vis = h.visibility?.[i] || 50000;
-    const cloudLow = h.cloud_cover_low?.[i] || 0;
-    const cloudTotal = h.cloud_cover?.[i] || 0;
-
-    // Niederschlags-Parameter
-    const precip = h.precipitation?.[i] || 0;
-    const precipProb = h.precipitation_probability?.[i] || 0;
-    const showers = h.showers?.[i] || 0;
-
-    // Nebel-Risiko (intelligente Kombination statt nur Spread)
-    const fogRisk = getFogRisk(spread, ws, vis);
-    const gustFactor = getGustFactor(ws, wg);
-
-    // === NO-GO Kriterien (Score 1) ===
-    // Wind (nur wenn Filter aktiv)
-    if (filter.wind) {
-        if (ws > L.wind.surface.yellow || wg > L.wind.gusts.yellow ||
-            gustSpread > L.wind.gustSpread.yellow ||
-            w900 > L.wind.w900.yellow || w850 > L.wind.w850.yellow ||
-            w800 > L.wind.w800.yellow || w700 > L.wind.w700.yellow ||
-            grad > L.wind.gradient.yellow || grad3000 > L.wind.gradient3000.yellow ||
-            (gustFactor > L.wind.gustFactor.yellow && wg > L.wind.gustFactorMinWind.yellow)) return 1;
-    }
-    // Thermik (nur wenn Filter aktiv) - CAPE und Lifted Index, NICHT Nebel
-    if (filter.thermik) {
-        if (cape > L.cape.yellow || li < L.liftedIndex.yellow) return 1;
-    }
-    // Wolken/Sicht (nur wenn Filter aktiv) - inkl. Nebelrisiko
-    if (filter.clouds) {
-        if (cloudLow > L.clouds.low.yellow || fogRisk === 'severe') return 1;
-    }
-    // Niederschlag (nur wenn Filter aktiv)
-    if (filter.precip) {
-        if (precip > L.precip.yellow || showers > L.showers.yellow) return 1;
-    }
-
-    // === VORSICHT Kriterien (Score 2) ===
-    // Wind (nur wenn Filter aktiv)
-    if (filter.wind) {
-        if (ws > L.wind.surface.green || wg > L.wind.gusts.green ||
-            gustSpread > L.wind.gustSpread.green ||
-            w900 > L.wind.w900.green || w850 > L.wind.w850.green ||
-            w800 > L.wind.w800.green || w700 > L.wind.w700.green ||
-            grad > L.wind.gradient.green || grad3000 > L.wind.gradient3000.green ||
-            (gustFactor > L.wind.gustFactor.green && wg > L.wind.gustFactorMinWind.green)) return 2;
-    }
-    // Thermik (nur wenn Filter aktiv) - CAPE, Lifted Index, sehr trockene Luft
-    if (filter.thermik) {
-        if (spread > L.spread.max || cape > L.cape.green || li < L.liftedIndex.green) return 2;
-    }
-    // Wolken/Sicht (nur wenn Filter aktiv) - inkl. Nebelrisiko
-    if (filter.clouds) {
-        if (cloudTotal > L.clouds.total.yellow || cloudLow > L.clouds.low.green ||
-            vis < L.visibility.green || fogRisk === 'likely' || fogRisk === 'possible') return 2;
-    }
-    // Niederschlag (nur wenn Filter aktiv)
-    if (filter.precip) {
-        if (precip > L.precip.green || precipProb > L.precipProb.yellow || showers > L.showers.green) return 2;
-    }
-
-    // === Alles OK (Score 3) ===
-    return 3;
+export function scoreHourFromData(hours, i = 0, filter = null) {
+    const hour = Array.isArray(hours) ? hours[i] : hours;
+    if (!hour) return 2;
+    return assessNormalizedHour(hour, {
+        limits: getEffectiveLimits(),
+        comfortFilters: filter || state.paramFilter
+    }).score;
 }
 
 /**
@@ -462,33 +379,7 @@ export function calculateCloudBase(temp, dewpoint, elevation) {
  * Bestes Zeitfenster finden
  */
 export function findBestWindow(dayStr) {
-    const windows = [];
-    let currentWindow = null;
-
-    for (let h = 6; h <= 20; h++) {
-        const ts = dayStr + 'T' + h.toString().padStart(2, '0') + ':00';
-        const idx = state.hourlyData.time.findIndex(t => t === ts);
-        if (idx === -1) continue;
-
-        const sc = getHourScore(idx);
-        if (sc === 3) {
-            if (!currentWindow) currentWindow = { start: h, end: h, indices: [idx] };
-            else {
-                currentWindow.end = h;
-                currentWindow.indices.push(idx);
-            }
-        } else {
-            if (currentWindow) {
-                windows.push(currentWindow);
-                currentWindow = null;
-            }
-        }
-    }
-
-    if (currentWindow) windows.push(currentWindow);
-    if (windows.length === 0) return null;
-
-    return windows.reduce((a, b) => (b.end - b.start) > (a.end - a.start) ? b : a);
+    return findBestWindowForHours(state.hourlyWeather, state.hourlyAssessments, dayStr);
 }
 
 /**
@@ -497,20 +388,9 @@ export function findBestWindow(dayStr) {
 export function dayHasKillers(dayStr) {
     for (let h = 6; h <= 20; h++) {
         const ts = dayStr + 'T' + h.toString().padStart(2, '0') + ':00';
-        const idx = state.hourlyData.time.findIndex(t => t === ts);
+        const idx = state.hourlyWeather.findIndex(hour => hour.time === ts);
         if (idx === -1) continue;
-
-        const wind = extractWindData(state.hourlyData, idx);
-        const { ws, wg, w700, grad } = wind;
-        const cape = state.hourlyData.cape?.[idx] || 0;
-        const vis = state.hourlyData.visibility?.[idx] || 10000;
-        const gustFactor = getGustFactor(ws, wg);
-
-        // Killer-Kriterien (aus LIMITS für Single Source of Truth)
-        if (cape > LIMITS.cape.yellow || w700 > LIMITS.wind.w700.yellow || grad > LIMITS.wind.gradient.yellow ||
-            vis < LIMITS.visibility.yellow || wg > LIMITS.wind.gusts.yellow || (gustFactor > 1.0 && wg > LIMITS.wind.gusts.green)) {
-            return true;
-        }
+        if ((getHourAssessment(idx)?.hardBlockers?.length || 0) > 0) return true;
     }
     return false;
 }
@@ -534,24 +414,15 @@ export function updateSunTimes(di) {
 
 /**
  * PHASE 2: Berechnet ob Bedingungen anfängerfreundlich sind
- * @param {number} i - Index in hourlyData
+ * @param {number} i - Index in state.hourlyWeather
  * @returns {Object} Beginner assessment
  */
 export function calculateBeginnerSafety(i) {
-    const h = state.hourlyData;
-    if (!h) return { isBeginner: false, missingData: true };
+    const hour = state.hourlyWeather[i];
+    if (!hour) return { isBeginner: false, missingData: true };
 
-    const ws = validateValue(h.wind_speed_10m[i], null);
-    const wg = validateValue(h.wind_gusts_10m[i], null);
-    const w900 = validateValue(h.wind_speed_900hPa?.[i], null);
-    const w850 = validateValue(h.wind_speed_850hPa?.[i], null);
-    const w800 = validateValue(h.wind_speed_800hPa?.[i], null);
-    const w700 = validateValue(h.wind_speed_700hPa?.[i], null);
-    const cape = validateValue(h.cape?.[i], null);
-    const vis = validateValue(h.visibility[i], null);
-    const temp = validateValue(h.temperature_2m[i], null);
-    const dew = validateValue(h.dew_point_2m[i], null);
-    const spread = (temp !== null && dew !== null) ? temp - dew : null;
+    const metrics = deriveHourMetrics(hour);
+    const { ws, wg, w900, w850, w800, w700, cape, visibility: vis, spread } = metrics;
 
     // Validierung: Nur wenn alle kritischen Daten vorhanden sind
     if (ws === null || w850 === null) {
@@ -658,7 +529,7 @@ export function calculateBeginnerSafety(i) {
 
 /**
  * PHASE 2: Generiert verständliche Risiko-Erklärungen
- * @param {number} i - Index in hourlyData
+ * @param {number} i - Index in state.hourlyWeather
  * @param {number} score - Aktueller Score (1-3)
  * @returns {Array} Array von Risiko-Objekten
  */
@@ -760,176 +631,20 @@ export function evaluatePrecip(precip, precipProb, cape, showers = 0) {
 }
 
 export function getRiskExplanation(i, score) {
-    const risks = [];
-    const h = state.hourlyData;
-    if (!h || score === 3) return risks; // Keine Erklärung bei Grün
+    const assessment = getHourAssessment(i);
+    if (!assessment || score === 3) return [];
 
-    const ws = validateValue(h.wind_speed_10m[i], 0);
-    const wg = validateValue(h.wind_gusts_10m[i], 0);
-    const w850 = validateValue(h.wind_speed_850hPa?.[i], 0);
-    const w700 = validateValue(h.wind_speed_700hPa?.[i], 0);
-    const cape = validateValue(h.cape?.[i], 0);
-    const vis = validateValue(h.visibility?.[i], 10000);
-    const temp = validateValue(h.temperature_2m?.[i], null);
-    const dew = validateValue(h.dew_point_2m?.[i], null);
-    const spread = (temp !== null && dew !== null) ? temp - dew : 10;
-    const grad = Math.abs(w850 - ws);
-    const gustDiff = wg - ws;
-    const fogRisk = getFogRisk(spread, ws, vis);
-
-    // Wind-Risiken (Schwellenwerte aus LIMITS)
-    if (ws > LIMITS.wind.surface.yellow) {
-        risks.push({
-            severity: 'high',
-            category: 'wind',
-            icon: '💨',
-            title: 'Starker Bodenwind',
-            description: `${Math.round(ws)} km/h am Boden – Schwieriger Start, Sturzgefahr`,
-            advice: 'Nur für erfahrene Piloten mit guter Schirmkontrolle'
-        });
-    } else if (ws > LIMITS.wind.surface.green) {
-        risks.push({
-            severity: 'medium',
-            category: 'wind',
-            icon: '🌬️',
-            title: 'Erhöhter Bodenwind',
-            description: `${Math.round(ws)} km/h – Aktiver Startaufbau erforderlich`,
-            advice: 'Rückwärtsstart empfohlen, auf Böen achten'
-        });
-    }
-
-    // Böen-Risiken
-    if (gustDiff > 15) {
-        risks.push({
-            severity: 'high',
-            category: 'gusts',
-            icon: '⚡',
-            title: 'Starke Böen',
-            description: `Böen ${Math.round(wg)} km/h (${Math.round(gustDiff)} über Grundwind) – Sehr turbulent`,
-            advice: 'Erhöhte Einklappergefahr, hohe Pilotenbelastung'
-        });
-    } else if (gustDiff > 10) {
-        risks.push({
-            severity: 'medium',
-            category: 'gusts',
-            icon: '💨',
-            title: 'Erhöhte Böigkeit',
-            description: `Böen ${Math.round(wg)} km/h (${Math.round(gustDiff)} über Grundwind) – Unruhige Luft`,
-            advice: 'Aktives Fliegen nötig, Schirm im Blick behalten'
-        });
-    }
-
-    // Höhenwind-Risiken (Schwellenwerte aus LIMITS)
-    if (w700 > LIMITS.wind.w700.yellow) {
-        risks.push({
-            severity: 'high',
-            category: 'upperwind',
-            icon: '🏔️',
-            title: 'Gefährlicher Höhenwind',
-            description: `${Math.round(w700)} km/h in 3000m – Extreme Lee-Turbulenzen möglich`,
-            advice: 'Lee-Seiten absolut meiden! Föhngefahr in den Alpen'
-        });
-    } else if (w700 > LIMITS.wind.w700.green) {
-        risks.push({
-            severity: 'medium',
-            category: 'upperwind',
-            icon: '⛰️',
-            title: 'Starker Höhenwind',
-            description: `${Math.round(w700)} km/h in 3000m – Lee-Turbulenzen möglich`,
-            advice: 'Lee-Bereiche meiden, Beschleuniger bereithalten'
-        });
-    }
-
-    // Gradient-Risiken (Schwellenwerte aus LIMITS)
-    if (grad > LIMITS.wind.gradient.yellow) {
-        risks.push({
-            severity: 'high',
-            category: 'gradient',
-            icon: '📊',
-            title: 'Gefährliche Windscherung',
-            description: `${Math.round(grad)} km/h Unterschied Boden/1500m – Starke Turbulenz`,
-            advice: 'Beim Aufsteigen auf Schirm achten, abrupte Schirmreaktionen möglich'
-        });
-    } else if (grad > LIMITS.wind.gradient.green) {
-        risks.push({
-            severity: 'medium',
-            category: 'gradient',
-            icon: '📈',
-            title: 'Erhöhter Windgradient',
-            description: `${Math.round(grad)} km/h Unterschied Boden/1500m`,
-            advice: 'Beim Thermikflug auf Windwechsel vorbereitet sein'
-        });
-    }
-
-    // CAPE/Thermik-Risiken (Schwellenwerte aus LIMITS)
-    if (cape > LIMITS.cape.yellow) {
-        risks.push({
-            severity: 'high',
-            category: 'thermal',
-            icon: '⛈️',
-            title: 'Gewittergefahr',
-            description: `CAPE ${Math.round(cape)} J/kg – Gewitterwolken (Cb) können entstehen`,
-            advice: 'Früh landen! Wetterentwicklung ständig beobachten'
-        });
-    } else if (cape > LIMITS.cape.green) {
-        risks.push({
-            severity: 'medium',
-            category: 'thermal',
-            icon: '🔥',
-            title: 'Kräftige Thermik',
-            description: `CAPE ${Math.round(cape)} J/kg – Unruhige, starke Aufwinde möglich`,
-            advice: 'Nur für erfahrene Thermikflieger, Wolkenentwicklung beobachten'
-        });
-    }
-
-    // Nebel/Sicht-Risiken (intelligente Kombination aus Spread, Wind, Sichtweite)
-    if (fogRisk === 'severe') {
-        // Echte Nebelgefahr oder sehr schlechte Sicht
-        if (vis < LIMITS.fog.visibilitySevere) {
-            risks.push({
-                severity: 'high',
-                category: 'visibility',
-                icon: '🌫️',
-                title: 'Kritisch schlechte Sicht',
-                description: `Nur ${(vis/1000).toFixed(1)} km Sicht – VFR-Minimum unterschritten`,
-                advice: 'Nicht starten! Orientierung und Landeplatzerkennung unmöglich'
-            });
-        } else {
-            risks.push({
-                severity: 'high',
-                category: 'fog',
-                icon: '🌫️',
-                title: 'Hohe Nebelgefahr',
-                description: `Spread nur ${spread.toFixed(1)}°C bei ${Math.round(ws)} km/h Wind – Klassische Nebelbedingungen`,
-                advice: 'Luft nahezu gesättigt, Bodennebel sehr wahrscheinlich'
-            });
-        }
-    } else if (fogRisk === 'likely') {
-        risks.push({
-            severity: 'medium',
-            category: 'fog',
-            icon: '🌁',
-            title: 'Nebel wahrscheinlich',
-            description: `Spread ${spread.toFixed(1)}°C, Sicht ${(vis/1000).toFixed(1)} km – Feucht und dunstig`,
-            advice: 'Webcams prüfen! Lokale Verhältnisse können besser sein (Inversion)'
-        });
-    } else if (fogRisk === 'possible') {
-        risks.push({
-            severity: 'medium',
-            category: 'visibility',
-            icon: '🌥️',
-            title: 'Sichteinschränkung möglich',
-            description: spread < LIMITS.fog.spreadWarning
-                ? `Hohe Luftfeuchtigkeit (Spread ${spread.toFixed(1)}°C) – Dunst oder tiefe Basis möglich`
-                : `Sicht ${(vis/1000).toFixed(1)} km – Reduzierte Fernsicht`,
-            advice: 'Wetter vor Ort checken, früh orientieren'
-        });
-    }
-
-    return risks;
+    return assessment.reasons.map(reason => ({
+        severity: reason.level === 'red' ? 'high' : 'medium',
+        category: reason.category,
+        icon: reason.level === 'red' ? '⚠️' : 'ℹ️',
+        title: reason.hardBlocker ? 'Kritischer Parameter' : 'Erhöhter Parameter',
+        description: reason.text,
+        advice: reason.hardBlocker
+            ? 'Bedingungen kritisch prüfen und im Zweifel nicht starten'
+            : 'Bedingungen und persönliche Reserven vor Ort prüfen'
+    }));
 }
-
-// === Live-Wind Integration ===
 // Quellen: OpenWindMap/Pioupiou + Lawinenwarndienste (avalanche.report)
 
 // Cache für Live-Wind-Daten

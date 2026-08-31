@@ -59,9 +59,9 @@ export function getColorClassRev(v, l) {
 /**
  * Spread-Farbklasse (spezielle Logik)
  */
-export function getSpreadColor(s) {
+export function getSpreadColor(s, limits = LIMITS) {
     if (s === null || s === undefined) return 'green'; // Bei fehlenden Daten neutral
-    return s < LIMITS.spread.min ? 'red' : (s < LIMITS.spread.optimalMin || s > LIMITS.spread.max) ? 'yellow' : 'green';
+    return s < limits.spread.min ? 'red' : (s < limits.spread.optimalMin || s > limits.spread.max) ? 'yellow' : 'green';
 }
 
 /**
