@@ -292,6 +292,67 @@ export function selectHour(idx) {
     renderWindDiagram(state.forecastDays[state.selectedDay].date);
 }
 
+function updateFoehnDiagnostic(foehn) {
+    const riskEl = document.getElementById('foehnRisk');
+    const statusEl = document.getElementById('foehnStatus');
+    if (!riskEl || !statusEl || !foehn) return;
+
+    const levelLabels = {
+        low: 'Niedrig',
+        elevated: 'Föhnige Tendenz',
+        high: 'Hoch',
+        critical: 'Kritisch',
+        unknown: 'Unbekannt'
+    };
+    const levelClasses = {
+        low: 'green',
+        elevated: 'yellow',
+        high: 'red',
+        critical: 'red',
+        unknown: 'no-data'
+    };
+    const typeLabels = {
+        south: 'Südföhn-Signal',
+        north: 'Nordföhn-Signal',
+        none: 'Kein eindeutiger Typ',
+        uncertain: 'Widersprüchlich/unsicher'
+    };
+    const trendLabels = {
+        increasing: 'Zunehmend',
+        steady: 'Gleichbleibend',
+        decreasing: 'Abnehmend',
+        unknown: 'Unbekannt'
+    };
+    const confidenceLabels = { high: 'Hoch', medium: 'Mittel', low: 'Gering' };
+
+    if (foehn.applicability === 'notApplicable') {
+        riskEl.textContent = 'Nicht anwendbar';
+        riskEl.className = 'param-value no-data';
+        statusEl.className = 'param-status no-data';
+        document.getElementById('foehnType').textContent = 'Außerhalb Alpenraum';
+        document.getElementById('foehnPressure').textContent = '—';
+        document.getElementById('foehnFlow').textContent = '—';
+        document.getElementById('foehnTrend').textContent = '—';
+        document.getElementById('foehnConfidence').textContent = '—';
+        return;
+    }
+
+    riskEl.textContent = levelLabels[foehn.level] || levelLabels.unknown;
+    riskEl.className = `param-value ${levelClasses[foehn.level] || 'no-data'}`;
+    statusEl.className = `param-status ${levelClasses[foehn.level] || 'no-data'}`;
+    document.getElementById('foehnType').textContent = typeLabels[foehn.type] || typeLabels.uncertain;
+    const delta = foehn.metrics?.pressure?.deltaHpa;
+    document.getElementById('foehnPressure').textContent = Number.isFinite(delta)
+        ? `${delta >= 0 ? '+' : ''}${delta.toFixed(1)} hPa`
+        : 'Nicht verfügbar';
+    const flow = foehn.metrics?.flow?.selected;
+    document.getElementById('foehnFlow').textContent = flow?.matchingLevelCount > 0
+        ? `${getWindDir(flow.dominantDirectionDeg)}, ${Math.round(flow.averageSpeedKmh)} km/h (${flow.matchingLevelCount}/3 Level)`
+        : 'Kein konsistentes Signal';
+    document.getElementById('foehnTrend').textContent = trendLabels[foehn.trend] || trendLabels.unknown;
+    document.getElementById('foehnConfidence').textContent = confidenceLabels[foehn.confidence] || 'Gering';
+}
+
 /**
  * v9: updateDisplay (750hPa entfernt)
  */
@@ -338,6 +399,7 @@ export function updateDisplay(i) {
     renderRiskExplanation(null);
     document.getElementById('killerWarnings')?.classList.remove('visible');
     updateReasonSummary(assessment);
+    updateFoehnDiagnostic(assessment.foehn);
     updateWindrose(
         wind.wd10m, wind.wd900, wind.wd850, wind.wd700,
         ws, w900, w850, w700
@@ -450,7 +512,7 @@ export function updateDisplay(i) {
         const dateObj = new Date(hour.time);
         const dayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
         const timeLabel = `${dayNames[dateObj.getDay()]} ${dateObj.getDate()}.${dateObj.getMonth() + 1}. · ${dateObj.getHours().toString().padStart(2, '0')}:00`;
-        ['windTimeHint', 'thermikTimeHint', 'cloudTimeHint', 'precipTimeHint'].forEach(id => {
+        ['windTimeHint', 'foehnTimeHint', 'thermikTimeHint', 'cloudTimeHint', 'precipTimeHint'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.textContent = timeLabel;
         });

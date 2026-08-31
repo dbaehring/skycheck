@@ -22,6 +22,8 @@ import {
 } from './assessment.js';
 import { findBestWindowForHours } from './aggregation.js';
 import { assessThermalDay } from './thermal-aggregation.js';
+import { isFoehnRegionApplicable } from './foehn-engine.js';
+import { fetchFoehnPressureSeries } from './foehn-pressure-provider.js';
 
 /**
  * Gibt die effektiven Limits zurück (Custom wenn gesetzt, sonst Default)
@@ -76,7 +78,8 @@ export function rebuildHourlyAssessments() {
     const limits = getEffectiveLimits();
     state.hourlyAssessments = assessNormalizedHours(state.hourlyWeather, {
         limits,
-        comfortFilters: state.paramFilter
+        comfortFilters: state.paramFilter,
+        foehnPressureSeries: state.foehnPressure?.series || []
     });
     return state.hourlyAssessments;
 }
@@ -117,6 +120,7 @@ export async function fetchWeatherData() {
         modelDisplayName = 'ECMWF/GFS';
     }
     const timezone = inEU ? 'Europe/Berlin' : 'auto';
+    state.foehnPressure = null;
 
     try {
         // Haupt-Wetterdaten (Wind, Thermik-Indikatoren, Wolken, Niederschlag)
@@ -180,6 +184,15 @@ export async function fetchWeatherData() {
                 }
             } else {
                 console.warn('Höhenwinde-Fetch fehlgeschlagen:', pressureResult.reason);
+            }
+            // Der zusätzliche Referenzdruckabruf folgt bewusst auf die zwei
+            // bestehenden Requests, um das Wetter-API nicht mit drei
+            // gleichzeitigen Abfragen zu belasten.
+            state.foehnPressure = isFoehnRegionApplicable(state.currentLocation)
+                ? await fetchFoehnPressureSeries({ forecastDays: 3 })
+                : { status: 'notApplicable', series: [] };
+            if (state.foehnPressure.status === 'unavailable') {
+                console.warn('Föhn-Druckgradient nicht verfügbar; Bewertung nutzt nur das Höhenwindprofil.');
             }
         } catch (fetchError) {
             clearTimeout(timeoutId);
@@ -488,7 +501,7 @@ export function calculateBeginnerSafety(i) {
             value: w700 || 0,
             threshold: BEGINNER_LIMITS.w700,
             label: 'Wind 3000m',
-            reason: w700 >= BEGINNER_LIMITS.w700 ? 'Höhenwind 3000m zu stark (Föhn-Indikator)' : null
+            reason: w700 >= BEGINNER_LIMITS.w700 ? 'Höhenwind 3000m zu stark' : null
         },
         cape: {
             pass: cape === null || cape < BEGINNER_LIMITS.cape,

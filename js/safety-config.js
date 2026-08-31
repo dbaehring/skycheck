@@ -64,7 +64,8 @@ export const HARD_SAFETY_POLICY = Object.freeze([
     'Extreme Richtungsscherung nur zusammen mit starkem Höhenwind',
     'Bestehende Grenze für sehr schlechte Sicht bzw. schweres Nebelrisiko',
     'Feste Grenzen für eindeutigen Niederschlag und Schauer',
-    'Expliziter Gewittercode oder starke Instabilität zusammen mit deutlichem Schauersignal'
+    'Expliziter Gewittercode oder starke Instabilität zusammen mit deutlichem Schauersignal',
+    'Kritisches separates Föhnassessment unabhängig vom Komfortprofil'
 ]);
 
 export function buildComfortThresholds(effectiveLimits = LIMITS) {

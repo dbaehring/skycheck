@@ -380,6 +380,7 @@ h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: line
 .param-status.green, .param-status.go { background: var(--green); box-shadow: 0 0 6px var(--green); }
 .param-status.yellow, .param-status.caution { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
 .param-status.red, .param-status.nogo { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.param-status.no-data { background: var(--text-muted); box-shadow: none; }
 .param-body { padding: 0.75rem 0.9rem; }
 .param-row { display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
 .param-row:last-child { border-bottom: none; }
@@ -2736,4 +2737,3 @@ input:focus-visible,
         scroll-behavior: auto !important;
     }
 }
-

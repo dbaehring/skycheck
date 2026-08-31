@@ -4,7 +4,9 @@
  * Die Engine beschreibt den prognostizierten Flugcharakter. Hard Blocker sind
  * nicht übersteuerbare Hinweise auf kritische Wetterindikatoren, aber weder
  * allgemeine Flugverbote noch eine Flugfreigabe. Die Engine enthält bewusst
- * noch keinen Thermik-/XC- oder Föhnscore.
+ * keinen Thermik-/XC-Score. Das separate Föhnassessment wirkt ausschließlich
+ * als Diagnose-Level bzw. nicht übersteuerbarer Blocker, nicht als zweiter
+ * numerischer Windabzug.
  */
 
 import { LIMITS } from './config.js';
@@ -358,6 +360,43 @@ function evaluateComfort(metrics, thresholds, filters, reasons, context) {
     }
 }
 
+function integrateFoehn(foehn, reasons, blockers) {
+    if (!foehn || foehn.applicability === 'notApplicable' || foehn.level === 'low') return;
+    if (foehn.level === 'critical') {
+        addBlocker(reasons, blockers, {
+            code: 'foehn-critical',
+            category: 'foehn',
+            value: foehn.metrics?.score ?? null,
+            threshold: FOEHN_SAFETY_POLICY.critical,
+            text: 'Starke, konsistente Föhnindikatoren'
+        });
+        return;
+    }
+    if (foehn.level === 'high') {
+        addReason(reasons, {
+            code: 'foehn-high',
+            category: 'foehn',
+            level: 'demanding',
+            value: foehn.metrics?.score ?? null,
+            text: 'Mehrere konsistente Föhnindikatoren'
+        });
+        return;
+    }
+    if (foehn.level === 'elevated') {
+        addReason(reasons, {
+            code: 'foehn-elevated',
+            category: 'foehn',
+            level: null,
+            value: foehn.metrics?.score ?? null,
+            text: 'Föhnige Tendenz – einzelne Indikatoren'
+        });
+    }
+}
+
+const FOEHN_SAFETY_POLICY = Object.freeze({
+    critical: 'foehn.level === critical'
+});
+
 export function assessSafety(hour, options = {}) {
     const comfortThresholds = options.comfortThresholds || buildComfortThresholds(options.limits || LIMITS);
     const comfortFilters = {
@@ -372,6 +411,7 @@ export function assessSafety(hour, options = {}) {
     const blockers = [];
     const hardContext = evaluateHardBlockers(metrics, reasons, blockers);
     evaluateComfort(metrics, comfortThresholds, comfortFilters, reasons, hardContext);
+    integrateFoehn(options.foehn, reasons, blockers);
 
     let level = 'relaxed';
     if (blockers.length > 0) {
@@ -405,6 +445,7 @@ export function assessSafety(hour, options = {}) {
         metrics,
         comfortThresholds,
         hardSafetyThresholds: HARD_SAFETY_THRESHOLDS,
+        foehn: options.foehn || null,
         dataQuality
     };
 }

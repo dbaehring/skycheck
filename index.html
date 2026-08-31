@@ -270,7 +270,7 @@
 
                     <div class="params-grid parameter-grid" role="region" aria-label="Wetterparameter">
                         <div class="param-card full-width expanded" data-card="wind" role="region" aria-label="Windparameter">
-                            <div class="param-header"><span class="param-title">💨 Wind (Details)<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Detaillierte Windwerte für die ausgewählte Stunde. Großer Gradient = Turbulenz. Höhenwind >30 km/h = Föhngefahr!</span></span></span><span class="param-time-hint" id="windTimeHint"></span><span class="param-status" id="windStatus"></span><span class="toggle-icon">▼</span></div>
+                            <div class="param-header"><span class="param-title">💨 Wind (Details)<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Detaillierte Windwerte für die ausgewählte Stunde. Starker Höhenwind und große Gradienten können turbulente Bedingungen begünstigen.</span></span></span><span class="param-time-hint" id="windTimeHint"></span><span class="param-status" id="windStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
                                 <div class="wind-table">
                                     <div class="wind-table-header"><span>Höhe</span><span>Geschw.</span><span>Richtung</span></div>
@@ -312,6 +312,18 @@
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="param-card expanded" data-card="foehn" role="region" aria-label="Föhndiagnose">
+                            <div class="param-header"><span class="param-title">🌬️ Föhnindikatoren<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Kombiniert den Bozen–Innsbruck-Druckgradienten mit Richtung, Stärke und Konsistenz der Höhenströmung. Ein einzelner Höhenwindwert beweist keinen Föhn.</span></span></span><span class="param-time-hint" id="foehnTimeHint"></span><span class="param-status" id="foehnStatus"></span><span class="toggle-icon">▼</span></div>
+                            <div class="param-body">
+                                <div class="param-row"><span class="param-label">Föhnrisiko</span><span class="param-value" id="foehnRisk">-</span></div>
+                                <div class="param-row"><span class="param-label">Typ</span><span class="param-value" id="foehnType">-</span></div>
+                                <div class="param-row"><span class="param-label">Bozen–Innsbruck</span><span class="param-value" id="foehnPressure">-</span></div>
+                                <div class="param-row"><span class="param-label">850–700 hPa</span><span class="param-value" id="foehnFlow">-</span></div>
+                                <div class="param-row"><span class="param-label">Trend</span><span class="param-value" id="foehnTrend">-</span></div>
+                                <div class="param-row"><span class="param-label">Confidence</span><span class="param-value" id="foehnConfidence">-</span></div>
+                                <p class="u-text-xs u-text-muted u-mt-sm">Keine Lee-/Rotorprognose. <a href="https://wetter.provinz.bz.it/de/foehndiagramm" target="_blank" rel="noopener noreferrer">Offizielles Föhndiagramm</a></p>
                             </div>
                         </div>
                         <div class="param-card expanded" data-card="thermik" role="region" aria-label="Thermikparameter">
@@ -367,7 +379,7 @@
                     <h3>🚨 Die 5 STOPP-Kriterien - Immer prüfen!</h3>
                     <div class="killer-grid">
                         <div class="killer-item"><span class="killer-number">1</span><span class="killer-text"><strong>Gewitter / CB</strong><br>CAPE &gt;1000 J/kg</span></div>
-                        <div class="killer-item"><span class="killer-number">2</span><span class="killer-text"><strong>Föhn / Höhenwind</strong><br>700 hPa &gt;30 km/h</span></div>
+                        <div class="killer-item"><span class="killer-number">2</span><span class="killer-text"><strong>Föhnindikatoren</strong><br>Starke konsistente alpenquerende Strömung</span></div>
                         <div class="killer-item"><span class="killer-number">3</span><span class="killer-text"><strong>Windscherung</strong><br>Gradient &gt;18 km/h</span></div>
                         <div class="killer-item"><span class="killer-number">4</span><span class="killer-text"><strong>Nebel / Sicht</strong><br>Sicht &lt;1.5 km oder Spread &lt;1°C</span></div>
                         <div class="killer-item"><span class="killer-number">5</span><span class="killer-text"><strong>Eigene Verfassung</strong><br>Müde, Druck, Zweifel?</span></div>
@@ -394,7 +406,7 @@
                         <tr><td>Böendifferenz</td><td>&lt; 5 km/h</td><td>Ruhige, laminare Luft</td></tr>
                         <tr><td>Höhenwind (1500m)</td><td>&lt; 15 km/h</td><td>Keine Lee-Gefahr</td></tr>
                         <tr><td>Höhenwind (2000m)</td><td>&lt; 18 km/h</td><td>Ruhige Höhenluft</td></tr>
-                        <tr><td>Höhenwind (3000m)</td><td>&lt; 20 km/h</td><td>Kein Föhn-Risiko</td></tr>
+                        <tr><td>Höhenwind (3000m)</td><td>&lt; 20 km/h</td><td>Schwacher Höhenwind</td></tr>
                         <tr><td>Windgradient</td><td>&lt; 8 km/h</td><td>Sanfter Übergang</td></tr>
                         <tr><td>CAPE</td><td>&lt; 200 J/kg</td><td>Sanfte Thermik</td></tr>
                         <tr><td>Sicht</td><td>&gt; 15 km</td><td>Gute Orientierung</td></tr>

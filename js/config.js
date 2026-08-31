@@ -114,7 +114,7 @@ export const BEGINNER_LIMITS = {
     w900: 12,            // Höhenwind 1000m < 12 km/h (sanfte Bedingungen)
     w850: 15,            // Höhenwind 1500m < 15 km/h (keine Lee-Gefahr)
     w800: 18,            // Höhenwind 2000m < 18 km/h
-    w700: 20,            // Höhenwind 3000m < 20 km/h (kein Föhn)
+    w700: 20,            // Höhenwind 3000m < 20 km/h (ruhiger Höhenwind)
     gradient: 8,         // Gradient < 8 km/h (sanfter Übergang)
     cape: 200,           // CAPE < 200 J/kg (sanfte Thermik)
     visibility: 15000,   // Sicht > 15 km (gute Orientierung)

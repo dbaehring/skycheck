@@ -10,6 +10,7 @@ export const state = {
     // Providerunabhängige, normalisierte Stundenwerte und zentrale Assessments
     hourlyWeather: [],
     hourlyAssessments: [],
+    foehnPressure: null,
     dailyData: null,
     selectedDay: 0,
     selectedHourIndex: null,

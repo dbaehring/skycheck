@@ -10,6 +10,7 @@ import { LIMITS } from './config.js';
 import { assessSafety } from './safety-engine.js';
 import { assessThermal } from './thermal-engine.js';
 import { buildThermalDayContexts } from './thermal-metrics.js';
+import { assessFoehn, assessFoehnHours } from './foehn-engine.js';
 import {
     deriveHourMetrics,
     getFogRiskFromValues
@@ -202,13 +203,42 @@ export function assessNormalizedHour(hour, options = {}) {
     const limits = options.limits || LIMITS;
     const comfortFilters = { ...ALL_COMFORT_FILTERS, ...(options.comfortFilters || {}) };
     const metrics = deriveHourMetrics(hour);
+    const foehn = options.foehnAssessment || assessFoehn(hour, options.foehnContext || {});
     const safety = assessSafety(hour, {
         limits,
-        comfortFilters
+        comfortFilters,
+        foehn
     });
     const thermal = assessThermal(hour, { context: options.thermalContext });
     const reasons = [];
     const hardBlockers = [];
+
+    if (foehn.level === 'critical') {
+        hardBlockers.push({ category: 'foehn', code: 'foehn-critical', value: foehn.metrics?.score ?? null });
+        reasons.push({
+            category: 'foehn',
+            level: 'red',
+            text: '🌬️ Starke, konsistente Föhnindikatoren',
+            deviation: 200,
+            hardBlocker: true
+        });
+    } else if (foehn.level === 'high') {
+        reasons.push({
+            category: 'foehn',
+            level: 'yellow',
+            text: '🌬️ Föhnrisiko hoch – mehrere konsistente Indikatoren',
+            deviation: 100,
+            hardBlocker: false
+        });
+    } else if (foehn.level === 'elevated') {
+        reasons.push({
+            category: 'foehn',
+            level: 'yellow',
+            text: '🌬️ Föhnige Tendenz – einzelne Indikatoren',
+            deviation: 20,
+            hardBlocker: false
+        });
+    }
 
     const categories = {
         wind: evaluateWind(metrics, limits, reasons, hardBlockers),
@@ -217,7 +247,9 @@ export function assessNormalizedHour(hour, options = {}) {
         precip: evaluatePrecip(metrics, limits, reasons, hardBlockers)
     };
 
-    const filteredReasons = reasons.filter(reason => reason.hardBlocker || comfortFilters[reason.category]);
+    const filteredReasons = reasons.filter(reason =>
+        reason.hardBlocker || reason.category === 'foehn' || comfortFilters[reason.category]
+    );
     filteredReasons.sort((a, b) => {
         if (a.level === 'red' && b.level !== 'red') return -1;
         if (a.level !== 'red' && b.level === 'red') return 1;
@@ -237,6 +269,7 @@ export function assessNormalizedHour(hour, options = {}) {
         if (containsUnknown || hour.dataQuality?.level === 'insufficient' || hour.dataQuality?.stale) {
             score = Math.min(score, 2);
         }
+        if (foehn.level === 'high') score = Math.min(score, 2);
     }
 
     if (hour.dataQuality?.level !== 'good') {
@@ -260,16 +293,21 @@ export function assessNormalizedHour(hour, options = {}) {
         reasons: filteredReasons,
         dataQuality: safety.dataQuality,
         safety,
-        thermal
+        thermal,
+        foehn
     };
 }
 
 export function assessNormalizedHours(hours, options = {}) {
     const contexts = buildThermalDayContexts(hours);
-    return (hours || []).map(hour => {
+    const foehnAssessments = assessFoehnHours(hours, {
+        pressureSeries: options.foehnPressureSeries || []
+    });
+    return (hours || []).map((hour, index) => {
         const day = typeof hour?.time === 'string' ? hour.time.split('T')[0] : null;
         return assessNormalizedHour(hour, {
             ...options,
+            foehnAssessment: foehnAssessments[index],
             thermalContext: contexts.get(day) || {}
         });
     });
