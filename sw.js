@@ -7,9 +7,9 @@
  * - Erzwingt Cache-Invalidierung bei wiederkehrenden Nutzern
  */
 
-const CACHE_NAME = 'skycheck-v20';
-const STATIC_CACHE_NAME = 'skycheck-static-v20';
-const API_CACHE_NAME = 'skycheck-api-v20';
+const CACHE_NAME = 'skycheck-v21';
+const STATIC_CACHE_NAME = 'skycheck-static-v21';
+const API_CACHE_NAME = 'skycheck-api-v21';
 
 // Statische Assets die gecacht werden sollen
 const STATIC_ASSETS = [
@@ -26,6 +26,10 @@ const STATIC_ASSETS = [
     './js/weather-metrics.js',
     './js/safety-config.js',
     './js/safety-engine.js',
+    './js/thermal-config.js',
+    './js/thermal-metrics.js',
+    './js/thermal-engine.js',
+    './js/thermal-aggregation.js',
     './js/aggregation.js',
     './js/expert-profiles.js',
     './js/favorites.js',

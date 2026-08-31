@@ -14,14 +14,25 @@ export function createHour(overrides = {}) {
         },
         wind: {
             levels: [
-                { pressureHpa: 900, approximateAltitudeM: 1000, speedKmh: 7, directionDeg: 180 },
-                { pressureHpa: 850, approximateAltitudeM: 1500, speedKmh: 9, directionDeg: 185 },
-                { pressureHpa: 800, approximateAltitudeM: 2000, speedKmh: 11, directionDeg: 190 },
-                { pressureHpa: 700, approximateAltitudeM: 3000, speedKmh: 14, directionDeg: 195 }
+                { pressureHpa: 900, approximateAltitudeM: 1000, speedKmh: 7, directionDeg: 180, geopotentialHeightMslM: 1050 },
+                { pressureHpa: 850, approximateAltitudeM: 1500, speedKmh: 9, directionDeg: 185, geopotentialHeightMslM: 1550 },
+                { pressureHpa: 800, approximateAltitudeM: 2000, speedKmh: 11, directionDeg: 190, geopotentialHeightMslM: 2050 },
+                { pressureHpa: 700, approximateAltitudeM: 3000, speedKmh: 14, directionDeg: 195, geopotentialHeightMslM: 3100 }
             ]
         },
-        clouds: { lowPct: 10, midPct: 10, highPct: 10, totalPct: 20 },
-        convection: { capeJkg: 0, liftedIndex: 0 },
+        atmosphere: {
+            temperatureLevels: [
+                { pressureHpa: 950, temperatureC: 18.0, geopotentialHeightMslM: 650 },
+                { pressureHpa: 925, temperatureC: 16.4, geopotentialHeightMslM: 850 },
+                { pressureHpa: 900, temperatureC: 14.8, geopotentialHeightMslM: 1050 },
+                { pressureHpa: 850, temperatureC: 10.8, geopotentialHeightMslM: 1550 },
+                { pressureHpa: 800, temperatureC: 6.8, geopotentialHeightMslM: 2050 },
+                { pressureHpa: 700, temperatureC: -1.6, geopotentialHeightMslM: 3100 }
+            ]
+        },
+        clouds: { lowPct: 10, midPct: 10, highPct: 10, totalPct: 20, convectiveBaseMslM: 2600 },
+        radiation: { shortwaveWm2: 600, directWm2: 450, diffuseWm2: 150 },
+        convection: { capeJkg: 0, liftedIndex: 0, updraftMs: null },
         precipitation: { amountMm: 0, probabilityPct: 0, showersMm: 0 },
         boundaryLayer: { heightM: 1600 },
         freezingLevelM: 3000,
@@ -54,4 +65,3 @@ export function createDay(dayStr, scores) {
     });
     return { hours, assessments };
 }
-

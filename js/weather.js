@@ -15,11 +15,13 @@ import {
 } from './open-meteo-adapter.js';
 import {
     assessNormalizedHour,
+    assessNormalizedHours,
     deriveHourMetrics,
     getFogRiskFromValues,
     resolveEffectiveLimits
 } from './assessment.js';
 import { findBestWindowForHours } from './aggregation.js';
+import { assessThermalDay } from './thermal-aggregation.js';
 
 /**
  * Gibt die effektiven Limits zurück (Custom wenn gesetzt, sonst Default)
@@ -72,10 +74,10 @@ export function extractWindData(hour) {
 
 export function rebuildHourlyAssessments() {
     const limits = getEffectiveLimits();
-    state.hourlyAssessments = state.hourlyWeather.map(hour => assessNormalizedHour(hour, {
+    state.hourlyAssessments = assessNormalizedHours(state.hourlyWeather, {
         limits,
         comfortFilters: state.paramFilter
-    }));
+    });
     return state.hourlyAssessments;
 }
 
@@ -380,6 +382,10 @@ export function calculateCloudBase(temp, dewpoint, elevation) {
  */
 export function findBestWindow(dayStr) {
     return findBestWindowForHours(state.hourlyWeather, state.hourlyAssessments, dayStr);
+}
+
+export function getThermalDayAssessment(dayStr) {
+    return assessThermalDay(state.hourlyWeather, state.hourlyAssessments, dayStr);
 }
 
 /**

@@ -2,12 +2,14 @@
  * Zentrales Stunden-Assessment auf Basis normalisierter Wetterwerte.
  *
  * Die bestehende 1/2/3-Ampel bleibt als Legacy-Ergebnis erhalten. Phase 2a
- * ergänzt daneben die eigenständige Safety-/Komfortbewertung. Eine
- * Thermik-/XC-Engine ist weiterhin nicht enthalten.
+ * ergänzt daneben eigenständige Safety-/Komfort- und Thermik-/XC-Ergebnisse.
+ * Beide neuen Engines bleiben voneinander und vom Legacy-Score unabhängig.
  */
 
 import { LIMITS } from './config.js';
 import { assessSafety } from './safety-engine.js';
+import { assessThermal } from './thermal-engine.js';
+import { buildThermalDayContexts } from './thermal-metrics.js';
 import {
     deriveHourMetrics,
     getFogRiskFromValues
@@ -204,6 +206,7 @@ export function assessNormalizedHour(hour, options = {}) {
         limits,
         comfortFilters
     });
+    const thermal = assessThermal(hour, { context: options.thermalContext });
     const reasons = [];
     const hardBlockers = [];
 
@@ -256,6 +259,18 @@ export function assessNormalizedHour(hour, options = {}) {
         metrics,
         reasons: filteredReasons,
         dataQuality: safety.dataQuality,
-        safety
+        safety,
+        thermal
     };
+}
+
+export function assessNormalizedHours(hours, options = {}) {
+    const contexts = buildThermalDayContexts(hours);
+    return (hours || []).map(hour => {
+        const day = typeof hour?.time === 'string' ? hour.time.split('T')[0] : null;
+        return assessNormalizedHour(hour, {
+            ...options,
+            thermalContext: contexts.get(day) || {}
+        });
+    });
 }

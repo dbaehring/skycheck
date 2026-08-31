@@ -10,7 +10,7 @@ import { selectLocation } from './map.js';
 import { getEffectiveLimits } from './weather.js';
 import { showToast } from './ui.js';
 import { OPEN_METEO_FAVORITE_HOURLY_FIELDS, normalizeOpenMeteoHourly } from './open-meteo-adapter.js';
-import { ALL_COMFORT_FILTERS, assessNormalizedHour } from './assessment.js';
+import { ALL_COMFORT_FILTERS, assessNormalizedHours } from './assessment.js';
 import { summarizeFavoriteDay } from './aggregation.js';
 
 // Rate limiting: Verzögerung zwischen API-Calls (ms)
@@ -387,10 +387,10 @@ async function fetchQuickWeather(lat, lon, cacheKey) {
         // NICHT aus new Date().toISOString() (UTC) - sonst Mismatch nahe Mitternacht/Zeitzonen-Offset
         const todayStr = hours[0].time.split('T')[0];
         const limits = getEffectiveLimits();
-        const assessments = hours.map(hour => assessNormalizedHour(hour, {
+        const assessments = assessNormalizedHours(hours, {
             limits,
             comfortFilters: ALL_COMFORT_FILTERS
-        }));
+        });
         const { worstScore, bestWindow } = summarizeFavoriteDay(hours, assessments, todayStr);
 
         const statusMap = { 3: 'go', 2: 'caution', 1: 'nogo' };

@@ -8,6 +8,10 @@
  * - Sicht und Höhen: m
  * - Bewölkung und Wahrscheinlichkeiten: %
  * - Niederschlag/Schauer: mm
+ * - Strahlung: W/m² als Mittelwert der vorangegangenen Stunde
+ * - Boundary-Layer-Höhe: m über Grund (Schichttiefe)
+ * - Konvektive Wolkenbasis und Geopotentialhöhen: m über MSL
+ * - Updraft: m/s, optionales ICON-D2-Maximum zwischen Boden und 10 km
  * - CAPE: J/kg
  *
  * Nur dieses Modul kennt Open-Meteo-Feldnamen. Es normalisiert Daten, nimmt
@@ -31,10 +35,21 @@ export const OPEN_METEO_MAIN_HOURLY_FIELDS = [
     'cape',
     'lifted_index',
     'freezing_level_height',
-    'weather_code'
+    'weather_code',
+    'shortwave_radiation',
+    'direct_radiation',
+    'diffuse_radiation',
+    'convective_cloud_base',
+    'updraft'
 ];
 
 export const OPEN_METEO_PRESSURE_HOURLY_FIELDS = [
+    'temperature_950hPa',
+    'temperature_925hPa',
+    'temperature_900hPa',
+    'temperature_850hPa',
+    'temperature_800hPa',
+    'temperature_700hPa',
     'wind_speed_900hPa',
     'wind_speed_850hPa',
     'wind_speed_800hPa',
@@ -43,6 +58,12 @@ export const OPEN_METEO_PRESSURE_HOURLY_FIELDS = [
     'wind_direction_850hPa',
     'wind_direction_800hPa',
     'wind_direction_700hPa',
+    'geopotential_height_950hPa',
+    'geopotential_height_925hPa',
+    'geopotential_height_900hPa',
+    'geopotential_height_850hPa',
+    'geopotential_height_800hPa',
+    'geopotential_height_700hPa',
     'boundary_layer_height'
 ];
 
@@ -54,11 +75,13 @@ export const OPEN_METEO_FAVORITE_HOURLY_FIELDS = [
 export const OPEN_METEO_DAILY_FIELDS = ['sunrise', 'sunset'];
 
 const PRESSURE_LEVELS = [
-    { pressureHpa: 900, approximateAltitudeM: 1000, speed: 'wind_speed_900hPa', direction: 'wind_direction_900hPa' },
-    { pressureHpa: 850, approximateAltitudeM: 1500, speed: 'wind_speed_850hPa', direction: 'wind_direction_850hPa' },
-    { pressureHpa: 800, approximateAltitudeM: 2000, speed: 'wind_speed_800hPa', direction: 'wind_direction_800hPa' },
-    { pressureHpa: 700, approximateAltitudeM: 3000, speed: 'wind_speed_700hPa', direction: 'wind_direction_700hPa' }
+    { pressureHpa: 900, approximateAltitudeM: 1000, speed: 'wind_speed_900hPa', direction: 'wind_direction_900hPa', geopotential: 'geopotential_height_900hPa' },
+    { pressureHpa: 850, approximateAltitudeM: 1500, speed: 'wind_speed_850hPa', direction: 'wind_direction_850hPa', geopotential: 'geopotential_height_850hPa' },
+    { pressureHpa: 800, approximateAltitudeM: 2000, speed: 'wind_speed_800hPa', direction: 'wind_direction_800hPa', geopotential: 'geopotential_height_800hPa' },
+    { pressureHpa: 700, approximateAltitudeM: 3000, speed: 'wind_speed_700hPa', direction: 'wind_direction_700hPa', geopotential: 'geopotential_height_700hPa' }
 ];
+
+const THERMAL_PRESSURE_LEVELS = [950, 925, 900, 850, 800, 700];
 
 const CORE_QUALITY_PATHS = [
     'surface.windSpeedKmh',
@@ -151,18 +174,33 @@ export function normalizeOpenMeteoHourly(mainHourly, pressureHourly = null, opti
                     pressureHpa: level.pressureHpa,
                     approximateAltitudeM: level.approximateAltitudeM,
                     speedKmh: getPressureValue(mainHourly, pressureHourly, level.speed, index),
-                    directionDeg: getPressureValue(mainHourly, pressureHourly, level.direction, index)
+                    directionDeg: getPressureValue(mainHourly, pressureHourly, level.direction, index),
+                    geopotentialHeightMslM: getPressureValue(mainHourly, pressureHourly, level.geopotential, index)
+                }))
+            },
+            atmosphere: {
+                temperatureLevels: THERMAL_PRESSURE_LEVELS.map(pressureHpa => ({
+                    pressureHpa,
+                    temperatureC: getPressureValue(mainHourly, pressureHourly, `temperature_${pressureHpa}hPa`, index),
+                    geopotentialHeightMslM: getPressureValue(mainHourly, pressureHourly, `geopotential_height_${pressureHpa}hPa`, index)
                 }))
             },
             clouds: {
                 lowPct: valueAt(mainHourly, 'cloud_cover_low', index),
                 midPct: valueAt(mainHourly, 'cloud_cover_mid', index),
                 highPct: valueAt(mainHourly, 'cloud_cover_high', index),
-                totalPct: valueAt(mainHourly, 'cloud_cover', index)
+                totalPct: valueAt(mainHourly, 'cloud_cover', index),
+                convectiveBaseMslM: valueAt(mainHourly, 'convective_cloud_base', index)
+            },
+            radiation: {
+                shortwaveWm2: valueAt(mainHourly, 'shortwave_radiation', index),
+                directWm2: valueAt(mainHourly, 'direct_radiation', index),
+                diffuseWm2: valueAt(mainHourly, 'diffuse_radiation', index)
             },
             convection: {
                 capeJkg: valueAt(mainHourly, 'cape', index),
-                liftedIndex: valueAt(mainHourly, 'lifted_index', index)
+                liftedIndex: valueAt(mainHourly, 'lifted_index', index),
+                updraftMs: valueAt(mainHourly, 'updraft', index)
             },
             precipitation: {
                 amountMm: valueAt(mainHourly, 'precipitation', index),
