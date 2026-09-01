@@ -234,7 +234,7 @@ export function buildDashboardDayView(hours, assessments, dayStr, dailyConfidenc
         bestWindow: bestWindow ? {
             ...bestWindow,
             timeLabel: formatTimeRange(bestWindow.start, bestWindow.end),
-            label: bestWindow.type === 'thermal' ? 'Interessantes Wetterfenster' : 'Ruhiges Wetterfenster',
+            label: bestWindow.type === 'thermal' ? 'Bestes Flugwetterfenster' : 'Ruhigstes Flugwetterfenster',
             description: bestWindow.type === 'thermal'
                 ? `${DASHBOARD_LABELS.safety[bestWindow.safetyLevel]} · Thermik ${DASHBOARD_LABELS.thermal[bestWindow.thermalLevel].toLowerCase()}`
                 : 'Relaxed bei schwacher bis brauchbarer Thermik'

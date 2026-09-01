@@ -29,6 +29,41 @@ import {
 
 // DOM-Cache für Performance (vermeidet wiederholte getElementById-Aufrufe)
 let domCache = null;
+let lockedScrollY = 0;
+let modalReturnFocus = null;
+
+/**
+ * Sperrt die Seite, ohne ihre aktuelle Scrollposition zu verlieren.
+ * Der Dialog selbst bleibt der einzige Scrollcontainer.
+ */
+function lockBodyScroll(modal) {
+    if (!document.body.classList.contains('modal-open')) {
+        lockedScrollY = window.scrollY;
+        modalReturnFocus = document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
+        document.body.style.top = `-${lockedScrollY}px`;
+        document.body.classList.add('modal-open');
+    }
+
+    requestAnimationFrame(() => {
+        const firstControl = modal?.querySelector('.modal-close, button, input, select, textarea');
+        firstControl?.focus({ preventScroll: true });
+    });
+}
+
+/**
+ * Hebt die Seitensperre auf und stellt Position sowie Fokus wieder her.
+ */
+function unlockBodyScroll() {
+    if (document.querySelector('.modal-overlay.visible')) return;
+
+    document.body.classList.remove('modal-open');
+    document.body.style.top = '';
+    window.scrollTo(0, lockedScrollY);
+    modalReturnFocus?.focus({ preventScroll: true });
+    modalReturnFocus = null;
+}
 
 /**
  * Initialisiert oder gibt den DOM-Cache zurück
@@ -1317,7 +1352,7 @@ export function openExpertSettings() {
     if (modal) {
         populateExpertForm();
         modal.classList.add('visible');
-        document.body.style.overflow = 'hidden';
+        lockBodyScroll(modal);
     }
 }
 
@@ -1326,9 +1361,9 @@ export function openExpertSettings() {
  */
 export function closeExpertSettings() {
     const modal = document.getElementById('expertModal');
-    if (modal) {
+    if (modal?.classList.contains('visible')) {
         modal.classList.remove('visible');
-        document.body.style.overflow = '';
+        unlockBodyScroll();
     }
 }
 
@@ -1479,7 +1514,7 @@ export function openAboutModal() {
     const modal = document.getElementById('aboutModal');
     if (modal) {
         modal.classList.add('visible');
-        document.body.style.overflow = 'hidden';
+        lockBodyScroll(modal);
         // Version aus APP_INFO setzen
         const versionEl = document.getElementById('aboutVersion');
         if (versionEl) {
@@ -1499,9 +1534,9 @@ export function openAboutModal() {
  */
 export function closeAboutModal() {
     const modal = document.getElementById('aboutModal');
-    if (modal) {
+    if (modal?.classList.contains('visible')) {
         modal.classList.remove('visible');
-        document.body.style.overflow = '';
+        unlockBodyScroll();
     }
 }
 
@@ -1512,7 +1547,9 @@ export function openWelcomeModal() {
     const modal = document.getElementById('welcomeModal');
     if (modal) {
         modal.classList.add('visible');
-        document.body.style.overflow = 'hidden';
+        const dialog = modal.querySelector('.welcome-modal');
+        if (dialog) dialog.scrollTop = 0;
+        lockBodyScroll(modal);
     }
 }
 
@@ -1521,14 +1558,14 @@ export function openWelcomeModal() {
  */
 export function closeWelcomeModal() {
     const modal = document.getElementById('welcomeModal');
-    if (modal) {
+    if (modal?.classList.contains('visible')) {
         modal.classList.remove('visible');
-        document.body.style.overflow = '';
-    }
-    try {
-        localStorage.setItem(STORAGE_KEYS.ONBOARDING_DONE, '1');
-    } catch (e) {
-        // localStorage nicht verfügbar
+        unlockBodyScroll();
+        try {
+            localStorage.setItem(STORAGE_KEYS.ONBOARDING_DONE, '1');
+        } catch (e) {
+            // localStorage nicht verfügbar
+        }
     }
 }
 

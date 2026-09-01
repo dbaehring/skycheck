@@ -7,7 +7,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.opentopomap.org https://*.tile.openstreetmap.org; connect-src 'self' https://api.open-meteo.com https://api.pioupiou.fr https://static.avalanche.report; worker-src 'self';">
 
     <!-- === SkyCheck Meta-Tags === -->
-    <title>SkyCheck | Flugwetter in vier Dimensionen</title>
+    <title>SkyCheck | Flugwetter auf einen Blick</title>
     <meta name="description" content="SkyCheck v11 RC1 ordnet Flugcharakter, Thermik, Föhnrisiko und Modellkonsens für Gleitschirmflieger getrennt ein.">
     <meta name="keywords" content="Gleitschirm, Paragliding, Wetter, Meteo, Thermik, Flugwetter, SkyCheck">
     <meta name="author" content="SkyCheck">
@@ -16,7 +16,7 @@
     <link rel="canonical" href="https://www.skycheck.cloud/">
 
     <!-- Open Graph -->
-    <meta property="og:title" content="SkyCheck v11 RC1 - Flugwetter in vier Dimensionen">
+    <meta property="og:title" content="SkyCheck v11 RC1 - Flugwetter auf einen Blick">
     <meta property="og:description" content="Flugcharakter, Thermik, Föhnrisiko und Modellkonsens getrennt einordnen.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.skycheck.cloud/">
@@ -27,7 +27,7 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="SkyCheck v11 RC1 - Flugwetter in vier Dimensionen">
+    <meta name="twitter:title" content="SkyCheck v11 RC1 - Flugwetter auf einen Blick">
     <meta name="twitter:description" content="Flugcharakter, Thermik, Föhnrisiko und Modellkonsens auf einen Blick.">
     <meta name="twitter:image" content="https://www.skycheck.cloud/img/logo-512.png">
 
@@ -58,7 +58,7 @@
                     <img src="./img/logo.svg" alt="SkyCheck" class="header-logo">
                     <div class="logo-text">
                         <h1>SkyCheck</h1>
-                        <p class="subtitle">Wetterdimensionen klar einordnen</p>
+                        <p class="subtitle">Flugwetter auf einen Blick</p>
                     </div>
                 </div>
             </div>
@@ -127,7 +127,7 @@
                             </article>
                         </div>
                         <article class="dashboard-window unknown" id="dashboardWindow">
-                            <span class="dashboard-window-label" id="dashboardWindowLabel">Wetterfenster</span>
+                            <span class="dashboard-window-label" id="dashboardWindowLabel">Flugwetterfenster</span>
                             <strong id="dashboardWindowTime">Noch nicht bestimmbar</strong>
                             <span id="dashboardWindowDetail">Es werden keine Dimensionen zu einem Gesamtscore verrechnet.</span>
                         </article>
@@ -141,22 +141,25 @@
                         </div>
                         <div class="dashboard-hints" id="dashboardHints" aria-live="polite"></div>
                         <p class="dashboard-data-quality u-hidden" id="dashboardDataQuality"></p>
-                        <div class="sun-times dashboard-meta">
-                            <div class="sun-time"><span>☀️ Aufgang:</span><span class="sun-time-value" id="sunrise">-</span></div>
-                            <div class="sun-time"><span>🌙 Untergang:</span><span class="sun-time-value" id="sunset">-</span></div>
-                            <div class="sun-time"><span>⏱️ Tageslicht:</span><span class="sun-time-value" id="daylight">-</span></div>
-                            <div class="sun-time"><span>❄️ 0°C:</span><span class="sun-time-value" id="freezingLevel">-</span></div>
-                            <div class="sun-time"><span>📍 Höhe:</span><span class="sun-time-value" id="stationElevation">-</span></div>
-                        </div>
-                        <div class="dashboard-model-meta">
-                            <div class="model-info"><span>Primärmodell:</span><strong id="modelName">ICON-D2/EU</strong></div>
-                            <div id="modelWarning" class="model-warning u-hidden">⚠️ Außerhalb ICON-Abdeckung – globales Modell mit gröberer Auflösung</div>
-                            <div class="update-info" id="updateInfo"><span id="updateLabel">Daten von:</span><span class="update-info-time" id="updateTime">-</span></div>
-                        </div>
-                        <div class="forecast-change" id="forecastChange">
-                            <div class="forecast-change-title">📈 Änderung seit letztem Laden:</div>
-                            <div class="forecast-change-items" id="forecastChangeItems"></div>
-                        </div>
+                        <details class="dashboard-context">
+                            <summary>Prognosekontext</summary>
+                            <div class="sun-times dashboard-meta">
+                                <div class="sun-time"><span>☀️ Aufgang:</span><span class="sun-time-value" id="sunrise">-</span></div>
+                                <div class="sun-time"><span>🌙 Untergang:</span><span class="sun-time-value" id="sunset">-</span></div>
+                                <div class="sun-time"><span>⏱️ Tageslicht:</span><span class="sun-time-value" id="daylight">-</span></div>
+                                <div class="sun-time"><span>❄️ 0°C:</span><span class="sun-time-value" id="freezingLevel">-</span></div>
+                                <div class="sun-time"><span>📍 Höhe:</span><span class="sun-time-value" id="stationElevation">-</span></div>
+                            </div>
+                            <div class="dashboard-model-meta">
+                                <div class="model-info"><span>Primärmodell:</span><strong id="modelName">ICON-D2/EU</strong></div>
+                                <div id="modelWarning" class="model-warning u-hidden">⚠️ Außerhalb ICON-Abdeckung – globales Modell mit gröberer Auflösung</div>
+                                <div class="update-info" id="updateInfo"><span id="updateLabel">Daten von:</span><span class="update-info-time" id="updateTime">-</span></div>
+                            </div>
+                            <div class="forecast-change" id="forecastChange">
+                                <div class="forecast-change-title">📈 Änderung seit letztem Laden:</div>
+                                <div class="forecast-change-items" id="forecastChangeItems"></div>
+                            </div>
+                        </details>
                     </section>
                     <nav class="day-comparison" id="dayComparison" role="navigation" aria-label="Tagesauswahl">
                         <h3>📅 Tag wählen</h3>
@@ -252,7 +255,7 @@
                         </div>
                     </div>
 
-                    <details class="legacy-assessment">
+                    <details class="legacy-assessment" id="legacyAssessment" data-legacy-debug hidden>
                         <summary>Legacy-v10-Diagnose</summary>
                         <div class="assessment-card" role="status" aria-label="Legacy-Bewertung">
                             <div class="assessment-wrapper">
@@ -427,7 +430,7 @@
                 </p>
             </div>
         </footer>
-        <section class="explanation-section">
+        <section class="explanation-section" id="legacyReference" data-legacy-debug hidden>
             <button class="explanation-toggle" id="explanationToggle"><span>📖 Parameter-Referenz</span><span class="toggle-icon" id="toggleIcon">▼</span></button>
             <div class="explanation-content" id="explanationContent">
                 <div class="killer-section" id="killerExplainSection">
@@ -585,7 +588,7 @@
             <div class="about-header">
                 <img src="./img/logo.svg" alt="SkyCheck Logo" class="about-logo">
                 <h2 id="aboutModalTitle">SkyCheck</h2>
-                <p class="about-tagline">Flugwetter in vier unabhängigen Dimensionen</p>
+                <p class="about-tagline">Flugwetter auf einen Blick</p>
                 <span class="about-version" id="aboutVersion">v11 RC1</span>
             </div>
             <div class="about-tabs">
@@ -596,21 +599,21 @@
             <div class="about-content">
                 <div class="about-tab-content active" id="tab-about">
                     <p><strong>SkyCheck</strong> ordnet wichtige Wetterparameter für Gleitschirmflieger ein. Es erteilt keine Startfreigabe und ersetzt nicht das eigene Urteil.</p>
-                    <p>Das Dashboard zeigt <strong>Flugcharakter, Thermik, Föhnrisiko und Modellkonsens</strong> getrennt für Tag und Stunde.</p>
+                    <p>Das Dashboard zeigt <strong>Flugcharakter, Thermik &amp; XC, Föhnrisiko und Modellkonsens</strong> getrennt für Tag und Stunde.</p>
                     <h4>Daten &amp; Modelle</h4>
                     <p><a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> liefert das Primärmodell und den Vergleich aus ICON-D2, ICON-EU, GeoSphere AROME Austria und ECMWF IFS. Der Föhn-Druckgradient ist eine ICON-Prognose.</p>
-                    <p class="about-ref-hint">💡 Detaillierte Schwellwerte findest du in der <strong>Parameter-Referenz</strong> am Seitenende.</p>
+                    <p class="about-ref-hint">💡 Prognosekontext und Datenherkunft lassen sich direkt im Dashboard aufklappen.</p>
                 </div>
                 <div class="about-tab-content" id="tab-features">
                     <ul class="about-feature-list">
                         <li><span class="feature-icon">▦</span> <strong>Entscheidungs-Dashboard</strong> mit vier unabhängigen Dimensionen</li>
-                        <li><span class="feature-icon">🚨</span> <strong>5 STOPP-Kriterien</strong> - die wichtigsten Gefahren im Blick</li>
+                        <li><span class="feature-icon">🚨</span> <strong>Kritische Indikatoren</strong> - markante Gefahren getrennt im Blick</li>
                         <li><span class="feature-icon">💨</span> <strong>Wind nach Höhe</strong> - Boden bis 3000m mit Gradient</li>
                         <li><span class="feature-icon">🧭</span> <strong>Windrose</strong> - Windrichtung auf allen Höhen</li>
                         <li><span class="feature-icon">📊</span> <strong>Wind-Höhenprofil</strong> - Tagesverlauf nach Höhe</li>
                         <li><span class="feature-icon">⭐</span> <strong>Favoriten-System</strong> - deine Startplätze speichern</li>
                         <li><span class="feature-icon">📱</span> <strong>Offline-fähig</strong> - als PWA installierbar</li>
-                        <li><span class="feature-icon">⏱️</span> <strong>Doppelmarker-Timeline</strong> für Flugcharakter und Thermik</li>
+                        <li><span class="feature-icon">⏱️</span> <strong>Doppelmarker-Timeline</strong> für Flugcharakter und Thermik &amp; XC</li>
                         <li><span class="feature-icon">📅</span> <strong>3-Tage-Vorschau</strong> mit kompakten Dimensionswerten</li>
                         <li><span class="feature-icon">📡</span> <strong>Live-Wind</strong> - Messwerte von OpenWindMap + Lawinenwarndiensten (Alpen)</li>
                     </ul>
@@ -643,44 +646,39 @@
             <div class="welcome-header">
                 <img src="./img/logo.svg" alt="SkyCheck Logo" class="welcome-logo">
                 <h2 id="welcomeModalTitle">Willkommen bei SkyCheck!</h2>
-                <p class="welcome-tagline">Dein Flugwetter-Assistent für Gleitschirmflieger</p>
+                <p class="welcome-tagline">Flugwetter auf einen Blick</p>
             </div>
             <div class="welcome-content">
+                <p class="welcome-lead">SkyCheck hilft dir, Flugwetter schneller einzuschätzen.</p>
                 <div class="welcome-section">
-                    <div class="welcome-section-icon">📍</div>
+                    <div class="welcome-section-icon">🟢</div>
                     <div class="welcome-section-text">
-                        <h3>Standort wählen</h3>
-                        <p>Klicke auf die Karte oder nutze GPS, um deinen Startplatz zu wählen. Du kannst auch Koordinaten per Link teilen.</p>
+                        <h3>Flugcharakter</h3>
+                        <p>Wie ruhig oder anspruchsvoll wirken die Bedingungen?</p>
                     </div>
                 </div>
                 <div class="welcome-section">
-                    <div class="welcome-section-icon">🚦</div>
+                    <div class="welcome-section-icon">🔥</div>
                     <div class="welcome-section-text">
-                        <h3>Vier Wetterdimensionen</h3>
-                        <p>Flugcharakter, Thermik, Föhnrisiko und Modellkonsens werden unabhängig dargestellt. Kritische Indikatoren bleiben dominant.</p>
+                        <h3>Thermik &amp; XC</h3>
+                        <p>Wie gut ist das nutzbare Thermikpotenzial?</p>
                     </div>
                 </div>
                 <div class="welcome-section">
-                    <div class="welcome-section-icon">⏱️</div>
+                    <div class="welcome-section-icon">🏔️</div>
                     <div class="welcome-section-text">
-                        <h3>Tagesverlauf</h3>
-                        <p>Die Timeline zeigt dir stündlich, wie sich die Bedingungen entwickeln. Tippe auf eine Stunde für Details.</p>
+                        <h3>Föhnrisiko</h3>
+                        <p>Gibt es Hinweise auf eine föhnige Alpenströmung?</p>
                     </div>
                 </div>
                 <div class="welcome-section">
-                    <div class="welcome-section-icon">⭐</div>
+                    <div class="welcome-section-icon">🎯</div>
                     <div class="welcome-section-text">
-                        <h3>Favoriten</h3>
-                        <p>Speichere deine Lieblingsplätze für schnellen Zugriff und vergleiche das Wetter an mehreren Standorten.</p>
+                        <h3>Modellkonsens</h3>
+                        <p>Wie ähnlich prognostizieren ICON-D2, ICON-EU, AROME und ECMWF die Wetterentwicklung?</p>
                     </div>
                 </div>
-                <div class="welcome-section">
-                    <div class="welcome-section-icon">⚙️</div>
-                    <div class="welcome-section-text">
-                        <h3>Expertenmodus</h3>
-                        <p>Passe persönliche Komfortgrenzen an. Kritische Indikatoren bleiben davon unabhängig.</p>
-                    </div>
-                </div>
+                <p class="welcome-disclaimer">SkyCheck ersetzt nicht DHV-Flugwetter, Reality Check und die eigene Entscheidung am Startplatz.</p>
             </div>
             <div class="welcome-footer">
                 <button class="welcome-start-btn" id="welcomeStartBtn">Los geht's!</button>

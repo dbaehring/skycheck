@@ -8,7 +8,7 @@
 export const APP_INFO = {
     name: 'SkyCheck',
     version: '11.0.0-rc.1',  // Hauptversion - Cache-Version (sw.js) kann unabhängig sein
-    slogan: 'Wetterdimensionen klar einordnen',
+    slogan: 'Flugwetter auf einen Blick',
     description: 'Detaillierte Gleitschirm-Wetteranalyse',
     author: 'SkyCheck Team',
     year: 2026,

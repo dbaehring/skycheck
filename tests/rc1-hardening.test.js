@@ -207,3 +207,36 @@ test('RC1 K: Legacy-Score beeinflusst die vier v11-Dimensionen nicht', () => {
         [highLegacy.safety.level, highLegacy.thermal.level, highLegacy.foehn.level, highLegacy.confidence.level]
     );
 });
+
+test('RC1 L: Legacy-UI ist standardmäßig verborgen und nur per Debug-Parameter aktivierbar', async () => {
+    const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+    const main = await readFile(new URL('../js/main.js', import.meta.url), 'utf8');
+
+    assert.match(html, /id="legacyAssessment" data-legacy-debug hidden/);
+    assert.match(html, /id="legacyReference" data-legacy-debug hidden/);
+    assert.match(main, /get\('debug'\) === 'legacy'/);
+    assert.match(main, /element\.hidden = !legacyDebugEnabled/);
+});
+
+test('RC1 M: Welcome-Dialog scrollt selbst und bewahrt die Hintergrundposition', async () => {
+    const css = await readFile(new URL('../css/styles.css', import.meta.url), 'utf8');
+    const ui = await readFile(new URL('../js/ui.js', import.meta.url), 'utf8');
+
+    assert.match(css, /\.welcome-modal\s*\{[^}]*overflow-y:\s*auto[^}]*overscroll-behavior:\s*contain/s);
+    assert.match(css, /\.welcome-content\s*\{[^}]*overflow:\s*visible/s);
+    assert.match(css, /\.modal-open\s*\{[^}]*position:\s*fixed[^}]*overflow:\s*hidden/s);
+    assert.match(ui, /lockedScrollY = window\.scrollY/);
+    assert.match(ui, /window\.scrollTo\(0, lockedScrollY\)/);
+    assert.match(ui, /dialog\.scrollTop = 0/);
+});
+
+test('RC1 N: Einführung und normale About-Ansicht verwenden nur die v11-Begriffe', async () => {
+    const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+    const normalDialogs = html.slice(html.indexOf('<!-- About Modal -->'), html.indexOf('<!-- Favorites Compare Modal -->'));
+
+    assert.match(normalDialogs, /Flugwetter auf einen Blick/);
+    assert.match(normalDialogs, /Thermik &amp; XC/);
+    assert.match(normalDialogs, /Föhnrisiko/);
+    assert.match(normalDialogs, /Modellkonsens/);
+    assert.doesNotMatch(normalDialogs, /\b(?:GO|NO-GO|STOPP)\b/);
+});

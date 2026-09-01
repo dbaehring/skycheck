@@ -89,10 +89,22 @@ import {
 } from './ui.js';
 
 /**
+ * Blendet die frühere v10-Auswertung ausschließlich für gezielte Diagnose ein.
+ */
+function configureLegacyDebugUI() {
+    const legacyDebugEnabled = new URLSearchParams(window.location.search).get('debug') === 'legacy';
+    document.querySelectorAll('[data-legacy-debug]').forEach(element => {
+        element.hidden = !legacyDebugEnabled;
+    });
+}
+
+/**
  * App initialisieren
  */
 async function initApp() {
     try {
+        configureLegacyDebugUI();
+
         // 1. Theme laden
         const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
         setTheme(savedTheme || getPreferredTheme());

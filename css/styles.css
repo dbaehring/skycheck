@@ -240,8 +240,14 @@ h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: line
 .add-favorite-btn { padding: 0.75rem 1rem; background: var(--bg-dark); border: 1px dashed var(--border); border-radius: 8px; color: var(--text-muted); font-size: 0.85rem; cursor: pointer; transition: all 0.2s; font-family: 'DM Sans', sans-serif; margin: 0.75rem 1.25rem; display: block; width: calc(100% - 2.5rem); }
 .add-favorite-btn:hover { border-color: var(--yellow); color: var(--yellow); border-style: solid; }
 .add-favorite-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 1rem; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 1rem; overflow: hidden; overscroll-behavior: none; }
 .modal-overlay.visible { display: flex; }
+.modal-open {
+    position: fixed;
+    inset-inline: 0;
+    width: 100%;
+    overflow: hidden;
+}
 .modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; max-width: 400px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
 .modal h3 { font-size: 1.1rem; margin-bottom: 1rem; }
 .modal input { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-input); color: var(--text-primary); font-size: 1rem; font-family: 'DM Sans', sans-serif; margin-bottom: 1rem; }
@@ -283,6 +289,21 @@ h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; background: line
 .confidence-meta { color: var(--text-muted); font-family: 'Space Mono', monospace; font-size: 0.68rem; }
 .sun-times { display: flex; gap: 1rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border); flex-wrap: wrap; }
 .sun-time { display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--text-secondary); }
+.dashboard-context {
+    margin-top: 0.65rem;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+.dashboard-context > summary {
+    width: fit-content;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+.dashboard-context > summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 3px;
+}
 .sun-time-value { font-family: 'Space Mono', monospace; font-weight: 600; }
 .trend { font-size: 0.85rem; margin-left: 0.25rem; }
 .trend.up { color: var(--red); }
@@ -2201,8 +2222,12 @@ input:focus-visible,
 /* === Welcome Modal === */
 .welcome-modal {
     max-width: 550px;
+    max-height: calc(100dvh - 2rem);
     padding: 0;
-    overflow: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
 }
 .welcome-header {
     background: var(--sky-gradient);
@@ -2227,8 +2252,21 @@ input:focus-visible,
 }
 .welcome-content {
     padding: 1.25rem;
-    max-height: 60vh;
-    overflow-y: auto;
+    max-height: none;
+    overflow: visible;
+}
+.welcome-lead,
+.welcome-disclaimer {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+.welcome-lead {
+    padding-bottom: 0.4rem;
+}
+.welcome-disclaimer {
+    padding-top: 0.9rem;
+    font-size: 0.8rem;
 }
 .welcome-section {
     display: flex;
@@ -2512,6 +2550,15 @@ input:focus-visible,
     .welcome-content {
         flex: 1;
         max-height: none;
+    }
+
+    #welcomeModal .welcome-modal {
+        display: block;
+        height: 100dvh;
+        max-height: 100dvh;
+        margin-top: 0;
+        overflow-y: auto;
+        border-radius: 0;
     }
     .about-tab {
         font-size: 0.75rem;

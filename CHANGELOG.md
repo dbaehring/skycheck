@@ -18,8 +18,10 @@
 - Daten- und Modellhinweise sowie Föhn-Reality-Check in der Hauptansicht ergänzt.
 - Tastaturbedienung für Parameterkarten, Komfortfilter und Windprofilzellen ergänzt.
 - Kleine Displays bis 320 px, lange Ortsnamen und Touch-Ziele nachgeschärft.
+- Welcome-Dialog scrollt auf Trackpad und Touch als eigener Container; Hintergrundposition und Fokus bleiben beim Schließen erhalten.
+- Legacy-v10-Auswertung ist in der normalen Oberfläche entfernt und nur noch mit `?debug=legacy` sichtbar.
 - Verwaiste Best-Window-Styles und Debug-Ausgaben entfernt; doppelte Dashboard-Renderings reduziert.
-- Service-Worker-Cache auf `skycheck-v33` angehoben.
+- Service-Worker-Cache auf `skycheck-v36` angehoben.
 - RC1-Szenarientests A–K für Datenlücken, Offline/Stale, Providerausfälle, Dimensionskonflikte, Zeitzonen und Legacy-Isolation ergänzt.
 
 ### Unverändert
