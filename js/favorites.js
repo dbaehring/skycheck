@@ -11,7 +11,7 @@ import { getEffectiveLimits } from './weather.js';
 import { showToast } from './ui.js';
 import { OPEN_METEO_FAVORITE_HOURLY_FIELDS, normalizeOpenMeteoHourly } from './open-meteo-adapter.js';
 import { ALL_COMFORT_FILTERS, assessNormalizedHours } from './assessment.js';
-import { summarizeFavoriteDay } from './aggregation.js';
+import { buildDashboardDayView } from './dashboard.js';
 
 // Rate limiting: Verzögerung zwischen API-Calls (ms)
 const API_DELAY = 200;
@@ -34,7 +34,8 @@ export function loadFavoriteWeatherCache() {
 
         // Nur nicht-abgelaufene Einträge behalten
         for (const [key, entry] of Object.entries(parsed)) {
-            if (entry && entry.timestamp && (now - entry.timestamp) < CACHE_CONFIG.favoriteWeatherTTL) {
+            if (entry && entry.timestamp && entry.level &&
+                (now - entry.timestamp) < CACHE_CONFIG.favoriteWeatherTTL) {
                 validEntries[key] = entry;
             }
         }
@@ -391,19 +392,20 @@ async function fetchQuickWeather(lat, lon, cacheKey) {
             limits,
             comfortFilters: ALL_COMFORT_FILTERS
         });
-        const { worstScore, bestWindow } = summarizeFavoriteDay(hours, assessments, todayStr);
-
-        const statusMap = { 3: 'go', 2: 'caution', 1: 'nogo' };
-        const labelMap = { 3: 'GO', 2: 'Vorsicht', 1: 'No-Go' };
-        let info = labelMap[worstScore];
-        if (bestWindow) {
-            info += ' ' + bestWindow.start + '-' + bestWindow.end + 'h';
-        } else if (worstScore === 1) {
-            info += ' (kein Fenster)';
-        }
+        const view = buildDashboardDayView(hours, assessments, todayStr, null, []);
+        const statusMap = {
+            relaxed: 'go',
+            sporty: 'caution',
+            demanding: 'caution',
+            critical: 'nogo',
+            unknown: 'loading'
+        };
+        let info = `Flugcharakter: ${view.safety.label} · Thermik: ${view.thermal.label}`;
+        if (view.bestWindow) info += ` · ${view.bestWindow.timeLabel}`;
 
         state.favoriteWeatherCache[cacheKey] = {
-            status: statusMap[worstScore],
+            status: statusMap[view.safety.level],
+            level: view.safety.level,
             info: info,
             timestamp: Date.now()
         };
@@ -446,17 +448,19 @@ function renderCompareGrid() {
     const grid = document.getElementById('compareGrid');
     if (!grid) return;
 
-    const statusLabels = {
-        go: 'GO',
-        caution: 'VORSICHT',
-        nogo: 'NO-GO',
-        loading: 'Lädt...'
+    const levelLabels = {
+        relaxed: 'ENTSPANNT',
+        sporty: 'SPORTLICH',
+        demanding: 'ANSPRUCHSVOLL',
+        critical: 'KRITISCH',
+        unknown: 'UNBEKANNT'
     };
 
     grid.innerHTML = state.favorites.map((f, idx) => {
         const key = f.lat.toFixed(4) + ',' + f.lon.toFixed(4);
         const cached = state.favoriteWeatherCache[key];
         const status = cached?.status || 'loading';
+        const level = cached?.level || 'unknown';
         const info = cached?.info || 'Lade Wetterdaten...';
         const safeName = escapeHtml(f.name);
         const safeInfo = escapeHtml(info);
@@ -468,7 +472,7 @@ function renderCompareGrid() {
                     <span class="compare-card-name">${safeName}</span>
                 </div>
                 <div class="compare-card-info">${safeInfo}</div>
-                <span class="compare-card-label ${status}">${statusLabels[status]}</span>
+                <span class="compare-card-label ${status}">${levelLabels[level]}</span>
             </div>
         `;
     }).join('');

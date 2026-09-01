@@ -24,6 +24,7 @@ import { findBestWindowForHours } from './aggregation.js';
 import { assessThermalDay } from './thermal-aggregation.js';
 import { isFoehnRegionApplicable } from './foehn-engine.js';
 import { fetchFoehnPressureSeries } from './foehn-pressure-provider.js';
+import { clearModelForecastCache } from './model-forecast-provider.js';
 
 /**
  * Gibt die effektiven Limits zurück (Custom wenn gesetzt, sonst Default)
@@ -336,6 +337,7 @@ export async function refreshData() {
     if (!btn) return;
     btn.classList.add('spinning');
     btn.disabled = true;
+    clearModelForecastCache(state.currentLocation);
     await fetchWeatherData();
     btn.classList.remove('spinning');
     btn.disabled = false;

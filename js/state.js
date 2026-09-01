@@ -10,6 +10,12 @@ export const state = {
     // Providerunabhängige, normalisierte Stundenwerte und zentrale Assessments
     hourlyWeather: [],
     hourlyAssessments: [],
+    forecastConfidence: {
+        status: 'idle',
+        hourly: [],
+        daily: [],
+        models: []
+    },
     foehnPressure: null,
     dailyData: null,
     selectedDay: 0,

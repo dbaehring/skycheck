@@ -12,12 +12,18 @@ import {
     escapeHtml, validateCustomLimits, formatAge
 } from './utils.js';
 import {
-    getHourScore, findBestWindow, updateSunTimes, calculateCloudBase,
+    updateSunTimes, calculateCloudBase,
     calculateBeginnerSafety, getFogRisk, extractWindData,
     getEffectiveLimits, getHourAssessment, rebuildHourlyAssessments
 } from './weather.js';
-import { getDayTrafficLightFromAssessments, V10_TIME_WINDOWS } from './aggregation.js';
+import { V10_TIME_WINDOWS } from './aggregation.js';
 import { EXPERT_PRESETS, buildCustomLimits } from './expert-profiles.js';
+import {
+    DASHBOARD_LABELS,
+    buildDashboardDayView,
+    buildDashboardHourView,
+    findBestWeatherWindow
+} from './dashboard.js';
 
 // DOM-Cache für Performance (vermeidet wiederholte getElementById-Aufrufe)
 let domCache = null;
@@ -147,53 +153,35 @@ export function setupDays() {
 }
 
 /**
- * Berechnet Tages-Ampel basierend auf Option A:
- * - GO: ≥3h grünes Fenster
- * - VORSICHT: 1-2h grünes Fenster ODER keine roten Stunden
- * - NO-GO: Kein grünes Fenster UND mindestens eine rote Stunde
- */
-function getDayTrafficLight(dayStr) {
-    return getDayTrafficLightFromAssessments(state.hourlyWeather, state.hourlyAssessments, dayStr);
-}
-
-/**
  * Tages-Auswahl bauen (mit Ampel und Zeitfenster)
  */
 export function buildDayComparison() {
     const grid = document.getElementById('dayComparisonGrid');
     grid.innerHTML = '';
 
-    // Besten Tag ermitteln (Tag mit längstem grünen Fenster)
-    let bestDayIdx = -1;
-    let longestWindow = -1;
-    state.forecastDays.forEach((day, i) => {
-        const win = findBestWindow(day.date);
-        if (win) {
-            const duration = win.end - win.start;
-            if (duration > longestWindow) {
-                longestWindow = duration;
-                bestDayIdx = i;
-            }
-        }
-    });
-
     state.forecastDays.forEach((day, i) => {
         const d = new Date(day.date);
         const names = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
         const name = i === 0 ? 'Heute' : i === 1 ? 'Morgen' : names[d.getDay()];
-        const bestWin = findBestWindow(day.date);
-        const hasGreenWindow = bestWin !== null;
-        const winText = bestWin ? (bestWin.start + '-' + bestWin.end + 'h') : '—';
-        const isBest = i === bestDayIdx && hasGreenWindow;
-        const trafficLight = getDayTrafficLight(day.date);
+        const view = buildDashboardDayView(
+            state.hourlyWeather,
+            state.hourlyAssessments,
+            day.date,
+            confidenceForDay(day.date),
+            state.forecastConfidence.hourly
+        );
 
-        const card = document.createElement('div');
-        card.className = 'day-comparison-card' + (i === state.selectedDay ? ' active' : '') + (isBest ? ' best' : '');
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'day-comparison-card' + (i === state.selectedDay ? ' active' : '');
         card.dataset.dayIdx = i;
+        card.setAttribute('role', 'tab');
+        card.setAttribute('aria-selected', i === state.selectedDay ? 'true' : 'false');
         card.innerHTML = `
             <div class="day-comparison-date">${name} ${d.getDate()}.${d.getMonth() + 1}.</div>
-            <span class="day-comparison-status ${trafficLight.status}">${trafficLight.label}</span>
-            <div class="day-comparison-window ${hasGreenWindow ? 'go' : ''}">${winText}</div>`;
+            <span class="day-comparison-status ${view.safety.level}">Flugcharakter: ${view.safety.label}</span>
+            <span class="day-comparison-thermal ${view.thermal.level}">Thermik: ${view.thermal.label}</span>
+            <span class="day-comparison-window">${view.bestWindow?.timeLabel || 'Kein Fenster'}</span>`;
         grid.appendChild(card);
     });
 }
@@ -203,9 +191,13 @@ export function buildDayComparison() {
  */
 export function selectDay(idx) {
     state.selectedDay = idx;
-    document.querySelectorAll('.day-comparison-card').forEach((c, i) => c.classList.toggle('active', i === idx));
+    document.querySelectorAll('.day-comparison-card').forEach((c, i) => {
+        c.classList.toggle('active', i === idx);
+        c.setAttribute('aria-selected', i === idx ? 'true' : 'false');
+    });
     updateSunTimes(idx);
     updateForecastConfidence(idx);
+    renderDashboardDay(idx);
     buildTimeline(state.forecastDays[idx].date);
 
     // Wind-Profil immer aktualisieren (ist jetzt immer sichtbar)
@@ -217,19 +209,217 @@ export function selectDay(idx) {
     selectHour(def);
 }
 
-/**
- * PHASE 3 Aufgabe 3: Prognose-Sicherheit
- */
 export function updateForecastConfidence(dayIdx) {
-    const starsEl = document.getElementById('confidenceStars');
-    const configs = [
-        { stars: '⭐⭐⭐', class: 'high', label: 'hoch' },
-        { stars: '⭐⭐☆', class: 'medium', label: 'mittel' },
-        { stars: '⭐☆☆', class: 'low', label: 'gering' }
+    const levelEl = document.getElementById('confidenceLevel');
+    const modelEl = document.getElementById('confidenceModels');
+    const reasonsEl = document.getElementById('confidenceReasons');
+    const metaEl = document.getElementById('confidenceMeta');
+    if (!levelEl || !modelEl || !reasonsEl || !metaEl) return;
+
+    const labels = { high: 'hoch', medium: 'mittel', low: 'gering', unknown: 'unbekannt' };
+    const renderComponent = (id, level) => {
+        const element = document.getElementById(id);
+        if (!element) return;
+        element.textContent = labels[level] || '—';
+        element.className = `confidence-value ${level || 'unknown'}`;
+    };
+    const resetReasons = () => {
+        while (reasonsEl.firstChild) reasonsEl.removeChild(reasonsEl.firstChild);
+    };
+    const confidenceState = state.forecastConfidence;
+
+    if (confidenceState.status === 'loading' || confidenceState.status === 'idle') {
+        levelEl.textContent = 'wird geladen…';
+        levelEl.className = 'confidence-level unknown';
+        modelEl.textContent = 'ICON-D2 · ICON-EU · AROME Austria · ECMWF IFS werden parallel verglichen.';
+        metaEl.textContent = 'Die Hauptprognose bleibt währenddessen vollständig nutzbar.';
+        resetReasons();
+        ['confidenceWind', 'confidenceThermal', 'confidenceClouds', 'confidencePrecipitation']
+            .forEach(id => renderComponent(id, 'unknown'));
+        renderDashboardDay(dayIdx);
+        return;
+    }
+
+    const day = state.forecastDays[dayIdx];
+    const daily = confidenceState.daily?.find(item => item.date === day?.date);
+    const level = daily?.level || 'unknown';
+    levelEl.textContent = labels[level];
+    levelEl.className = `confidence-level ${level}`;
+    renderComponent('confidenceWind', daily?.components?.wind || 'unknown');
+    renderComponent('confidenceThermal', daily?.components?.thermal || 'unknown');
+    renderComponent('confidenceClouds', daily?.components?.clouds || 'unknown');
+    renderComponent('confidencePrecipitation', daily?.components?.precipitation || 'unknown');
+
+    if (confidenceState.models?.length > 0) {
+        modelEl.textContent = confidenceState.models.map(model =>
+            `${model.displayName} ${model.status === 'available' ? '✓' : '—'}`
+        ).join(' · ');
+        modelEl.title = confidenceState.models
+            .filter(model => model.status !== 'available' && model.error)
+            .map(model => `${model.displayName}: ${model.error}`)
+            .join('\n');
+    } else {
+        modelEl.textContent = 'Keine Modellantwort verfügbar.';
+        modelEl.removeAttribute('title');
+    }
+
+    resetReasons();
+    for (const reason of daily?.reasons || []) {
+        const item = document.createElement('li');
+        item.className = reason.tone || 'neutral';
+        const prefix = reason.tone === 'positive' ? '+' : reason.tone === 'negative' ? '−' : '•';
+        item.textContent = `${prefix} ${reason.text}`;
+        reasonsEl.appendChild(item);
+    }
+    const performance = confidenceState.performance;
+    metaEl.textContent = performance
+        ? `${daily?.metrics?.evaluatedHours || 0} Flugfenster-Stunden · ${performance.requestCount} API-Aufrufe · ${performance.cacheHits} Cache-Treffer`
+        : 'Consensus nicht verfügbar.';
+    renderDashboardDay(dayIdx);
+    buildDayComparison();
+    if (state.selectedHourIndex !== null) {
+        renderDashboardHour(state.selectedHourIndex);
+        if (state.forecastDays[dayIdx]) buildTimeline(state.forecastDays[dayIdx].date);
+    }
+}
+
+function setDashboardLevel(element, group, level) {
+    if (!element) return;
+    const levels = Object.keys(DASHBOARD_LABELS[group] || {});
+    element.classList.remove(...levels);
+    element.classList.add(level || 'unknown');
+}
+
+function confidenceForDay(dayStr) {
+    return state.forecastConfidence.daily?.find(item => item.date === dayStr) || null;
+}
+
+function confidenceForHour(time) {
+    return state.forecastConfidence.hourly?.find(item => item.time === time) || null;
+}
+
+function formatDashboardDate(dayStr) {
+    const date = new Date(`${dayStr}T12:00`);
+    return new Intl.DateTimeFormat('de-DE', {
+        weekday: 'long',
+        day: '2-digit',
+        month: '2-digit'
+    }).format(date);
+}
+
+function renderDashboardDay(dayIdx = state.selectedDay) {
+    const day = state.forecastDays?.[dayIdx];
+    if (!day) return;
+    const view = buildDashboardDayView(
+        state.hourlyWeather,
+        state.hourlyAssessments,
+        day.date,
+        confidenceForDay(day.date),
+        state.forecastConfidence.hourly
+    );
+    const safety = document.getElementById('dashboardSafety');
+    const thermal = document.getElementById('dashboardThermal');
+    const foehn = document.getElementById('dashboardFoehn');
+    const consensus = document.getElementById('dashboardConsensus');
+    setDashboardLevel(safety, 'safety', view.safety.level);
+    setDashboardLevel(thermal, 'thermal', view.thermal.level);
+    setDashboardLevel(foehn, 'foehn', view.foehn.level);
+    setDashboardLevel(consensus, 'confidence', view.confidence.level);
+    document.getElementById('dashboardDate').textContent = formatDashboardDate(day.date);
+    document.getElementById('dashboardSafetyValue').textContent = view.safety.label;
+    document.getElementById('dashboardSafetyDetail').textContent = view.safety.level === 'unknown'
+        ? view.dataQualityReason
+        : 'Schwerste Ausprägung zwischen 06 und 20 Uhr.';
+    document.getElementById('dashboardThermalValue').textContent = view.thermal.label;
+    document.getElementById('dashboardThermalDetail').textContent = view.thermalDay.reasons?.[0] || 'Keine Thermikangabe.';
+    document.getElementById('dashboardFoehnValue').textContent = view.foehn.label;
+    document.getElementById('dashboardConsensusValue').textContent = state.forecastConfidence.status === 'loading'
+        ? 'Wird geladen…'
+        : view.confidence.label;
+
+    const windowCard = document.getElementById('dashboardWindow');
+    windowCard.classList.remove('thermal', 'quiet', 'conflict', 'unknown');
+    if (view.bestWindow) {
+        windowCard.classList.add(view.bestWindow.type);
+        document.getElementById('dashboardWindowLabel').textContent = view.bestWindow.label;
+        document.getElementById('dashboardWindowTime').textContent = view.bestWindow.timeLabel;
+        document.getElementById('dashboardWindowDetail').textContent = view.bestWindow.description;
+    } else if (view.hasThermalConflict) {
+        windowCard.classList.add('conflict');
+        document.getElementById('dashboardWindowLabel').textContent = 'Kein interessantes Wetterfenster';
+        document.getElementById('dashboardWindowTime').textContent = 'Starke Thermik trifft auf kritische Indikatoren';
+        document.getElementById('dashboardWindowDetail').textContent = 'Thermik und Flugcharakter bleiben bewusst getrennt dargestellt.';
+    } else {
+        windowCard.classList.add('unknown');
+        document.getElementById('dashboardWindowLabel').textContent = 'Kein interessantes Wetterfenster';
+        document.getElementById('dashboardWindowTime').textContent = 'Im betrachteten Zeitraum nicht vorhanden';
+        document.getElementById('dashboardWindowDetail').textContent = 'Die Einzelindikatoren bleiben darunter vollständig sichtbar.';
+    }
+
+    const hints = document.getElementById('dashboardHints');
+    hints.replaceChildren(...view.hints.map(hint => {
+        const paragraph = document.createElement('p');
+        paragraph.className = `dashboard-hint ${hint.tone}`;
+        paragraph.textContent = hint.text;
+        return paragraph;
+    }));
+    const dataQuality = document.getElementById('dashboardDataQuality');
+    dataQuality.textContent = view.dataQualityReason || '';
+    dataQuality.classList.toggle('u-hidden', !view.dataQualityReason);
+
+    document.getElementById('flightCharacterLevel').textContent = view.safety.label;
+    document.getElementById('flightCharacterReason').textContent = view.hints[0]?.text || 'Kein dominanter Belastungsfaktor im Tagesprofil.';
+    document.getElementById('thermalXcLevel').textContent = view.thermal.label;
+    document.getElementById('thermalXcReason').textContent = view.thermalDay.reasons?.join(' · ') || 'Keine belastbare Tagesaggregation.';
+    document.getElementById('foehnDetailLevel').textContent = view.foehn.label;
+    document.getElementById('foehnDetailReason').textContent = view.foehn.level === 'notApplicable'
+        ? 'Standort liegt außerhalb des anwendbaren Alpenraums.'
+        : view.foehn.level === 'high' || view.foehn.level === 'critical'
+            ? 'Mehrere Föhnindikatoren verlangen besondere Aufmerksamkeit.'
+            : 'Föhnindikatoren werden unabhängig vom Flugcharakter gezeigt.';
+}
+
+function renderDashboardHour(index) {
+    const hour = state.hourlyWeather[index];
+    const assessment = getHourAssessment(index);
+    if (!hour || !assessment) return;
+    const view = buildDashboardHourView(hour, assessment, confidenceForHour(hour.time));
+    document.getElementById('selectedHourTitle').textContent = view.timeLabel;
+    const dimensions = document.getElementById('hourDimensions');
+    const values = [
+        ['Flugcharakter', view.safety],
+        ['Thermik', view.thermal],
+        ['Föhn', view.foehn],
+        ['Konsens', view.confidence]
     ];
-    const config = configs[Math.min(dayIdx, 2)];
-    starsEl.textContent = config.stars;
-    starsEl.className = 'stars ' + config.class;
+    dimensions.replaceChildren(...values.map(([name, value]) => {
+        const item = document.createElement('div');
+        item.className = `hour-dimension ${value.level}`;
+        const label = document.createElement('span');
+        label.textContent = name;
+        const strong = document.createElement('strong');
+        strong.textContent = value.label;
+        item.append(label, strong);
+        return item;
+    }));
+    const renderList = (id, entries) => {
+        const list = document.getElementById(id);
+        list.replaceChildren(...entries.map(text => {
+            const item = document.createElement('li');
+            item.textContent = text;
+            return item;
+        }));
+    };
+    renderList('hourWindSummary', Object.values(view.wind));
+    renderList('hourThermalSummary', Object.values(view.thermalSummary));
+    document.getElementById('flightCharacterLevel').textContent = view.safety.label;
+    document.getElementById('flightCharacterReason').textContent = view.dataQualityReason || view.limitingFactor;
+    document.getElementById('thermalXcLevel').textContent = view.thermal.label;
+    document.getElementById('thermalXcReason').textContent = Object.values(view.thermalSummary).join(' · ');
+    document.getElementById('foehnDetailLevel').textContent = view.foehn.label;
+    const foehnReasons = assessment.foehn?.reasons || [];
+    document.getElementById('foehnDetailReason').textContent = foehnReasons[0]?.text || foehnReasons[0] ||
+        (view.foehn.level === 'notApplicable' ? 'Außerhalb des anwendbaren Alpenraums.' : 'Kein dominantes Föhnsignal in dieser Stunde.');
 }
 
 /**
@@ -239,11 +429,12 @@ export function updateForecastConfidence(dayIdx) {
 export function buildTimeline(dayStr) {
     const tl = document.getElementById('timeline');
     tl.innerHTML = '';
-    const bestWin = findBestWindow(dayStr);
-
-    // Best-Window Banner ausblenden (Info wird in Tages-Karten angezeigt)
-    const bwEl = document.getElementById('bestWindow');
-    if (bwEl) bwEl.classList.remove('visible', 'yellow');
+    const bestWin = findBestWeatherWindow(
+        state.hourlyWeather,
+        state.hourlyAssessments,
+        dayStr,
+        state.forecastConfidence.hourly
+    );
 
     const now = new Date();
     // todayStr aus normalisierten Stunden (lokale Zeitzone des Orts) ableiten, nicht aus UTC -
@@ -257,13 +448,22 @@ export function buildTimeline(dayStr) {
         const idx = state.hourlyWeather.findIndex(hour => hour.time === ts);
         if (idx === -1) continue;
 
-        const sc = getHourScore(idx);
-        const slot = document.createElement('div');
-        slot.className = 'timeline-slot ' + scoreToColor(sc);
+        const assessment = getHourAssessment(idx);
+        const safety = assessment?.safety?.level || 'unknown';
+        const thermal = assessment?.thermal?.level || 'unknown';
+        const foehn = assessment?.foehn?.applicability === 'notApplicable'
+            ? 'notApplicable'
+            : assessment?.foehn?.level || 'unknown';
+        const confidence = confidenceForHour(state.hourlyWeather[idx].time)?.level || 'unknown';
+        const slot = document.createElement('button');
+        slot.type = 'button';
+        slot.className = `timeline-slot safety-${safety}`;
         slot.dataset.hourIdx = idx;
+        slot.setAttribute('role', 'option');
+        slot.setAttribute('aria-selected', idx === state.selectedHourIndex ? 'true' : 'false');
+        slot.setAttribute('aria-label', `${h}:00, Flugcharakter ${DASHBOARD_LABELS.safety[safety]}, Thermik ${DASHBOARD_LABELS.thermal[thermal]}, Föhn ${DASHBOARD_LABELS.foehn[foehn]}, Modellkonsens ${DASHBOARD_LABELS.confidence[confidence]}`);
         if (idx === state.selectedHourIndex) slot.classList.add('active');
-        // Bestes Fenster markieren (grüne Stunden)
-        if (bestWin && h >= bestWin.start && h <= bestWin.end && sc === 3) {
+        if (bestWin?.indices.includes(idx)) {
             slot.classList.add('best');
         }
         // Aktuelle Stunde markieren (nur heute)
@@ -271,11 +471,15 @@ export function buildTimeline(dayStr) {
             slot.classList.add('now');
         }
 
-        const weatherCode = state.hourlyWeather[idx]?.weatherCode ?? 0;
-        const weatherInfo = getWeatherInfo(weatherCode);
         const isMobile = window.innerWidth < UI_CONFIG.mobileBreakpoint;
         const timeText = isMobile ? h : h + ':00';
-        slot.innerHTML = `<div class="slot-time">${timeText}</div><div class="slot-weather">${weatherInfo.icon}</div>`;
+        const foehnMarker = foehn === 'elevated' || foehn === 'high' || foehn === 'critical'
+            ? `<span class="timeline-marker foehn ${foehn}" title="Föhn ${DASHBOARD_LABELS.foehn[foehn]}">▲</span>`
+            : '';
+        const confidenceMarker = confidence === 'low'
+            ? '<span class="timeline-marker low-consensus" title="Geringer Modellkonsens">≋</span>'
+            : '';
+        slot.innerHTML = `<span class="slot-time">${timeText}</span><span class="timeline-markers"><span class="timeline-marker safety ${safety}" aria-hidden="true">●</span><span class="timeline-marker thermal ${thermal}" aria-hidden="true">◆</span>${foehnMarker}${confidenceMarker}</span>`;
         tl.appendChild(slot);
     }
 }
@@ -286,6 +490,7 @@ export function buildTimeline(dayStr) {
 export function selectHour(idx) {
     state.selectedHourIndex = idx;
     updateDisplay(idx);
+    renderDashboardHour(idx);
     buildTimeline(state.forecastDays[state.selectedDay].date);
 
     // Wind-Profil aktualisieren (um ausgewählte Stunde zu markieren)
@@ -517,6 +722,7 @@ export function updateDisplay(i) {
             if (el) el.textContent = timeLabel;
         });
     }
+    renderDashboardHour(i);
 }
 // Bewertungsfunktionen werden jetzt aus weather.js importiert (Single Source of Truth)
 
@@ -1046,15 +1252,15 @@ function updateExpertModeUI() {
 
     if (hint) {
         if (!state.expertMode) {
-            hint.textContent = 'Eigene Grenzwerte für die Ampel-Bewertung definieren';
+            hint.textContent = 'Eigene Komfortgrenzen; kritische Indikatoren bleiben unabhängig.';
             hint.classList.remove('active');
         } else if (state.customLimits) {
             // Zähle geänderte Parameter
             const changes = countCustomChanges();
-            hint.innerHTML = `<strong>✓ ${changes} Parameter angepasst</strong>`;
+            hint.textContent = `✓ ${changes} Komfortparameter angepasst; kritische Indikatoren bleiben unabhängig.`;
             hint.classList.add('active');
         } else {
-            hint.textContent = 'Klicke "Anpassen" um Grenzwerte zu setzen';
+            hint.textContent = 'Komfortgrenzen anpassen; kritische Indikatoren bleiben unabhängig.';
             hint.classList.remove('active');
         }
     }

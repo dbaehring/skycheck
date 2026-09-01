@@ -7,6 +7,7 @@
 import { state } from './state.js';
 import { STORAGE_KEYS, APP_INFO } from './config.js';
 import { setupModalClose } from './utils.js';
+import { fetchModelForecastConsensus } from './model-forecast-provider.js';
 
 // Map-Modul
 import {
@@ -45,6 +46,7 @@ import {
 import {
     setupDays,
     selectDay,
+    updateForecastConfidence,
     buildTimeline,
     selectHour,
     updateDisplay,
@@ -170,7 +172,14 @@ async function initApp() {
  */
 function onWeatherLoaded() {
     setupDays();
+    state.forecastConfidence = {
+        status: 'loading',
+        hourly: [],
+        daily: [],
+        models: []
+    };
     selectDay(0);
+    loadForecastConfidence();
 
     // Letzte Position speichern
     if (state.currentLocation.lat && state.currentLocation.lon) {
@@ -188,6 +197,37 @@ function onWeatherLoaded() {
         // Live-Wind: Nur Button anzeigen, nicht automatisch laden
         showLiveWindButton();
     }
+}
+
+/**
+ * Laedt den Modellvergleich erst nach der primaeren Prognose. Dadurch bleibt
+ * die Hauptansicht schnell und ein Provider-Ausfall blockiert SkyCheck nicht.
+ */
+async function loadForecastConfidence() {
+    const location = { ...state.currentLocation };
+    const expectedKey = `${Number(location.lat).toFixed(3)},${Number(location.lon).toFixed(3)}`;
+    try {
+        const result = await fetchModelForecastConsensus({
+            location,
+            primaryHours: state.hourlyWeather,
+            primaryAssessments: state.hourlyAssessments,
+            forecastDays: 3,
+            timezone: 'auto'
+        });
+        const currentKey = `${Number(state.currentLocation.lat).toFixed(3)},${Number(state.currentLocation.lon).toFixed(3)}`;
+        if (currentKey !== expectedKey) return;
+        state.forecastConfidence = result;
+    } catch (error) {
+        console.warn('Modellkonsens konnte nicht geladen werden:', error);
+        state.forecastConfidence = {
+            status: 'unavailable',
+            hourly: [],
+            daily: [],
+            models: [],
+            error: error?.message || 'Unbekannter Fehler'
+        };
+    }
+    updateForecastConfidence(state.selectedDay);
 }
 
 /**
@@ -250,6 +290,25 @@ function registerEventListeners() {
     const refreshBtn = document.getElementById('refreshBtn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', refreshData);
+    }
+
+    // Modellkonsens-Details: expliziter Toggle als Fallback fuer Browser,
+    // die das native <details>-Verhalten bei flex-Summaries nicht ausloesen.
+    const confidenceDetails = document.getElementById('forecastConfidence');
+    const confidenceSummary = confidenceDetails?.querySelector('summary');
+    if (confidenceDetails && confidenceSummary) {
+        const toggleConfidenceDetails = () => {
+            confidenceDetails.open = !confidenceDetails.open;
+        };
+        confidenceSummary.addEventListener('click', (event) => {
+            event.preventDefault();
+            toggleConfidenceDetails();
+        });
+        confidenceSummary.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            toggleConfidenceDetails();
+        });
     }
 
     // Favoriten-Button

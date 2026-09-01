@@ -7,7 +7,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.opentopomap.org https://*.tile.openstreetmap.org; connect-src 'self' https://api.open-meteo.com https://api.pioupiou.fr https://static.avalanche.report; worker-src 'self';">
 
     <!-- === SkyCheck Meta-Tags === -->
-    <title>SkyCheck | Sicherer fliegen mit der Wetterampel</title>
+    <title>SkyCheck | Flugwetter in vier Dimensionen</title>
     <meta name="description" content="SkyCheck - Kompakte Gleitschirm-Wetteranalyse in 60 Sekunden. Wind, Thermik, Wolken & Sicht, Niederschlag auf einen Blick.">
     <meta name="keywords" content="Gleitschirm, Paragliding, Wetter, Meteo, Thermik, Flugwetter, SkyCheck">
     <meta name="author" content="SkyCheck">
@@ -28,7 +28,7 @@
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="SkyCheck - Paragliding Meteo">
-    <meta name="twitter:description" content="Sicherer fliegen mit der Wetterampel. Wind, Thermik, Wolken und Sicht auf einen Blick.">
+    <meta name="twitter:description" content="Flugcharakter, Thermik, Föhn und Modellkonsens auf einen Blick.">
     <meta name="twitter:image" content="https://www.skycheck.cloud/img/logo-512.png">
 
     <!-- PWA Meta-Tags -->
@@ -58,7 +58,7 @@
                     <img src="./img/logo.svg" alt="SkyCheck" class="header-logo">
                     <div class="logo-text">
                         <h1>SkyCheck</h1>
-                        <p class="subtitle">Sicherer fliegen mit der Wetterampel</p>
+                        <p class="subtitle">Wetterdimensionen klar einordnen</p>
                     </div>
                 </div>
             </div>
@@ -104,112 +104,163 @@
                     <p>Wetterdaten werden abgerufen...</p>
                 </div>
                 <div id="resultsContainer" class="u-hidden">
-                    <div class="location-card">
-                        <span class="location-name" id="locationName">-</span>
-                        <div class="location-details" id="locationDetails">-</div>
-                        <div class="model-info"><span>Modell:</span><strong id="modelName">ICON-D2/EU</strong></div>
-                        <div id="modelWarning" class="model-warning u-hidden">⚠️ Außerhalb ICON-Abdeckung - globales Modell (weniger genau)</div>
-                        <div class="forecast-confidence" id="forecastConfidence">
-                            <span>📊 Prognose-Sicherheit:</span>
-                            <span class="stars high" id="confidenceStars">⭐⭐⭐</span>
-                            <span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Wettermodelle werden mit zunehmendem Vorhersagezeitraum ungenauer. Heute: hoch, Morgen: mittel, Übermorgen: gering. Am Flugtag nochmals prüfen!</span></span>
+                    <section class="location-card decision-dashboard" aria-labelledby="dashboardTitle">
+                        <div class="dashboard-heading">
+                            <div>
+                                <span class="location-name" id="locationName">-</span>
+                                <div class="location-details" id="locationDetails">-</div>
+                                <h2 class="dashboard-date" id="dashboardTitle"><span id="dashboardDate">Ausgewählter Tag</span></h2>
+                            </div>
+                            <button class="refresh-btn" id="refreshBtn" title="Daten aktualisieren">↻ Neu laden</button>
                         </div>
-                        <div class="sun-times">
+                        <div class="dashboard-primary-grid">
+                            <article class="dashboard-dimension safety unknown" id="dashboardSafety" aria-live="polite">
+                                <span class="dashboard-dimension-label">Flugcharakter</span>
+                                <strong id="dashboardSafetyValue">Unbekannt</strong>
+                                <span id="dashboardSafetyDetail">Bewertung wird vorbereitet.</span>
+                            </article>
+                            <article class="dashboard-dimension thermal unknown" id="dashboardThermal">
+                                <span class="dashboard-dimension-label">Thermik &amp; XC</span>
+                                <strong id="dashboardThermalValue">Unbekannt</strong>
+                                <span id="dashboardThermalDetail">Thermikprofil wird vorbereitet.</span>
+                            </article>
+                        </div>
+                        <article class="dashboard-window unknown" id="dashboardWindow">
+                            <span class="dashboard-window-label" id="dashboardWindowLabel">Wetterfenster</span>
+                            <strong id="dashboardWindowTime">Noch nicht bestimmbar</strong>
+                            <span id="dashboardWindowDetail">Es werden keine Dimensionen zu einem Gesamtscore verrechnet.</span>
+                        </article>
+                        <div class="dashboard-secondary-grid">
+                            <article class="dashboard-mini foehn unknown" id="dashboardFoehn">
+                                <span>Föhn</span><strong id="dashboardFoehnValue">Unbekannt</strong>
+                            </article>
+                            <article class="dashboard-mini confidence unknown" id="dashboardConsensus">
+                                <span>Modellkonsens</span><strong id="dashboardConsensusValue" aria-live="polite">Wird geladen…</strong>
+                            </article>
+                        </div>
+                        <div class="dashboard-hints" id="dashboardHints" aria-live="polite"></div>
+                        <p class="dashboard-data-quality u-hidden" id="dashboardDataQuality"></p>
+                        <div class="sun-times dashboard-meta">
                             <div class="sun-time"><span>☀️ Aufgang:</span><span class="sun-time-value" id="sunrise">-</span></div>
                             <div class="sun-time"><span>🌙 Untergang:</span><span class="sun-time-value" id="sunset">-</span></div>
                             <div class="sun-time"><span>⏱️ Tageslicht:</span><span class="sun-time-value" id="daylight">-</span></div>
-                            <div class="sun-time"><span>❄️ 0°C-Grenze:</span><span class="sun-time-value" id="freezingLevel">-</span></div>
-                            <div class="sun-time"><span>📍 Stationshöhe:</span><span class="sun-time-value" id="stationElevation">-</span></div>
+                            <div class="sun-time"><span>❄️ 0°C:</span><span class="sun-time-value" id="freezingLevel">-</span></div>
+                            <div class="sun-time"><span>📍 Höhe:</span><span class="sun-time-value" id="stationElevation">-</span></div>
                         </div>
-                        <div class="best-window" id="bestWindow">
-                            <span class="best-window-icon">⭐</span>
-                            <span class="best-window-text">Bestes Zeitfenster:</span>
-                            <span class="best-window-time" id="bestWindowTime">-</span>
-                        </div>
-                        <div class="update-info" id="updateInfo">
-                            <span>Daten von:</span>
-                            <span class="update-info-time" id="updateTime">-</span>
-                            <button class="refresh-btn" id="refreshBtn" title="Daten aktualisieren">↻ Neu laden</button>
+                        <div class="dashboard-model-meta">
+                            <div class="model-info"><span>Primärmodell:</span><strong id="modelName">ICON-D2/EU</strong></div>
+                            <div id="modelWarning" class="model-warning u-hidden">⚠️ Außerhalb ICON-Abdeckung – globales Modell mit gröberer Auflösung</div>
+                            <div class="update-info" id="updateInfo"><span>Daten von:</span><span class="update-info-time" id="updateTime">-</span></div>
                         </div>
                         <div class="forecast-change" id="forecastChange">
                             <div class="forecast-change-title">📈 Änderung seit letztem Laden:</div>
                             <div class="forecast-change-items" id="forecastChangeItems"></div>
                         </div>
-                    </div>
+                    </section>
                     <nav class="day-comparison" id="dayComparison" role="navigation" aria-label="Tagesauswahl">
                         <h3>📅 Tag wählen</h3>
                         <div class="day-comparison-grid" id="dayComparisonGrid" role="tablist"></div>
                     </nav>
-                    <div class="param-filter-card" role="region" aria-label="Parameter-Filter">
+                    <div class="timeline-card dashboard-timeline" role="region" aria-label="Stündlicher Tagesverlauf">
+                        <h3>Tagesverlauf <span>06–20 Uhr</span></h3>
+                        <p class="timeline-legend"><span>● Flugcharakter</span><span>◆ Thermik</span><span>▲ Föhn</span><span>≋ geringer Konsens</span></p>
+                        <div class="timeline" id="timeline" role="listbox" aria-label="Stunde auswählen"></div>
+                    </div>
+
+                    <section class="selected-hour-card" aria-labelledby="selectedHourTitle">
+                        <div class="selected-hour-heading">
+                            <div><span>Ausgewählte Stunde</span><h3 id="selectedHourTitle">—</h3></div>
+                            <div class="weather-current" id="weatherCurrent"><span class="weather-icon-text" id="weatherDesc">-</span><span class="weather-temp" id="currentTemp">-</span></div>
+                        </div>
+                        <div class="hour-dimensions" id="hourDimensions"></div>
+                        <div class="hour-summary-grid">
+                            <div><h4>Windprofil</h4><ul id="hourWindSummary"></ul></div>
+                            <div><h4>Thermikprofil</h4><ul id="hourThermalSummary"></ul></div>
+                        </div>
+                    </section>
+
+                    <section class="dashboard-details" aria-label="Entscheidungsdetails">
+                        <article class="dashboard-detail-card" id="flightCharacterDetails">
+                            <h3>Flugcharakter</h3><strong id="flightCharacterLevel">Unbekannt</strong>
+                            <p id="flightCharacterReason">Noch keine belastbare Bewertung.</p>
+                        </article>
+                        <article class="dashboard-detail-card" id="thermalXcDetails">
+                            <h3>Thermik &amp; XC</h3><strong id="thermalXcLevel">Unbekannt</strong>
+                            <p id="thermalXcReason">Noch kein Thermikprofil.</p>
+                        </article>
+                        <article class="dashboard-detail-card" id="foehnDetails">
+                            <h3>Föhn</h3><strong id="foehnDetailLevel">Unbekannt</strong>
+                            <p id="foehnDetailReason">Föhnindikatoren werden ausgewertet.</p>
+                            <a href="https://wetter.provinz.bz.it/de/foehndiagramm" target="_blank" rel="noopener noreferrer">Offizielles Föhndiagramm Südtirol ↗</a>
+                        </article>
+                        <article class="dashboard-detail-card consensus-detail" id="consensusDetails">
+                            <h3>Modellkonsens</h3>
+                            <details class="forecast-confidence" id="forecastConfidence">
+                                <summary><span>Diagnose</span><strong class="confidence-level unknown" id="confidenceLevel" aria-live="polite">Wird geladen…</strong></summary>
+                                <div class="confidence-details">
+                                    <div class="confidence-components" aria-label="Konsens nach Parameter">
+                                        <div><span>Wind</span><strong id="confidenceWind">—</strong></div>
+                                        <div><span>Thermik/Höhe</span><strong id="confidenceThermal">—</strong></div>
+                                        <div><span>Wolken</span><strong id="confidenceClouds">—</strong></div>
+                                        <div><span>Niederschlag</span><strong id="confidencePrecipitation">—</strong></div>
+                                    </div>
+                                    <p class="confidence-models" id="confidenceModels">Modelle werden verglichen…</p>
+                                    <ul class="confidence-reasons" id="confidenceReasons"></ul>
+                                    <p class="confidence-meta" id="confidenceMeta"></p>
+                                </div>
+                            </details>
+                        </article>
+                    </section>
+
+                    <nav class="external-weather-links" aria-label="Externe Wetterquellen">
+                        <h3>Weitere Wetterquellen</h3>
+                        <div>
+                            <a href="https://www.dhv.de/piloteninfos/wetter/" target="_blank" rel="noopener noreferrer">DHV Flugwetter ↗</a>
+                            <a href="https://wetter.provinz.bz.it/de/foehndiagramm" target="_blank" rel="noopener noreferrer">Föhndiagramm ↗</a>
+                            <a href="https://www.wetter.aero/" target="_blank" rel="noopener noreferrer">wetter.aero ↗</a>
+                            <a href="https://soaringmeteo.org/" target="_blank" rel="noopener noreferrer">Soaringmeteo ↗</a>
+                            <a href="https://www.windy.com/" target="_blank" rel="noopener noreferrer">Windy ↗</a>
+                            <a href="https://www.foto-webcam.eu/" target="_blank" rel="noopener noreferrer">Foto-Webcam ↗</a>
+                        </div>
+                    </nav>
+
+                    <div class="param-filter-card" role="region" aria-label="Persönliche Komfortfilter">
                         <div class="param-filter-header" id="paramFilterToggle">
-                            <span class="param-filter-title">🎯 Ampel-Filter</span>
-                            <span class="param-filter-summary" id="paramFilterSummary">Alle Parameter</span>
-                            <span class="toggle-icon">▼</span>
+                            <span class="param-filter-title">⚙️ Persönliche Komfortfilter</span>
+                            <span class="param-filter-summary" id="paramFilterSummary">Alle Parameter</span><span class="toggle-icon">▼</span>
                         </div>
                         <div class="param-filter-body" id="paramFilterBody">
-                            <p class="param-filter-hint">Wähle, welche Parameter für die Ampel-Bewertung berücksichtigt werden:</p>
+                            <p class="param-filter-hint">Persönliche Schwellen verändern Komfortbewertungen. Kritische Indikatoren bleiben davon unabhängig.</p>
                             <div class="param-filter-options">
-                                <label class="param-filter-option">
-                                    <input type="checkbox" id="filterWind" checked>
-                                    <span class="param-filter-icon">💨</span>
-                                    <span class="param-filter-label">Wind</span>
-                                </label>
-                                <label class="param-filter-option">
-                                    <input type="checkbox" id="filterThermik" checked>
-                                    <span class="param-filter-icon">🌡️</span>
-                                    <span class="param-filter-label">Thermik</span>
-                                </label>
-                                <label class="param-filter-option">
-                                    <input type="checkbox" id="filterClouds" checked>
-                                    <span class="param-filter-icon">☁️</span>
-                                    <span class="param-filter-label">Sicht</span>
-                                </label>
-                                <label class="param-filter-option">
-                                    <input type="checkbox" id="filterPrecip" checked>
-                                    <span class="param-filter-icon">🌧️</span>
-                                    <span class="param-filter-label">Niederschlag</span>
-                                </label>
+                                <label class="param-filter-option"><input type="checkbox" id="filterWind" checked><span class="param-filter-icon">💨</span><span class="param-filter-label">Wind</span></label>
+                                <label class="param-filter-option"><input type="checkbox" id="filterThermik" checked><span class="param-filter-icon">🌡️</span><span class="param-filter-label">Thermik</span></label>
+                                <label class="param-filter-option"><input type="checkbox" id="filterClouds" checked><span class="param-filter-icon">☁️</span><span class="param-filter-label">Sicht</span></label>
+                                <label class="param-filter-option"><input type="checkbox" id="filterPrecip" checked><span class="param-filter-icon">🌧️</span><span class="param-filter-label">Niederschlag</span></label>
                             </div>
                             <button class="param-filter-reset" id="paramFilterReset">Alle aktivieren</button>
                             <div class="expert-mode-section">
                                 <div class="expert-mode-toggle">
-                                    <label class="expert-toggle-label">
-                                        <input type="checkbox" id="expertModeToggle">
-                                        <span class="expert-toggle-switch"></span>
-                                        <span class="expert-toggle-text">⚙️ Expertenmodus</span>
-                                    </label>
-                                    <button class="expert-settings-btn" id="expertSettingsBtn" disabled title="Grenzwerte anpassen">Anpassen</button>
+                                    <label class="expert-toggle-label"><input type="checkbox" id="expertModeToggle"><span class="expert-toggle-switch"></span><span class="expert-toggle-text">Expertenmodus</span></label>
+                                    <button class="expert-settings-btn" id="expertSettingsBtn" disabled title="Komfortgrenzen anpassen">Anpassen</button>
                                 </div>
-                                <p class="expert-mode-hint" id="expertModeHint">Eigene Grenzwerte für die Ampel-Bewertung definieren</p>
+                                <p class="expert-mode-hint" id="expertModeHint">Eigene Komfortgrenzen; kritische Indikatoren bleiben unabhängig.</p>
                             </div>
                         </div>
                     </div>
-                    <div class="timeline-card" role="region" aria-label="Stündlicher Tagesverlauf"><h3>Tagesverlauf (6-20 Uhr)</h3><div class="timeline" id="timeline" role="listbox" aria-label="Stunden auswählen"></div></div>
 
-                    <div class="assessment-card" role="status" aria-live="polite" aria-label="Aktuelle Flugbedingungen">
-                        <div class="weather-current" id="weatherCurrent">
-                            <span class="weather-icon-text" id="weatherDesc" aria-label="Aktuelles Wetter">-</span>
-                            <span class="weather-temp" id="currentTemp" aria-label="Temperatur">-</span>
-                        </div>
-                        <div class="assessment-wrapper">
-                            <div class="traffic-light" id="trafficLight" aria-hidden="true">
-                                <div class="light red" id="lightRed"></div>
-                                <div class="light yellow" id="lightYellow"></div>
-                                <div class="light green" id="lightGreen"></div>
+                    <details class="legacy-assessment">
+                        <summary>Legacy-v10-Diagnose</summary>
+                        <div class="assessment-card" role="status" aria-label="Legacy-Bewertung">
+                            <div class="assessment-wrapper">
+                                <div class="traffic-light" id="trafficLight" aria-hidden="true"><div class="light red" id="lightRed"></div><div class="light yellow" id="lightYellow"></div><div class="light green" id="lightGreen"></div></div>
+                                <div class="assessment-status" id="assessmentStatus"><span id="statusIcon">○</span><span id="statusText">-</span></div>
                             </div>
-                            <div class="assessment-status" id="assessmentStatus" role="alert"><span id="statusIcon" aria-hidden="true">○</span><span id="statusText">-</span></div>
+                            <div class="reason-summary" id="reasonSummary"><div class="reason-summary-text" id="reasonText"></div></div>
                         </div>
-                        <div class="reason-summary" id="reasonSummary"><div class="reason-summary-text" id="reasonText"></div></div>
-                    </div>
-                    <!-- PHASE 2: Beginner Badge -->
-                    <div class="beginner-badge u-hidden" id="beginnerBadge"></div>
-                    <!-- PHASE 2: Risk Explanation -->
-                    <div class="risk-explanation u-hidden" id="riskExplanation"></div>
-                    <div class="killer-warnings" id="killerWarnings">
-                        <div class="killer-warnings-header"><span class="killer-warnings-icon">🚨</span><span class="killer-warnings-title">STOPP-Kriterien</span></div>
-                        <div class="killer-warnings-subtitle">Bei diesen Bedingungen NICHT fliegen:</div>
-                        <div id="killerList"></div>
-                    </div>
+                        <div class="beginner-badge u-hidden" id="beginnerBadge"></div>
+                        <div class="risk-explanation u-hidden" id="riskExplanation"></div>
+                        <div class="killer-warnings" id="killerWarnings"><div class="killer-warnings-header"><span class="killer-warnings-icon">🚨</span><span class="killer-warnings-title">STOPP-Kriterien</span></div><div id="killerList"></div></div>
+                    </details>
 
                     <!-- Tagesverlauf-Diagramme: Wind + Thermik + Live -->
                     <div class="day-diagrams-container">
@@ -365,7 +416,7 @@
         <footer class="sky-footer">
             <div class="footer-content">
                 <p class="footer-text">
-                    SkyCheck v10.0 | Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="footer-link">Open-Meteo</a> (ICON-D2/EU) + <a href="https://www.openwindmap.org/" target="_blank" rel="noopener noreferrer" class="footer-link">OpenWindMap</a> + <a href="https://avalanche.report/" target="_blank" rel="noopener noreferrer" class="footer-link">LWD</a>
+                    SkyCheck v11.0 | Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="footer-link">Open-Meteo</a> (ICON-D2/EU) + <a href="https://www.openwindmap.org/" target="_blank" rel="noopener noreferrer" class="footer-link">OpenWindMap</a> + <a href="https://avalanche.report/" target="_blank" rel="noopener noreferrer" class="footer-link">LWD</a>
                 </p>
                 <p class="footer-disclaimer">
                     <small>SkyCheck ersetzt keine fundierte Wetterberatung. Piloten sind selbst verantwortlich für ihre Flugentscheidungen.</small>
@@ -398,7 +449,7 @@
 
                 <div class="explanation-card u-mb-md explanation-card-beginner">
                     <h4>⭐ Anfängerfreundliche Bedingungen</h4>
-                    <p class="u-text-sm u-mb-sm">Bei grüner Ampel UND diesen Werten erscheint das "Anfänger-freundlich"-Badge:</p>
+                    <p class="u-text-sm u-mb-sm">Legacy-v10-Diagnose für besonders ruhige Modellbedingungen:</p>
                     <p class="u-text-xs u-text-muted u-mb-sm">⚠️ <strong>Hinweis:</strong> Diese Einschätzung basiert nur auf Modelldaten. Lokale Einflüsse (Talwindsysteme, Lee-Effekte, Thermikauslöser) müssen vor Ort selbst bewertet werden!</p>
                     <table>
                         <tr><th>Parameter</th><th>Schwelle</th><th>Warum?</th></tr>
@@ -415,8 +466,8 @@
                 </div>
 
                 <div class="explanation-card u-mb-md">
-                    <h4>📅 Tagesauswahl-Ampel</h4>
-                    <p class="u-text-sm u-mb-sm">Die Ampel bei der Tagesauswahl zeigt die Flugchancen des Tages:</p>
+                    <h4>📅 Legacy-v10-Tagesaggregation</h4>
+                    <p class="u-text-sm u-mb-sm">Diese frühere Aggregation bleibt nur als technische Referenz erhalten:</p>
                     <table>
                         <tr><th>Status</th><th>Bedeutung</th></tr>
                         <tr><td class="explanation-table-label-go">GO</td><td>≥ 3 Stunden grünes Zeitfenster vorhanden</td></tr>
@@ -427,8 +478,8 @@
                 </div>
 
                 <div class="explanation-intro" id="explanationIntro">
-                    <h3>🚦 Ampel-Schwellwerte</h3>
-                    <p>Hier findest du die genauen Grenzwerte für die Ampel-Bewertung.</p>
+                    <h3>Legacy-v10-Schwellwerte</h3>
+                    <p>Technische Referenz der früheren Gesamtbewertung.</p>
                     <div class="explanation-traffic-light">
                         <span class="light green">GRÜN = Go</span>
                         <span class="light yellow">GELB = Prüfen</span>
@@ -488,11 +539,11 @@
                 <div class="explanation-footer" id="explanationFooter">
                     <h3>📌 Wichtige Hinweise</h3>
                     <ul>
-                        <li><strong>Stunden-Ampel:</strong> Die Bewertung zeigt immer den schlechtesten Einzelwert aller Parameter.</li>
-                        <li><strong>Bestes Zeitfenster:</strong> Längste zusammenhängende grüne Phase (6-20 Uhr), markiert mit ⭐.</li>
+                        <li><strong>Dashboard:</strong> Flugcharakter, Thermik, Föhn und Modellkonsens bleiben voneinander getrennt.</li>
+                        <li><strong>Wetterfenster:</strong> Zusammenhängende interessante Stunden werden ohne gemeinsamen Score hervorgehoben.</li>
                         <li><strong>Trend-Pfeile:</strong> ↑ = Wert steigt (meist schlechter), ↓ = Wert sinkt, → = stabil.</li>
                         <li><strong>Böigkeit:</strong> Differenz zwischen Böen und Grundwind. &gt;8 km/h = Gelb, &gt;15 km/h = Rot (unruhige Luft).</li>
-                        <li><strong>Prognose-Sicherheit:</strong> Heute ⭐⭐⭐ (hoch), Morgen ⭐⭐ (mittel), Übermorgen ⭐ (gering).</li>
+                        <li><strong>Modellkonsens:</strong> Wird als hoch, mittel, gering oder unbekannt ausgewiesen – ohne Sterne.</li>
                         <li><strong>Lokale Verhältnisse:</strong> Diese App ersetzt nicht den Check vor Ort! Windsack, Wolken und Bauchgefühl beachten.</li>
                     </ul>
                     <p class="final-note">🪂 <em>Im Zweifel: Nicht starten! Der Berg ist morgen noch da.</em></p>
@@ -530,8 +581,8 @@
             <div class="about-header">
                 <img src="./img/logo.svg" alt="SkyCheck Logo" class="about-logo">
                 <h2 id="aboutModalTitle">SkyCheck</h2>
-                <p class="about-tagline">Sicherer fliegen mit der Wetterampel</p>
-                <span class="about-version" id="aboutVersion">v10.0</span>
+                <p class="about-tagline">Flugwetter in vier unabhängigen Dimensionen</p>
+                <span class="about-version" id="aboutVersion">v11.0</span>
             </div>
             <div class="about-tabs">
                 <button class="about-tab active" data-tab="about">Was ist SkyCheck?</button>
@@ -540,23 +591,23 @@
             </div>
             <div class="about-content">
                 <div class="about-tab-content active" id="tab-about">
-                    <p><strong>SkyCheck</strong> analysiert automatisch die wichtigsten Wetterparameter für sicheres Gleitschirmfliegen und zeigt dir auf einen Blick, ob die Bedingungen zum Fliegen geeignet sind.</p>
-                    <p>Das <strong>Ampel-System</strong> (Grün/Gelb/Rot) bewertet jede Stunde basierend auf Wind, Thermik, Wolken und Niederschlag.</p>
+                    <p><strong>SkyCheck</strong> ordnet wichtige Wetterparameter für Gleitschirmflieger ein. Es erteilt keine Startfreigabe und ersetzt nicht das eigene Urteil.</p>
+                    <p>Das Dashboard zeigt <strong>Flugcharakter, Thermik, Föhn und Modellkonsens</strong> getrennt für Tag und Stunde.</p>
                     <h4>Datenquelle</h4>
                     <p>Die Wetterdaten stammen von <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo.com</a> und nutzen je nach Region das hochaufgelöste ICON-D2 (2.2km) oder ICON-EU (7km) Modell.</p>
                     <p class="about-ref-hint">💡 Detaillierte Schwellwerte findest du in der <strong>Parameter-Referenz</strong> am Seitenende.</p>
                 </div>
                 <div class="about-tab-content" id="tab-features">
                     <ul class="about-feature-list">
-                        <li><span class="feature-icon">🚦</span> <strong>Wetterampel</strong> mit Stunden-Auflösung (6-20 Uhr)</li>
+                        <li><span class="feature-icon">▦</span> <strong>Entscheidungs-Dashboard</strong> mit vier unabhängigen Dimensionen</li>
                         <li><span class="feature-icon">🚨</span> <strong>5 STOPP-Kriterien</strong> - die wichtigsten Gefahren im Blick</li>
                         <li><span class="feature-icon">💨</span> <strong>Wind nach Höhe</strong> - Boden bis 3000m mit Gradient</li>
                         <li><span class="feature-icon">🧭</span> <strong>Windrose</strong> - Windrichtung auf allen Höhen</li>
                         <li><span class="feature-icon">📊</span> <strong>Wind-Höhenprofil</strong> - Tagesverlauf nach Höhe</li>
                         <li><span class="feature-icon">⭐</span> <strong>Favoriten-System</strong> - deine Startplätze speichern</li>
                         <li><span class="feature-icon">📱</span> <strong>Offline-fähig</strong> - als PWA installierbar</li>
-                        <li><span class="feature-icon">🌟</span> <strong>Anfänger-Badge</strong> - zeigt perfekte Bedingungen</li>
-                        <li><span class="feature-icon">📅</span> <strong>3-Tage-Vorschau</strong> mit Tages-Ampel</li>
+                        <li><span class="feature-icon">⏱️</span> <strong>Doppelmarker-Timeline</strong> für Flugcharakter und Thermik</li>
+                        <li><span class="feature-icon">📅</span> <strong>3-Tage-Vorschau</strong> mit kompakten Dimensionswerten</li>
                         <li><span class="feature-icon">📡</span> <strong>Live-Wind</strong> - Messwerte von OpenWindMap + Lawinenwarndiensten (Alpen)</li>
                     </ul>
                 </div>
@@ -577,7 +628,7 @@
             <div class="about-footer">
                 <a href="#" id="showWelcomeFromAbout" class="about-welcome-link">🎓 Einführung nochmal anzeigen</a>
                 <a href="#" id="feedbackEmailLink" class="about-feedback-link">📧 Feedback senden</a>
-                <p class="about-credits">Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a></p>
+                <p class="about-credits">Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo.com</a></p>
             </div>
         </div>
     </div>
@@ -601,8 +652,8 @@
                 <div class="welcome-section">
                     <div class="welcome-section-icon">🚦</div>
                     <div class="welcome-section-text">
-                        <h3>Die Ampel</h3>
-                        <p>Grün = fliegbar, Gelb = eingeschränkt, Rot = ungeeignet. Basiert auf Wind, Thermik, Sicht und Niederschlag.</p>
+                        <h3>Vier Wetterdimensionen</h3>
+                        <p>Flugcharakter, Thermik, Föhn und Modellkonsens werden unabhängig dargestellt. Kritische Indikatoren bleiben dominant.</p>
                     </div>
                 </div>
                 <div class="welcome-section">
@@ -623,7 +674,7 @@
                     <div class="welcome-section-icon">⚙️</div>
                     <div class="welcome-section-text">
                         <h3>Expertenmodus</h3>
-                        <p>Passe die Grenzwerte der Ampel an dein Können und deine Erfahrung an.</p>
+                        <p>Passe persönliche Komfortgrenzen an. Kritische Indikatoren bleiben davon unabhängig.</p>
                     </div>
                 </div>
             </div>
@@ -648,7 +699,7 @@
             <button class="modal-close" id="closeExpertModal" aria-label="Dialog schließen">×</button>
             <div class="expert-header">
                 <h2 id="expertModalTitle">⚙️ Expertenmodus</h2>
-                <p class="expert-subtitle">Eigene Grenzwerte für die Ampel-Bewertung</p>
+                <p class="expert-subtitle">Eigene Komfortgrenzen; kritische Indikatoren bleiben unabhängig</p>
             </div>
             <div class="expert-content">
                 <div class="expert-presets">
