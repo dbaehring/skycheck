@@ -7,9 +7,8 @@
  * - Erzwingt Cache-Invalidierung bei wiederkehrenden Nutzern
  */
 
-const CACHE_NAME = 'skycheck-v32';
-const STATIC_CACHE_NAME = 'skycheck-static-v32';
-const API_CACHE_NAME = 'skycheck-api-v32';
+const STATIC_CACHE_NAME = 'skycheck-static-v33';
+const API_CACHE_NAME = 'skycheck-api-v33';
 
 // Statische Assets die gecacht werden sollen
 const STATIC_ASSETS = [
@@ -22,6 +21,7 @@ const STATIC_ASSETS = [
     './js/map.js',
     './js/weather.js',
     './js/open-meteo-adapter.js',
+    './js/forecast-periods.js',
     './js/forecast-confidence-config.js',
     './js/model-forecast-adapter.js',
     './js/model-forecast-provider.js',
@@ -65,21 +65,16 @@ const API_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
  * Install-Event: Statische Assets cachen
  */
 self.addEventListener('install', (event) => {
-    console.log('[SW] Installing Service Worker...');
-
     event.waitUntil(
         caches.open(STATIC_CACHE_NAME)
             .then((cache) => {
-                console.log('[SW] Caching static assets');
                 return cache.addAll(STATIC_ASSETS);
             })
             .then(() => {
                 // Externe Assets separat cachen (Fehler ignorieren)
                 return caches.open(STATIC_CACHE_NAME).then((cache) => {
                     return Promise.allSettled(
-                        EXTERNAL_ASSETS.map(url => cache.add(url).catch(() => {
-                            console.log('[SW] Could not cache external:', url);
-                        }))
+                        EXTERNAL_ASSETS.map(url => cache.add(url).catch(() => null))
                     );
                 });
             })
@@ -91,8 +86,6 @@ self.addEventListener('install', (event) => {
  * Activate-Event: Alte Caches aufräumen
  */
 self.addEventListener('activate', (event) => {
-    console.log('[SW] Activating Service Worker...');
-
     event.waitUntil(
         caches.keys()
             .then((cacheNames) => {
@@ -104,10 +97,7 @@ self.addEventListener('activate', (event) => {
                                    name !== STATIC_CACHE_NAME &&
                                    name !== API_CACHE_NAME;
                         })
-                        .map((name) => {
-                            console.log('[SW] Deleting old cache:', name);
-                            return caches.delete(name);
-                        })
+                        .map((name) => caches.delete(name))
                 );
             })
             .then(() => self.clients.claim())
@@ -201,22 +191,20 @@ async function networkFirstWithCache(request, cacheName) {
         // Bei Netzwerkfehler: Cache-Fallback (mit TTL-Prüfung für API)
         const cachedResponse = await caches.match(request);
         if (cachedResponse) {
+            const headers = new Headers(cachedResponse.headers);
+            headers.set('sw-cache-fallback', 'true');
             if (isApiRequest) {
                 const cachedAt = cachedResponse.headers.get('sw-cached-at');
                 if (cachedAt && (Date.now() - parseInt(cachedAt)) > API_CACHE_MAX_AGE_MS) {
-                    console.log('[SW] API cache expired:', request.url);
                     // Abgelaufene Daten trotzdem liefern, aber mit Warnung-Header
-                    const headers = new Headers(cachedResponse.headers);
                     headers.set('sw-cache-stale', 'true');
-                    return new Response(await cachedResponse.blob(), {
-                        status: cachedResponse.status,
-                        statusText: cachedResponse.statusText,
-                        headers: headers
-                    });
                 }
             }
-            console.log('[SW] Serving from cache (offline):', request.url);
-            return cachedResponse;
+            return new Response(await cachedResponse.blob(), {
+                status: cachedResponse.status,
+                statusText: cachedResponse.statusText,
+                headers
+            });
         }
 
         // Offline-Fehler
@@ -238,7 +226,6 @@ async function fetchAndCache(request, cacheName) {
 
         return response;
     } catch (error) {
-        console.log('[SW] Fetch failed:', request.url);
         throw error;
     }
 }

@@ -14,7 +14,7 @@ const LEVEL_LABELS = Object.freeze({
     elevated: 'Erhöht',
     high: 'Hoch',
     critical: 'Kritisch',
-    unknown: 'Unbekannt'
+    unknown: 'Unklar'
 });
 
 function inBounds(location, bounds) {
@@ -199,10 +199,10 @@ function buildReasons(metrics) {
         reasons.push({
             code: 'pressure-gradient',
             signal: metrics.components.pressureGradient,
-            text: `Bozen–Innsbruck ${metrics.pressure.deltaHpa >= 0 ? '+' : ''}${metrics.pressure.deltaHpa.toFixed(1)} hPa`
+            text: `ICON-Prognose Bozen–Innsbruck ${metrics.pressure.deltaHpa >= 0 ? '+' : ''}${metrics.pressure.deltaHpa.toFixed(1)} hPa`
         });
     } else {
-        reasons.push({ code: 'pressure-unavailable', signal: 0, text: 'Bozen–Innsbruck-Druckgradient nicht verfügbar' });
+        reasons.push({ code: 'pressure-unavailable', signal: 0, text: 'ICON-Prognose des Bozen–Innsbruck-Druckgradienten nicht verfügbar' });
     }
     if (metrics.flow.selected.matchingLevelCount > 0) {
         const levelText = metrics.flow.selected.matchingLevels.map(level => level.pressureHpa).join('/');

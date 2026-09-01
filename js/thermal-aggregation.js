@@ -5,13 +5,14 @@
  */
 
 import { THERMAL_LEVEL_RANK, THERMAL_THRESHOLDS } from './thermal-config.js';
+import { isHourInPeriod } from './forecast-periods.js';
 
 const DAY_LABELS = Object.freeze({
     weak: 'Schwach',
     usable: 'Brauchbar',
     good: 'Gut',
     excellent: 'Sehr gut',
-    unknown: 'Unbekannt'
+    unknown: 'Unklar'
 });
 
 function hourOf(timestamp) {
@@ -40,6 +41,7 @@ export function findThermalWindows(hours, assessments, dayStr, minimumLevel = 'u
         const hour = hours[index];
         if (dayOf(hour?.time) !== dayStr) continue;
         const localHour = hourOf(hour.time);
+        if (!isHourInPeriod(localHour)) continue;
         const thermal = assessments[index]?.thermal;
         const eligible = thermal && THERMAL_LEVEL_RANK[thermal.level] >= minimumRank &&
             (!predicate || predicate(thermal, assessments[index]));
@@ -117,7 +119,7 @@ export function findBestThermalWindow(hours, assessments, dayStr) {
 export function assessThermalDay(hours, assessments, dayStr) {
     const dayIndices = [];
     for (let index = 0; index < (hours || []).length; index++) {
-        if (dayOf(hours[index]?.time) === dayStr) dayIndices.push(index);
+        if (dayOf(hours[index]?.time) === dayStr && isHourInPeriod(hourOf(hours[index]?.time))) dayIndices.push(index);
     }
     const knownIndices = dayIndices.filter(index => assessments[index]?.thermal?.level !== 'unknown');
     const config = THERMAL_THRESHOLDS.aggregation;

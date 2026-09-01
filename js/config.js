@@ -1,17 +1,17 @@
 /**
  * SkyCheck - Konfiguration
  * LIMITS, WEATHER_CODES und andere Konstanten
- * v10 - Sicherheit, PWA-Verbesserungen, 900hPa Integration
+ * v11 RC1 - Entscheidungs-Dashboard und gehärtete Prognosezustände
  */
 
 // === SkyCheck App Info ===
 export const APP_INFO = {
     name: 'SkyCheck',
-    version: '11.0.0',  // Hauptversion - Cache-Version (sw.js) kann unabhängig sein
+    version: '11.0.0-rc.1',  // Hauptversion - Cache-Version (sw.js) kann unabhängig sein
     slogan: 'Wetterdimensionen klar einordnen',
     description: 'Detaillierte Gleitschirm-Wetteranalyse',
     author: 'SkyCheck Team',
-    year: 2025,
+    year: 2026,
     // Email verschleiert gegen Spam-Bots (wird in ui.js zusammengesetzt)
     feedbackEmailParts: ['danielbaehring', 'gmail.com']
 };
@@ -20,6 +20,7 @@ export const APP_INFO = {
 export const API_CONFIG = {
     baseUrl: 'https://api.open-meteo.com/v1/forecast',
     elevationUrl: 'https://api.open-meteo.com/v1/elevation',
+    timezone: 'auto',  // Zeitstempel und Tagesgrenzen folgen dem gewählten Ort
     timeout: 15000,  // Max. Wartezeit in ms
     // OpenWindMap/Pioupiou API für Live-Winddaten
     pioupiouUrl: 'https://api.pioupiou.fr/v1/live/all',

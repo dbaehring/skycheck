@@ -1,3 +1,5 @@
+import { FORECAST_PERIODS } from './forecast-periods.js';
+
 /**
  * Reine v10-Zeit- und Tagesaggregation.
  *
@@ -9,9 +11,9 @@
  */
 
 export const V10_TIME_WINDOWS = Object.freeze({
-    timeline: { start: 6, end: 20 },
-    categorySummary: { start: 8, end: 18 },
-    favoriteSummary: { start: 6, end: 20 }
+    timeline: { start: FORECAST_PERIODS.pilotDay.start, end: FORECAST_PERIODS.pilotDay.end },
+    categorySummary: { start: FORECAST_PERIODS.legacyCategorySummary.start, end: FORECAST_PERIODS.legacyCategorySummary.end },
+    favoriteSummary: { start: FORECAST_PERIODS.pilotDay.start, end: FORECAST_PERIODS.pilotDay.end }
 });
 
 export function findHourIndex(hours, dayStr, hour) {
@@ -76,4 +78,3 @@ export function summarizeFavoriteDay(hours, assessments, dayStr) {
         bestWindow: findBestWindowForHours(hours, assessments, dayStr, V10_TIME_WINDOWS.favoriteSummary)
     };
 }
-

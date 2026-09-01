@@ -87,7 +87,7 @@ export async function fetchModelForecastConsensus({
     primaryHours = [],
     primaryAssessments = [],
     forecastDays = 3,
-    timezone = 'Europe/Berlin',
+    timezone = API_CONFIG.timezone,
     fetchImpl = (...args) => fetch(...args),
     force = false
 }) {

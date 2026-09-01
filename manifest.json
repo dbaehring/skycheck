@@ -1,7 +1,7 @@
 {
   "name": "SkyCheck - Paragliding Meteo",
   "short_name": "SkyCheck",
-  "description": "Sicherer fliegen mit der Wetterampel. Detaillierte Gleitschirm-Wetteranalyse.",
+  "description": "Flugcharakter, Thermik, Föhnrisiko und Modellkonsens für Gleitschirmflieger getrennt einordnen.",
   "start_url": "./index.html",
   "id": "skycheck",
   "scope": "./",

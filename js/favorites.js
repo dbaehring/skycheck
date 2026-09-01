@@ -4,7 +4,7 @@
  */
 
 import { state } from './state.js';
-import { STORAGE_KEYS, UI_CONFIG, CACHE_CONFIG } from './config.js';
+import { STORAGE_KEYS, UI_CONFIG, CACHE_CONFIG, API_CONFIG } from './config.js';
 import { isInIconEUCoverage, escapeHtml } from './utils.js';
 import { selectLocation } from './map.js';
 import { getEffectiveLimits } from './weather.js';
@@ -370,7 +370,7 @@ async function fetchQuickWeather(lat, lon, cacheKey) {
         const inEU = isInIconEUCoverage(lat, lon);
         const model = inEU ? 'icon_seamless' : 'best_match';
         const params = OPEN_METEO_FAVORITE_HOURLY_FIELDS.join(',');
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=${params}&models=${model}&forecast_days=1&wind_speed_unit=kmh&timezone=auto`;
+        const url = `${API_CONFIG.baseUrl}?latitude=${lat}&longitude=${lon}&hourly=${params}&models=${model}&forecast_days=1&wind_speed_unit=kmh&timezone=${API_CONFIG.timezone}`;
 
         const response = await fetch(url);
         if (!response.ok) {
@@ -449,7 +449,7 @@ function renderCompareGrid() {
     if (!grid) return;
 
     const levelLabels = {
-        relaxed: 'ENTSPANNT',
+        relaxed: 'RELAXED',
         sporty: 'SPORTLICH',
         demanding: 'ANSPRUCHSVOLL',
         critical: 'KRITISCH',

@@ -1,12 +1,12 @@
 /**
  * SkyCheck - Wetter-Modul
  * API-Calls und Wetterdaten-Verarbeitung
- * v9 - Mit Datenvalidierung
+ * v11 RC1 - lokale Zeit, Teilfehler und sichtbare Cache-Herkunft
  */
 
 import { state } from './state.js';
 import { BEGINNER_LIMITS, API_CONFIG, UI_CONFIG, METEO_CONSTANTS } from './config.js';
-import { isInIconD2Coverage, isInIconEUCoverage, getGustFactor, escapeHtml, haversineDistance, getWindDir } from './utils.js';
+import { isInIconD2Coverage, isInIconEUCoverage, getGustFactor, haversineDistance, getWindDir } from './utils.js';
 import {
     OPEN_METEO_DAILY_FIELDS,
     OPEN_METEO_MAIN_HOURLY_FIELDS,
@@ -25,6 +25,7 @@ import { assessThermalDay } from './thermal-aggregation.js';
 import { isFoehnRegionApplicable } from './foehn-engine.js';
 import { fetchFoehnPressureSeries } from './foehn-pressure-provider.js';
 import { clearModelForecastCache } from './model-forecast-provider.js';
+import { FORECAST_PERIODS } from './forecast-periods.js';
 
 /**
  * Gibt die effektiven Limits zurück (Custom wenn gesetzt, sonst Default)
@@ -96,6 +97,26 @@ export function setWeatherCallback(callback) {
     onWeatherLoaded = callback;
 }
 
+function renderInitialState(icon, title, detail, hint = '') {
+    const container = document.getElementById('initialState');
+    const iconElement = document.createElement('div');
+    iconElement.className = 'initial-state-icon';
+    iconElement.textContent = icon;
+    const heading = document.createElement('h3');
+    heading.textContent = title;
+    const detailElement = document.createElement('p');
+    detailElement.className = 'initial-state-detail';
+    detailElement.textContent = detail;
+    const children = [iconElement, heading, detailElement];
+    if (hint) {
+        const hintElement = document.createElement('p');
+        hintElement.className = 'initial-state-hint';
+        hintElement.textContent = hint;
+        children.push(hintElement);
+    }
+    container.replaceChildren(...children);
+}
+
 /**
  * Haupt-Funktion: Wetterdaten abrufen
  */
@@ -120,7 +141,8 @@ export async function fetchWeatherData() {
         modelChoice = 'best_match';
         modelDisplayName = 'ECMWF/GFS';
     }
-    const timezone = inEU ? 'Europe/Berlin' : 'auto';
+    // Der Provider liefert mit `auto` die lokale Zeitzone des Standorts.
+    const timezone = API_CONFIG.timezone;
     state.foehnPressure = null;
 
     try {
@@ -220,15 +242,26 @@ export async function fetchWeatherData() {
 
         const stale = mainResponse?.headers?.get('sw-cache-stale') === 'true' ||
             pressureResponse?.headers?.get('sw-cache-stale') === 'true';
+        const fromCache = mainResponse?.headers?.get('sw-cache-fallback') === 'true';
+        const cachedAtMs = Number(mainResponse?.headers?.get('sw-cached-at'));
+        const cachedAt = Number.isFinite(cachedAtMs) && cachedAtMs > 0 ? new Date(cachedAtMs) : null;
+        state.forecastFreshness = {
+            fromCache,
+            stale,
+            cachedAt: cachedAt?.toISOString() || null
+        };
         state.hourlyWeather = normalizeOpenMeteoHourly(d1.hourly, d2?.hourly, {
             location: state.currentLocation,
             stale
         });
         rebuildHourlyAssessments();
         state.dailyData = d1.daily;
-        state.lastUpdate = new Date();
+        state.timezone = d1.timezone || 'auto';
+        state.timezoneAbbreviation = d1.timezone_abbreviation || null;
+        state.lastUpdate = cachedAt || new Date();
 
         // Update UI
+        document.getElementById('updateLabel').textContent = fromCache ? 'Offline-Cache vom:' : 'Daten von:';
         document.getElementById('updateTime').textContent =
             state.lastUpdate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr';
 
@@ -284,7 +317,7 @@ export async function fetchWeatherData() {
         // Differenzierte Fehlermeldungen
         let errorIcon = '⚠️';
         let errorTitle = 'Fehler beim Laden';
-        let errorDetail = escapeHtml(e.message);
+        let errorDetail = e.message;
         let errorHint = 'Bitte erneut versuchen oder anderen Standort wählen.';
 
         if (!navigator.onLine) {
@@ -311,19 +344,10 @@ export async function fetchWeatherData() {
 
         const initialState = document.getElementById('initialState');
         initialState.style.display = 'block';
-        initialState.innerHTML = `
-            <div class="initial-state-icon">${errorIcon}</div>
-            <h3>${errorTitle}</h3>
-            <p style="color: var(--red);">${errorDetail}</p>
-            <p style="margin-top: 0.5rem;">${errorHint}</p>
-        `;
+        renderInitialState(errorIcon, errorTitle, errorDetail, errorHint);
         // Nach Timeout zurücksetzen
         setTimeout(() => {
-            initialState.innerHTML = `
-                <div class="initial-state-icon">🗺️</div>
-                <h3>Wähle einen Standort</h3>
-                <p>Klicke auf die Karte oder nutze GPS.</p>
-            `;
+            renderInitialState('🗺️', 'Wähle einen Standort', 'Klicke auf die Karte oder nutze GPS.');
         }, UI_CONFIG.errorResetDelay);
     }
 }
@@ -407,7 +431,7 @@ export function getThermalDayAssessment(dayStr) {
  * PHASE 1 SAFETY: Prüfe ob ein Tag Killer-Bedingungen hat
  */
 export function dayHasKillers(dayStr) {
-    for (let h = 6; h <= 20; h++) {
+    for (let h = FORECAST_PERIODS.pilotDay.start; h <= FORECAST_PERIODS.pilotDay.end; h++) {
         const ts = dayStr + 'T' + h.toString().padStart(2, '0') + ':00';
         const idx = state.hourlyWeather.findIndex(hour => hour.time === ts);
         if (idx === -1) continue;
@@ -674,12 +698,19 @@ let liveWindCache = {
     avalanche: { data: null, timestamp: 0 }
 };
 
+export function clearLiveWindCache() {
+    liveWindCache = {
+        pioupiou: { data: null, timestamp: 0 },
+        avalanche: { data: null, timestamp: 0 }
+    };
+}
+
 
 /**
  * Holt alle Pioupiou/OpenWindMap Stationen (mit Cache)
  * @returns {Promise<Array>} Array aller Stationen
  */
-async function fetchAllPioupiouStations() {
+async function fetchAllPioupiouStations(fetchImpl = (...args) => fetch(...args), warn = (...args) => console.warn(...args)) {
     const now = Date.now();
     const cache = liveWindCache.pioupiou;
 
@@ -689,7 +720,7 @@ async function fetchAllPioupiouStations() {
     }
 
     try {
-        const response = await fetch(API_CONFIG.pioupiouUrl);
+        const response = await fetchImpl(API_CONFIG.pioupiouUrl);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
@@ -701,9 +732,11 @@ async function fetchAllPioupiouStations() {
 
         return cache.data;
     } catch (error) {
-        console.warn('OpenWindMap API Fehler:', error);
-        // Bei Fehler: alte Cache-Daten zurückgeben falls vorhanden
-        return cache.data || [];
+        warn('OpenWindMap API Fehler:', error);
+        // Ein alter Cache ist besser als ein Totalausfall; ohne Cache wird der
+        // Fehler an die gemeinsame Live-Wind-Steuerung weitergereicht.
+        if (cache.data) return cache.data;
+        throw error;
     }
 }
 
@@ -730,7 +763,7 @@ function getAvalancheReportUrl() {
  * Quellen: LWD Tirol, Bayern, Salzburg, Südtirol, GeoSphere Austria
  * @returns {Promise<Array>} Array aller Stationen im einheitlichen Format
  */
-async function fetchAllAvalancheStations() {
+async function fetchAllAvalancheStations(fetchImpl = (...args) => fetch(...args), warn = (...args) => console.warn(...args)) {
     if (!API_CONFIG.avalancheReportEnabled) {
         return [];
     }
@@ -745,7 +778,7 @@ async function fetchAllAvalancheStations() {
 
     try {
         const url = getAvalancheReportUrl();
-        const response = await fetch(url);
+        const response = await fetchImpl(url);
 
         if (!response.ok) {
             // Fallback: Versuche vorherige Stunde
@@ -754,7 +787,7 @@ async function fetchAllAvalancheStations() {
                 const prevHour = hour > 0 ? hour - 1 : 23;
                 return `_${String(prevHour).padStart(2, '0')}-00_`;
             });
-            const fallbackResponse = await fetch(fallbackUrl);
+            const fallbackResponse = await fetchImpl(fallbackUrl);
             if (!fallbackResponse.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
@@ -772,9 +805,9 @@ async function fetchAllAvalancheStations() {
 
         return cache.data;
     } catch (error) {
-        console.warn('Avalanche.report API Fehler:', error);
-        // Bei Fehler: alte Cache-Daten zurückgeben falls vorhanden
-        return cache.data || [];
+        warn('Avalanche.report API Fehler:', error);
+        if (cache.data) return cache.data;
+        throw error;
     }
 }
 
@@ -842,15 +875,22 @@ function parseAvalancheStation(feature, targetLat, targetLon) {
  * @param {number} maxStations - Max. Anzahl Stationen (default aus Config)
  * @returns {Promise<Array>} Sortierte Liste der nächsten Stationen
  */
-export async function fetchNearbyLiveWind(lat, lon, radiusKm = null, maxStations = null) {
+export async function fetchNearbyLiveWind(lat, lon, radiusKm = null, maxStations = null, options = {}) {
     const radius = radiusKm || API_CONFIG.liveWindRadius;
     const max = maxStations || API_CONFIG.liveWindMaxStations;
 
     // Beide Quellen parallel abrufen
-    const [pioupiouStations, avalancheFeatures] = await Promise.all([
-        fetchAllPioupiouStations(),
-        fetchAllAvalancheStations()
+    const fetchImpl = options.fetchImpl || ((...args) => fetch(...args));
+    const warn = options.warn || ((...args) => console.warn(...args));
+    const [pioupiouResult, avalancheResult] = await Promise.allSettled([
+        fetchAllPioupiouStations(fetchImpl, warn),
+        fetchAllAvalancheStations(fetchImpl, warn)
     ]);
+    if (pioupiouResult.status === 'rejected' && avalancheResult.status === 'rejected') {
+        throw new Error('Live-Wind-Provider nicht erreichbar');
+    }
+    const pioupiouStations = pioupiouResult.status === 'fulfilled' ? pioupiouResult.value : [];
+    const avalancheFeatures = avalancheResult.status === 'fulfilled' ? avalancheResult.value : [];
 
     const allNearbyStations = [];
 

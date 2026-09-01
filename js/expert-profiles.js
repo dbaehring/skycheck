@@ -7,7 +7,7 @@ import { LIMITS } from './config.js';
 
 export const EXPERT_PRESETS = Object.freeze({
     beginner: {
-        label: 'Anfänger',
+        label: 'Konservativ',
         description: 'Konservative Limits für Flugschüler und Genussflieger',
         values: { windSurface: 12, windGusts: 18, gustSpread: 10, gradient: 12, directionShear: 30, w900: 18, w850: 20, w700: 22, cape: 500, cloudLow: 40, visibility: 15000, precip: 0.5, precipProb: 20 }
     },

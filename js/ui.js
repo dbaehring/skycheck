@@ -1,7 +1,7 @@
 /**
  * SkyCheck - UI-Modul
  * DOM-Updates, Rendering, Darstellungs-Logik
- * v9 - Mit formatValue für sichere Anzeige
+ * v11 RC1 - getrennte Entscheidungsdimensionen und sichtbare Datenzustände
  */
 
 import { state } from './state.js';
@@ -17,9 +17,11 @@ import {
     getEffectiveLimits, getHourAssessment, rebuildHourlyAssessments
 } from './weather.js';
 import { V10_TIME_WINDOWS } from './aggregation.js';
+import { FORECAST_PERIODS } from './forecast-periods.js';
 import { EXPERT_PRESETS, buildCustomLimits } from './expert-profiles.js';
 import {
     DASHBOARD_LABELS,
+    buildForecastFreshnessView,
     buildDashboardDayView,
     buildDashboardHourView,
     findBestWeatherWindow
@@ -197,11 +199,6 @@ export function selectDay(idx) {
     });
     updateSunTimes(idx);
     updateForecastConfidence(idx);
-    renderDashboardDay(idx);
-    buildTimeline(state.forecastDays[idx].date);
-
-    // Wind-Profil immer aktualisieren (ist jetzt immer sichtbar)
-    renderWindDiagram(state.forecastDays[idx].date);
 
     const now = new Date(), ch = now.getHours();
     let def = state.forecastDays[idx].indices.find(i => new Date(state.hourlyWeather[i].time).getHours() === (idx === 0 ? ch : 12));
@@ -216,7 +213,7 @@ export function updateForecastConfidence(dayIdx) {
     const metaEl = document.getElementById('confidenceMeta');
     if (!levelEl || !modelEl || !reasonsEl || !metaEl) return;
 
-    const labels = { high: 'hoch', medium: 'mittel', low: 'gering', unknown: 'unbekannt' };
+    const labels = DASHBOARD_LABELS.confidence;
     const renderComponent = (id, level) => {
         const element = document.getElementById(id);
         if (!element) return;
@@ -229,7 +226,7 @@ export function updateForecastConfidence(dayIdx) {
     const confidenceState = state.forecastConfidence;
 
     if (confidenceState.status === 'loading' || confidenceState.status === 'idle') {
-        levelEl.textContent = 'wird geladen…';
+        levelEl.textContent = 'Wird geladen…';
         levelEl.className = 'confidence-level unknown';
         modelEl.textContent = 'ICON-D2 · ICON-EU · AROME Austria · ECMWF IFS werden parallel verglichen.';
         metaEl.textContent = 'Die Hauptprognose bleibt währenddessen vollständig nutzbar.';
@@ -243,7 +240,7 @@ export function updateForecastConfidence(dayIdx) {
     const day = state.forecastDays[dayIdx];
     const daily = confidenceState.daily?.find(item => item.date === day?.date);
     const level = daily?.level || 'unknown';
-    levelEl.textContent = labels[level];
+    levelEl.textContent = level === 'unknown' ? '⚪ Unklar' : labels[level];
     levelEl.className = `confidence-level ${level}`;
     renderComponent('confidenceWind', daily?.components?.wind || 'unknown');
     renderComponent('confidenceThermal', daily?.components?.thermal || 'unknown');
@@ -290,6 +287,10 @@ function setDashboardLevel(element, group, level) {
     element.classList.add(level || 'unknown');
 }
 
+function visibleDashboardLabel(value) {
+    return value?.level === 'unknown' ? '⚪ Unklar' : value?.label || '⚪ Unklar';
+}
+
 function confidenceForDay(dayStr) {
     return state.forecastConfidence.daily?.find(item => item.date === dayStr) || null;
 }
@@ -325,17 +326,22 @@ function renderDashboardDay(dayIdx = state.selectedDay) {
     setDashboardLevel(thermal, 'thermal', view.thermal.level);
     setDashboardLevel(foehn, 'foehn', view.foehn.level);
     setDashboardLevel(consensus, 'confidence', view.confidence.level);
+    const freshness = document.getElementById('forecastFreshness');
+    const freshnessView = buildForecastFreshnessView(state.forecastFreshness);
+    freshness.classList.toggle('u-hidden', !freshnessView.visible);
+    freshness.classList.toggle('stale', freshnessView.stale);
+    freshness.textContent = freshnessView.text;
     document.getElementById('dashboardDate').textContent = formatDashboardDate(day.date);
-    document.getElementById('dashboardSafetyValue').textContent = view.safety.label;
+    document.getElementById('dashboardSafetyValue').textContent = visibleDashboardLabel(view.safety);
     document.getElementById('dashboardSafetyDetail').textContent = view.safety.level === 'unknown'
         ? view.dataQualityReason
-        : 'Schwerste Ausprägung zwischen 06 und 20 Uhr.';
-    document.getElementById('dashboardThermalValue').textContent = view.thermal.label;
+        : `Schwerste Ausprägung zwischen ${FORECAST_PERIODS.pilotDay.label}.`;
+    document.getElementById('dashboardThermalValue').textContent = visibleDashboardLabel(view.thermal);
     document.getElementById('dashboardThermalDetail').textContent = view.thermalDay.reasons?.[0] || 'Keine Thermikangabe.';
-    document.getElementById('dashboardFoehnValue').textContent = view.foehn.label;
+    document.getElementById('dashboardFoehnValue').textContent = visibleDashboardLabel(view.foehn);
     document.getElementById('dashboardConsensusValue').textContent = state.forecastConfidence.status === 'loading'
         ? 'Wird geladen…'
-        : view.confidence.label;
+        : visibleDashboardLabel(view.confidence);
 
     const windowCard = document.getElementById('dashboardWindow');
     windowCard.classList.remove('thermal', 'quiet', 'conflict', 'unknown');
@@ -367,11 +373,11 @@ function renderDashboardDay(dayIdx = state.selectedDay) {
     dataQuality.textContent = view.dataQualityReason || '';
     dataQuality.classList.toggle('u-hidden', !view.dataQualityReason);
 
-    document.getElementById('flightCharacterLevel').textContent = view.safety.label;
+    document.getElementById('flightCharacterLevel').textContent = visibleDashboardLabel(view.safety);
     document.getElementById('flightCharacterReason').textContent = view.hints[0]?.text || 'Kein dominanter Belastungsfaktor im Tagesprofil.';
-    document.getElementById('thermalXcLevel').textContent = view.thermal.label;
+    document.getElementById('thermalXcLevel').textContent = visibleDashboardLabel(view.thermal);
     document.getElementById('thermalXcReason').textContent = view.thermalDay.reasons?.join(' · ') || 'Keine belastbare Tagesaggregation.';
-    document.getElementById('foehnDetailLevel').textContent = view.foehn.label;
+    document.getElementById('foehnDetailLevel').textContent = visibleDashboardLabel(view.foehn);
     document.getElementById('foehnDetailReason').textContent = view.foehn.level === 'notApplicable'
         ? 'Standort liegt außerhalb des anwendbaren Alpenraums.'
         : view.foehn.level === 'high' || view.foehn.level === 'critical'
@@ -389,8 +395,8 @@ function renderDashboardHour(index) {
     const values = [
         ['Flugcharakter', view.safety],
         ['Thermik', view.thermal],
-        ['Föhn', view.foehn],
-        ['Konsens', view.confidence]
+        ['Föhnrisiko', view.foehn],
+        ['Modellkonsens', view.confidence]
     ];
     dimensions.replaceChildren(...values.map(([name, value]) => {
         const item = document.createElement('div');
@@ -398,7 +404,7 @@ function renderDashboardHour(index) {
         const label = document.createElement('span');
         label.textContent = name;
         const strong = document.createElement('strong');
-        strong.textContent = value.label;
+        strong.textContent = visibleDashboardLabel(value);
         item.append(label, strong);
         return item;
     }));
@@ -412,11 +418,11 @@ function renderDashboardHour(index) {
     };
     renderList('hourWindSummary', Object.values(view.wind));
     renderList('hourThermalSummary', Object.values(view.thermalSummary));
-    document.getElementById('flightCharacterLevel').textContent = view.safety.label;
+    document.getElementById('flightCharacterLevel').textContent = visibleDashboardLabel(view.safety);
     document.getElementById('flightCharacterReason').textContent = view.dataQualityReason || view.limitingFactor;
-    document.getElementById('thermalXcLevel').textContent = view.thermal.label;
+    document.getElementById('thermalXcLevel').textContent = visibleDashboardLabel(view.thermal);
     document.getElementById('thermalXcReason').textContent = Object.values(view.thermalSummary).join(' · ');
-    document.getElementById('foehnDetailLevel').textContent = view.foehn.label;
+    document.getElementById('foehnDetailLevel').textContent = visibleDashboardLabel(view.foehn);
     const foehnReasons = assessment.foehn?.reasons || [];
     document.getElementById('foehnDetailReason').textContent = foehnReasons[0]?.text || foehnReasons[0] ||
         (view.foehn.level === 'notApplicable' ? 'Außerhalb des anwendbaren Alpenraums.' : 'Kein dominantes Föhnsignal in dieser Stunde.');
@@ -443,7 +449,7 @@ export function buildTimeline(dayStr) {
     const currentHour = now.getHours();
     const isToday = dayStr === todayStr;
 
-    for (let h = 6; h <= 20; h++) {
+    for (let h = FORECAST_PERIODS.pilotDay.start; h <= FORECAST_PERIODS.pilotDay.end; h++) {
         const ts = dayStr + 'T' + h.toString().padStart(2, '0') + ':00';
         const idx = state.hourlyWeather.findIndex(hour => hour.time === ts);
         if (idx === -1) continue;
@@ -461,7 +467,7 @@ export function buildTimeline(dayStr) {
         slot.dataset.hourIdx = idx;
         slot.setAttribute('role', 'option');
         slot.setAttribute('aria-selected', idx === state.selectedHourIndex ? 'true' : 'false');
-        slot.setAttribute('aria-label', `${h}:00, Flugcharakter ${DASHBOARD_LABELS.safety[safety]}, Thermik ${DASHBOARD_LABELS.thermal[thermal]}, Föhn ${DASHBOARD_LABELS.foehn[foehn]}, Modellkonsens ${DASHBOARD_LABELS.confidence[confidence]}`);
+        slot.setAttribute('aria-label', `${h}:00, Flugcharakter ${DASHBOARD_LABELS.safety[safety]}, Thermik ${DASHBOARD_LABELS.thermal[thermal]}, Föhnrisiko ${DASHBOARD_LABELS.foehn[foehn]}, Modellkonsens ${DASHBOARD_LABELS.confidence[confidence]}`);
         if (idx === state.selectedHourIndex) slot.classList.add('active');
         if (bestWin?.indices.includes(idx)) {
             slot.classList.add('best');
@@ -474,10 +480,10 @@ export function buildTimeline(dayStr) {
         const isMobile = window.innerWidth < UI_CONFIG.mobileBreakpoint;
         const timeText = isMobile ? h : h + ':00';
         const foehnMarker = foehn === 'elevated' || foehn === 'high' || foehn === 'critical'
-            ? `<span class="timeline-marker foehn ${foehn}" title="Föhn ${DASHBOARD_LABELS.foehn[foehn]}">▲</span>`
+            ? `<span class="timeline-marker foehn ${foehn}" title="Föhnrisiko ${DASHBOARD_LABELS.foehn[foehn]}">▲</span>`
             : '';
         const confidenceMarker = confidence === 'low'
-            ? '<span class="timeline-marker low-consensus" title="Geringer Modellkonsens">≋</span>'
+            ? '<span class="timeline-marker low-consensus" title="Niedriger Modellkonsens">≋</span>'
             : '';
         slot.innerHTML = `<span class="slot-time">${timeText}</span><span class="timeline-markers"><span class="timeline-marker safety ${safety}" aria-hidden="true">●</span><span class="timeline-marker thermal ${thermal}" aria-hidden="true">◆</span>${foehnMarker}${confidenceMarker}</span>`;
         tl.appendChild(slot);
@@ -490,7 +496,6 @@ export function buildTimeline(dayStr) {
 export function selectHour(idx) {
     state.selectedHourIndex = idx;
     updateDisplay(idx);
-    renderDashboardHour(idx);
     buildTimeline(state.forecastDays[state.selectedDay].date);
 
     // Wind-Profil aktualisieren (um ausgewählte Stunde zu markieren)
@@ -504,10 +509,10 @@ function updateFoehnDiagnostic(foehn) {
 
     const levelLabels = {
         low: 'Niedrig',
-        elevated: 'Föhnige Tendenz',
+        elevated: 'Erhöht',
         high: 'Hoch',
         critical: 'Kritisch',
-        unknown: 'Unbekannt'
+        unknown: 'Unklar'
     };
     const levelClasses = {
         low: 'green',
@@ -526,9 +531,9 @@ function updateFoehnDiagnostic(foehn) {
         increasing: 'Zunehmend',
         steady: 'Gleichbleibend',
         decreasing: 'Abnehmend',
-        unknown: 'Unbekannt'
+        unknown: 'Unklar'
     };
-    const confidenceLabels = { high: 'Hoch', medium: 'Mittel', low: 'Gering' };
+    const confidenceLabels = { high: 'Hoch', medium: 'Mittel', low: 'Niedrig', unknown: 'Unklar' };
 
     if (foehn.applicability === 'notApplicable') {
         riskEl.textContent = 'Nicht anwendbar';
@@ -555,7 +560,7 @@ function updateFoehnDiagnostic(foehn) {
         ? `${getWindDir(flow.dominantDirectionDeg)}, ${Math.round(flow.averageSpeedKmh)} km/h (${flow.matchingLevelCount}/3 Level)`
         : 'Kein konsistentes Signal';
     document.getElementById('foehnTrend').textContent = trendLabels[foehn.trend] || trendLabels.unknown;
-    document.getElementById('foehnConfidence').textContent = confidenceLabels[foehn.confidence] || 'Gering';
+    document.getElementById('foehnConfidence').textContent = confidenceLabels[foehn.confidence] || 'Unklar';
 }
 
 /**
@@ -880,14 +885,17 @@ export function toggleContrastMode() {
 // PHASE 2: Akkordeon-Funktionen
 export function toggleParamCard(card, event) {
     if (event && event.target && event.target.closest('.tooltip-container')) return;
+    if (!card) return;
     card.classList.toggle('collapsed');
     card.classList.toggle('expanded');
+    card.querySelector('.param-header')?.setAttribute('aria-expanded', card.classList.contains('expanded') ? 'true' : 'false');
 }
 
 export function expandAllCards() {
     document.querySelectorAll('.params-grid .param-card[data-card]').forEach(card => {
         card.classList.remove('collapsed');
         card.classList.add('expanded');
+        card.querySelector('.param-header')?.setAttribute('aria-expanded', 'true');
     });
 }
 
@@ -895,6 +903,7 @@ export function collapseAllCards() {
     document.querySelectorAll('.params-grid .param-card[data-card]').forEach(card => {
         card.classList.add('collapsed');
         card.classList.remove('expanded');
+        card.querySelector('.param-header')?.setAttribute('aria-expanded', 'false');
     });
 }
 
@@ -904,6 +913,7 @@ export function autoExpandRedCards() {
         if (status && status.classList.contains('red')) {
             card.classList.remove('collapsed');
             card.classList.add('expanded');
+            card.querySelector('.param-header')?.setAttribute('aria-expanded', 'true');
         }
     });
 }
@@ -1177,6 +1187,7 @@ export function toggleParamFilter() {
     const card = document.querySelector('.param-filter-card');
     if (card) {
         card.classList.toggle('expanded');
+        document.getElementById('paramFilterToggle')?.setAttribute('aria-expanded', card.classList.contains('expanded') ? 'true' : 'false');
     }
 }
 
@@ -1738,9 +1749,9 @@ export function renderWindDiagram(dayStr) {
         { key: 'ground', pressureHpa: null, label: 'Boden' }
     ];
 
-    // Stunden von 6-20 Uhr (15 Stunden)
+    // Sichtbarer Pilotentag aus der zentralen Zeitraumkonfiguration.
     const hours = [];
-    for (let hour = 6; hour <= 20; hour++) {
+    for (let hour = FORECAST_PERIODS.pilotDay.start; hour <= FORECAST_PERIODS.pilotDay.end; hour++) {
         const ts = dayStr + 'T' + hour.toString().padStart(2, '0') + ':00';
         const idx = times.findIndex(t => t === ts);
         hours.push({ hour, idx });
@@ -1798,8 +1809,17 @@ export function renderWindDiagram(dayStr) {
             // Klick-Handler um Stunde auszuwählen
             cell.dataset.hourIdx = idx;
             cell.style.cursor = 'pointer';
+            cell.setAttribute('role', 'button');
+            cell.setAttribute('tabindex', '0');
+            cell.setAttribute('aria-label', `${level.label}, ${hour}:00 Uhr: ${Math.round(speed)} km/h ${dirText}`);
             cell.addEventListener('click', () => {
                 selectHour(idx);
+            });
+            cell.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    selectHour(idx);
+                }
             });
 
             // Bei sehr schwachem Wind: Kreis statt Pfeil

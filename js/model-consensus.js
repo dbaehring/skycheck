@@ -9,6 +9,7 @@ import {
     CONSENSUS_PRESSURE_LEVELS,
     FORECAST_CONFIDENCE_THRESHOLDS as THRESHOLDS
 } from './forecast-confidence-config.js';
+import { FORECAST_PERIODS, isHourInPeriod } from './forecast-periods.js';
 
 const LEVEL_RANK = Object.freeze({ unknown: 0, low: 1, medium: 2, high: 3 });
 const THERMAL_LEVEL_RANK = Object.freeze({ unknown: 0, poor: 1, usable: 2, good: 3, excellent: 4 });
@@ -397,11 +398,11 @@ export function aggregateDailyConsensus(hourlyConfidence, primaryAssessments = [
     for (const confidence of hourlyConfidence) {
         const [date, timePart] = confidence.time.split('T');
         const hour = Number(timePart?.slice(0, 2));
-        if (!Number.isFinite(hour) || hour < 6 || hour > 20) continue;
+        if (!isHourInPeriod(hour)) continue;
         const thermalLevel = assessmentByTime.get(confidence.time)?.thermal?.level || 'unknown';
         const weight = THERMAL_LEVEL_RANK[thermalLevel] >= THERMAL_LEVEL_RANK.good
             ? 3
-            : hour >= 10 && hour <= 17 ? 2 : 1;
+            : isHourInPeriod(hour, FORECAST_PERIODS.consensusCore) ? 2 : 1;
         if (!days.has(date)) days.set(date, []);
         days.get(date).push({ confidence, weight, thermalLevel });
     }
@@ -413,7 +414,7 @@ export function aggregateDailyConsensus(hourlyConfidence, primaryAssessments = [
                 date,
                 level: 'unknown',
                 reasons: [{ code: 'daily-data', tone: 'neutral', text: 'Zu wenige vergleichbare Stunden im Flugfenster.' }],
-                metrics: { evaluatedHours: 0, flightWindow: '06–20 Uhr' },
+                metrics: { evaluatedHours: 0, flightWindow: FORECAST_PERIODS.pilotDay.label },
                 components: { wind: 'unknown', thermal: 'unknown', thermalHeight: 'unknown', clouds: 'unknown', precipitation: 'unknown' },
                 modelCount: 0
             };
@@ -445,7 +446,7 @@ export function aggregateDailyConsensus(hourlyConfidence, primaryAssessments = [
                 tone: 'neutral',
                 text: thermalWeightedHours > 0
                     ? `${thermalWeightedHours} gute Thermikstunden wurden stärker gewichtet.`
-                    : 'Tageswert gewichtet 10–17 Uhr stärker als Randstunden.'
+                    : `Tageswert gewichtet ${FORECAST_PERIODS.consensusCore.label} stärker als Randstunden.`
             }
         ];
         if (mostRelevantWeakHour.confidence.level !== 'high') {
@@ -460,7 +461,7 @@ export function aggregateDailyConsensus(hourlyConfidence, primaryAssessments = [
             metrics: {
                 evaluatedHours: known.length,
                 weightedAverage,
-                flightWindow: '06–20 Uhr',
+                flightWindow: FORECAST_PERIODS.pilotDay.label,
                 thermalWeightedHours
             },
             components,

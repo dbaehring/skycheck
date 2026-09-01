@@ -8,7 +8,7 @@
 
     <!-- === SkyCheck Meta-Tags === -->
     <title>SkyCheck | Flugwetter in vier Dimensionen</title>
-    <meta name="description" content="SkyCheck - Kompakte Gleitschirm-Wetteranalyse in 60 Sekunden. Wind, Thermik, Wolken & Sicht, Niederschlag auf einen Blick.">
+    <meta name="description" content="SkyCheck v11 RC1 ordnet Flugcharakter, Thermik, Föhnrisiko und Modellkonsens für Gleitschirmflieger getrennt ein.">
     <meta name="keywords" content="Gleitschirm, Paragliding, Wetter, Meteo, Thermik, Flugwetter, SkyCheck">
     <meta name="author" content="SkyCheck">
 
@@ -16,8 +16,8 @@
     <link rel="canonical" href="https://www.skycheck.cloud/">
 
     <!-- Open Graph -->
-    <meta property="og:title" content="SkyCheck - Paragliding Meteo">
-    <meta property="og:description" content="Kompakte Gleitschirm-Wetteranalyse in 60 Sekunden. Wind, Thermik, Wolken und Sicht auf einen Blick.">
+    <meta property="og:title" content="SkyCheck v11 RC1 - Flugwetter in vier Dimensionen">
+    <meta property="og:description" content="Flugcharakter, Thermik, Föhnrisiko und Modellkonsens getrennt einordnen.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.skycheck.cloud/">
     <meta property="og:locale" content="de_DE">
@@ -27,8 +27,8 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="SkyCheck - Paragliding Meteo">
-    <meta name="twitter:description" content="Flugcharakter, Thermik, Föhn und Modellkonsens auf einen Blick.">
+    <meta name="twitter:title" content="SkyCheck v11 RC1 - Flugwetter in vier Dimensionen">
+    <meta name="twitter:description" content="Flugcharakter, Thermik, Föhnrisiko und Modellkonsens auf einen Blick.">
     <meta name="twitter:image" content="https://www.skycheck.cloud/img/logo-512.png">
 
     <!-- PWA Meta-Tags -->
@@ -113,15 +113,16 @@
                             </div>
                             <button class="refresh-btn" id="refreshBtn" title="Daten aktualisieren">↻ Neu laden</button>
                         </div>
+                        <div class="forecast-freshness u-hidden" id="forecastFreshness" role="status" aria-live="polite"></div>
                         <div class="dashboard-primary-grid">
                             <article class="dashboard-dimension safety unknown" id="dashboardSafety" aria-live="polite">
                                 <span class="dashboard-dimension-label">Flugcharakter</span>
-                                <strong id="dashboardSafetyValue">Unbekannt</strong>
+                                <strong id="dashboardSafetyValue">Unklar</strong>
                                 <span id="dashboardSafetyDetail">Bewertung wird vorbereitet.</span>
                             </article>
                             <article class="dashboard-dimension thermal unknown" id="dashboardThermal">
                                 <span class="dashboard-dimension-label">Thermik &amp; XC</span>
-                                <strong id="dashboardThermalValue">Unbekannt</strong>
+                                <strong id="dashboardThermalValue">Unklar</strong>
                                 <span id="dashboardThermalDetail">Thermikprofil wird vorbereitet.</span>
                             </article>
                         </div>
@@ -132,7 +133,7 @@
                         </article>
                         <div class="dashboard-secondary-grid">
                             <article class="dashboard-mini foehn unknown" id="dashboardFoehn">
-                                <span>Föhn</span><strong id="dashboardFoehnValue">Unbekannt</strong>
+                                <span>Föhnrisiko</span><strong id="dashboardFoehnValue">Unklar</strong>
                             </article>
                             <article class="dashboard-mini confidence unknown" id="dashboardConsensus">
                                 <span>Modellkonsens</span><strong id="dashboardConsensusValue" aria-live="polite">Wird geladen…</strong>
@@ -150,7 +151,7 @@
                         <div class="dashboard-model-meta">
                             <div class="model-info"><span>Primärmodell:</span><strong id="modelName">ICON-D2/EU</strong></div>
                             <div id="modelWarning" class="model-warning u-hidden">⚠️ Außerhalb ICON-Abdeckung – globales Modell mit gröberer Auflösung</div>
-                            <div class="update-info" id="updateInfo"><span>Daten von:</span><span class="update-info-time" id="updateTime">-</span></div>
+                            <div class="update-info" id="updateInfo"><span id="updateLabel">Daten von:</span><span class="update-info-time" id="updateTime">-</span></div>
                         </div>
                         <div class="forecast-change" id="forecastChange">
                             <div class="forecast-change-title">📈 Änderung seit letztem Laden:</div>
@@ -163,7 +164,7 @@
                     </nav>
                     <div class="timeline-card dashboard-timeline" role="region" aria-label="Stündlicher Tagesverlauf">
                         <h3>Tagesverlauf <span>06–20 Uhr</span></h3>
-                        <p class="timeline-legend"><span>● Flugcharakter</span><span>◆ Thermik</span><span>▲ Föhn</span><span>≋ geringer Konsens</span></p>
+                        <p class="timeline-legend"><span>● Flugcharakter</span><span>◆ Thermik</span><span>▲ Föhnrisiko</span><span>≋ niedriger Konsens</span></p>
                         <div class="timeline" id="timeline" role="listbox" aria-label="Stunde auswählen"></div>
                     </div>
 
@@ -181,17 +182,17 @@
 
                     <section class="dashboard-details" aria-label="Entscheidungsdetails">
                         <article class="dashboard-detail-card" id="flightCharacterDetails">
-                            <h3>Flugcharakter</h3><strong id="flightCharacterLevel">Unbekannt</strong>
+                            <h3>Flugcharakter</h3><strong id="flightCharacterLevel">Unklar</strong>
                             <p id="flightCharacterReason">Noch keine belastbare Bewertung.</p>
                         </article>
                         <article class="dashboard-detail-card" id="thermalXcDetails">
-                            <h3>Thermik &amp; XC</h3><strong id="thermalXcLevel">Unbekannt</strong>
+                            <h3>Thermik &amp; XC</h3><strong id="thermalXcLevel">Unklar</strong>
                             <p id="thermalXcReason">Noch kein Thermikprofil.</p>
                         </article>
                         <article class="dashboard-detail-card" id="foehnDetails">
-                            <h3>Föhn</h3><strong id="foehnDetailLevel">Unbekannt</strong>
+                            <h3>Föhnrisiko</h3><strong id="foehnDetailLevel">Unklar</strong>
                             <p id="foehnDetailReason">Föhnindikatoren werden ausgewertet.</p>
-                            <a href="https://wetter.provinz.bz.it/de/foehndiagramm" target="_blank" rel="noopener noreferrer">Offizielles Föhndiagramm Südtirol ↗</a>
+                            <a href="https://wetter.provinz.bz.it/de/foehndiagramm" target="_blank" rel="noopener noreferrer">Reality Check: offizielles Föhndiagramm ↗</a>
                         </article>
                         <article class="dashboard-detail-card consensus-detail" id="consensusDetails">
                             <h3>Modellkonsens</h3>
@@ -212,8 +213,11 @@
                         </article>
                     </section>
 
-                    <nav class="external-weather-links" aria-label="Externe Wetterquellen">
-                        <h3>Weitere Wetterquellen</h3>
+                    <section class="external-weather-links data-models" aria-labelledby="dataModelsTitle">
+                        <h3 id="dataModelsTitle">Daten &amp; Modelle</h3>
+                        <p><a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> liefert ICON-D2, ICON-EU und ECMWF IFS; GeoSphere AROME Austria ergänzt den Modellvergleich.</p>
+                        <p>Der Bozen–Innsbruck-Druckgradient ist eine modellierte ICON-Prognose via Open-Meteo, keine aktuelle Stationsmessung.</p>
+                        <h4>Externe Kontrollquellen</h4>
                         <div>
                             <a href="https://www.dhv.de/piloteninfos/wetter/" target="_blank" rel="noopener noreferrer">DHV Flugwetter ↗</a>
                             <a href="https://wetter.provinz.bz.it/de/foehndiagramm" target="_blank" rel="noopener noreferrer">Föhndiagramm ↗</a>
@@ -222,7 +226,7 @@
                             <a href="https://www.windy.com/" target="_blank" rel="noopener noreferrer">Windy ↗</a>
                             <a href="https://www.foto-webcam.eu/" target="_blank" rel="noopener noreferrer">Foto-Webcam ↗</a>
                         </div>
-                    </nav>
+                    </section>
 
                     <div class="param-filter-card" role="region" aria-label="Persönliche Komfortfilter">
                         <div class="param-filter-header" id="paramFilterToggle">
@@ -366,15 +370,15 @@
                             </div>
                         </div>
                         <div class="param-card expanded" data-card="foehn" role="region" aria-label="Föhndiagnose">
-                            <div class="param-header"><span class="param-title">🌬️ Föhnindikatoren<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Kombiniert den Bozen–Innsbruck-Druckgradienten mit Richtung, Stärke und Konsistenz der Höhenströmung. Ein einzelner Höhenwindwert beweist keinen Föhn.</span></span></span><span class="param-time-hint" id="foehnTimeHint"></span><span class="param-status" id="foehnStatus"></span><span class="toggle-icon">▼</span></div>
+                            <div class="param-header"><span class="param-title">🌬️ Föhnindikatoren<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Kombiniert die modellierte ICON-Prognose des Bozen–Innsbruck-Druckgradienten mit Richtung, Stärke und Konsistenz der Höhenströmung. Ein einzelner Höhenwindwert beweist keinen Föhn.</span></span></span><span class="param-time-hint" id="foehnTimeHint"></span><span class="param-status" id="foehnStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
                                 <div class="param-row"><span class="param-label">Föhnrisiko</span><span class="param-value" id="foehnRisk">-</span></div>
                                 <div class="param-row"><span class="param-label">Typ</span><span class="param-value" id="foehnType">-</span></div>
-                                <div class="param-row"><span class="param-label">Bozen–Innsbruck</span><span class="param-value" id="foehnPressure">-</span></div>
+                                <div class="param-row"><span class="param-label">ICON-Prognose Bozen–Innsbruck</span><span class="param-value" id="foehnPressure">-</span></div>
                                 <div class="param-row"><span class="param-label">850–700 hPa</span><span class="param-value" id="foehnFlow">-</span></div>
                                 <div class="param-row"><span class="param-label">Trend</span><span class="param-value" id="foehnTrend">-</span></div>
                                 <div class="param-row"><span class="param-label">Confidence</span><span class="param-value" id="foehnConfidence">-</span></div>
-                                <p class="u-text-xs u-text-muted u-mt-sm">Keine Lee-/Rotorprognose. <a href="https://wetter.provinz.bz.it/de/foehndiagramm" target="_blank" rel="noopener noreferrer">Offizielles Föhndiagramm</a></p>
+                                <p class="u-text-xs u-text-muted u-mt-sm">Keine Lee-/Rotorprognose. <a href="https://wetter.provinz.bz.it/de/foehndiagramm" target="_blank" rel="noopener noreferrer">Reality Check: offizielles Föhndiagramm</a></p>
                             </div>
                         </div>
                         <div class="param-card expanded" data-card="thermik" role="region" aria-label="Thermikparameter">
@@ -416,10 +420,10 @@
         <footer class="sky-footer">
             <div class="footer-content">
                 <p class="footer-text">
-                    SkyCheck v11.0 | Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="footer-link">Open-Meteo</a> (ICON-D2/EU) + <a href="https://www.openwindmap.org/" target="_blank" rel="noopener noreferrer" class="footer-link">OpenWindMap</a> + <a href="https://avalanche.report/" target="_blank" rel="noopener noreferrer" class="footer-link">LWD</a>
+                    SkyCheck v11 RC1 | Daten: <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="footer-link">Open-Meteo</a> + <a href="https://www.openwindmap.org/" target="_blank" rel="noopener noreferrer" class="footer-link">OpenWindMap</a> + <a href="https://avalanche.report/" target="_blank" rel="noopener noreferrer" class="footer-link">LWD</a>
                 </p>
                 <p class="footer-disclaimer">
-                    <small>SkyCheck ersetzt keine fundierte Wetterberatung. Piloten sind selbst verantwortlich für ihre Flugentscheidungen.</small>
+                    <small>SkyCheck ordnet Prognosedaten ein, ersetzt aber weder Wetterbriefing noch Vor-Ort-Beurteilung. Die Flugentscheidung bleibt beim Piloten.</small>
                 </p>
             </div>
         </footer>
@@ -539,11 +543,11 @@
                 <div class="explanation-footer" id="explanationFooter">
                     <h3>📌 Wichtige Hinweise</h3>
                     <ul>
-                        <li><strong>Dashboard:</strong> Flugcharakter, Thermik, Föhn und Modellkonsens bleiben voneinander getrennt.</li>
+                        <li><strong>Dashboard:</strong> Flugcharakter, Thermik, Föhnrisiko und Modellkonsens bleiben voneinander getrennt.</li>
                         <li><strong>Wetterfenster:</strong> Zusammenhängende interessante Stunden werden ohne gemeinsamen Score hervorgehoben.</li>
                         <li><strong>Trend-Pfeile:</strong> ↑ = Wert steigt (meist schlechter), ↓ = Wert sinkt, → = stabil.</li>
                         <li><strong>Böigkeit:</strong> Differenz zwischen Böen und Grundwind. &gt;8 km/h = Gelb, &gt;15 km/h = Rot (unruhige Luft).</li>
-                        <li><strong>Modellkonsens:</strong> Wird als hoch, mittel, gering oder unbekannt ausgewiesen – ohne Sterne.</li>
+                        <li><strong>Modellkonsens:</strong> Wird als hoch, mittel, niedrig oder unklar ausgewiesen – ohne Sterne.</li>
                         <li><strong>Lokale Verhältnisse:</strong> Diese App ersetzt nicht den Check vor Ort! Windsack, Wolken und Bauchgefühl beachten.</li>
                     </ul>
                     <p class="final-note">🪂 <em>Im Zweifel: Nicht starten! Der Berg ist morgen noch da.</em></p>
@@ -582,7 +586,7 @@
                 <img src="./img/logo.svg" alt="SkyCheck Logo" class="about-logo">
                 <h2 id="aboutModalTitle">SkyCheck</h2>
                 <p class="about-tagline">Flugwetter in vier unabhängigen Dimensionen</p>
-                <span class="about-version" id="aboutVersion">v11.0</span>
+                <span class="about-version" id="aboutVersion">v11 RC1</span>
             </div>
             <div class="about-tabs">
                 <button class="about-tab active" data-tab="about">Was ist SkyCheck?</button>
@@ -592,9 +596,9 @@
             <div class="about-content">
                 <div class="about-tab-content active" id="tab-about">
                     <p><strong>SkyCheck</strong> ordnet wichtige Wetterparameter für Gleitschirmflieger ein. Es erteilt keine Startfreigabe und ersetzt nicht das eigene Urteil.</p>
-                    <p>Das Dashboard zeigt <strong>Flugcharakter, Thermik, Föhn und Modellkonsens</strong> getrennt für Tag und Stunde.</p>
-                    <h4>Datenquelle</h4>
-                    <p>Die Wetterdaten stammen von <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo.com</a> und nutzen je nach Region das hochaufgelöste ICON-D2 (2.2km) oder ICON-EU (7km) Modell.</p>
+                    <p>Das Dashboard zeigt <strong>Flugcharakter, Thermik, Föhnrisiko und Modellkonsens</strong> getrennt für Tag und Stunde.</p>
+                    <h4>Daten &amp; Modelle</h4>
+                    <p><a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> liefert das Primärmodell und den Vergleich aus ICON-D2, ICON-EU, GeoSphere AROME Austria und ECMWF IFS. Der Föhn-Druckgradient ist eine ICON-Prognose.</p>
                     <p class="about-ref-hint">💡 Detaillierte Schwellwerte findest du in der <strong>Parameter-Referenz</strong> am Seitenende.</p>
                 </div>
                 <div class="about-tab-content" id="tab-features">
@@ -653,7 +657,7 @@
                     <div class="welcome-section-icon">🚦</div>
                     <div class="welcome-section-text">
                         <h3>Vier Wetterdimensionen</h3>
-                        <p>Flugcharakter, Thermik, Föhn und Modellkonsens werden unabhängig dargestellt. Kritische Indikatoren bleiben dominant.</p>
+                        <p>Flugcharakter, Thermik, Föhnrisiko und Modellkonsens werden unabhängig dargestellt. Kritische Indikatoren bleiben dominant.</p>
                     </div>
                 </div>
                 <div class="welcome-section">
@@ -704,7 +708,7 @@
             <div class="expert-content">
                 <div class="expert-presets">
                     <span class="expert-presets-label">Schnellauswahl:</span>
-                    <button class="expert-preset-btn" data-preset="beginner">🎓 Anfänger</button>
+                    <button class="expert-preset-btn" data-preset="beginner">🎓 Konservativ</button>
                     <button class="expert-preset-btn active" data-preset="standard">⚖️ Standard</button>
                     <button class="expert-preset-btn" data-preset="pro">🏆 Profi</button>
                 </div>

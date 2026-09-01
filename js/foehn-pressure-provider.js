@@ -15,7 +15,7 @@ function buildUrl(forecastDays) {
         latitude: `${FOEHN_REFERENCE_POINTS.bozen.lat},${FOEHN_REFERENCE_POINTS.innsbruck.lat}`,
         longitude: `${FOEHN_REFERENCE_POINTS.bozen.lon},${FOEHN_REFERENCE_POINTS.innsbruck.lon}`,
         hourly: 'pressure_msl',
-        timezone: 'Europe/Berlin',
+        timezone: API_CONFIG.timezone,
         forecast_days: String(forecastDays),
         models: 'icon_seamless'
     });

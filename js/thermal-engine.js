@@ -15,7 +15,7 @@ const LEVEL_LABELS = Object.freeze({
     usable: 'Brauchbar',
     good: 'Gut',
     excellent: 'Sehr gut',
-    unknown: 'Unbekannt'
+    unknown: 'Unklar'
 });
 
 function thermalDataQuality(hour, metrics) {

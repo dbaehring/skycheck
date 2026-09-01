@@ -18,11 +18,11 @@ import {
 import { deriveHourMetrics, getFogRiskFromValues } from './weather-metrics.js';
 
 const LEVEL_LABELS = Object.freeze({
-    relaxed: 'Entspannt',
+    relaxed: 'Relaxed',
     sporty: 'Sportlich',
     demanding: 'Anspruchsvoll',
     critical: 'Kritisch',
-    unknown: 'Unbekannt'
+    unknown: 'Unklar'
 });
 
 function unique(values) {

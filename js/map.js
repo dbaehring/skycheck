@@ -4,7 +4,7 @@
  */
 
 import { state } from './state.js';
-import { API_CONFIG, UI_CONFIG } from './config.js';
+import { API_CONFIG } from './config.js';
 import { showToast } from './ui.js';
 
 // Callback für Wetter-Laden (wird von main.js gesetzt)

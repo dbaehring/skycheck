@@ -1,11 +1,11 @@
 /**
  * SkyCheck - Haupt-Modul
  * Orchestrierung, Event-Listener, Initialisierung
- * v9 - Rebranding
+ * v11 RC1 - Dashboard-Orchestrierung und ausfalltolerante Provider
  */
 
 import { state } from './state.js';
-import { STORAGE_KEYS, APP_INFO } from './config.js';
+import { STORAGE_KEYS, APP_INFO, API_CONFIG } from './config.js';
 import { setupModalClose } from './utils.js';
 import { fetchModelForecastConsensus } from './model-forecast-provider.js';
 
@@ -47,9 +47,7 @@ import {
     setupDays,
     selectDay,
     updateForecastConfidence,
-    buildTimeline,
     selectHour,
-    updateDisplay,
     getPreferredTheme,
     setTheme,
     toggleTheme,
@@ -58,7 +56,6 @@ import {
     toggleParamCard,
     expandAllCards,
     collapseAllCards,
-    autoExpandRedCards,
     toggleWindroseVisibility,
     loadWindroseState,
     toggleExplanation,
@@ -71,7 +68,6 @@ import {
     closeAboutModal,
     switchAboutTab,
     initTouchTooltips,
-    renderWindDiagram,
     initPullToRefresh,
     // Expertenmodus
     loadExpertMode,
@@ -212,7 +208,7 @@ async function loadForecastConfidence() {
             primaryHours: state.hourlyWeather,
             primaryAssessments: state.hourlyAssessments,
             forecastDays: 3,
-            timezone: 'auto'
+            timezone: API_CONFIG.timezone
         });
         const currentKey = `${Number(state.currentLocation.lat).toFixed(3)},${Number(state.currentLocation.lon).toFixed(3)}`;
         if (currentKey !== expectedKey) return;
@@ -402,6 +398,12 @@ function registerEventListeners() {
     // Parameter-Karten (Event-Delegation)
     const parameterGrid = document.querySelector('.parameter-grid');
     if (parameterGrid) {
+        parameterGrid.querySelectorAll('.param-header').forEach(header => {
+            const card = header.closest('.param-card');
+            header.setAttribute('role', 'button');
+            header.setAttribute('tabindex', '0');
+            header.setAttribute('aria-expanded', card?.classList.contains('expanded') ? 'true' : 'false');
+        });
         parameterGrid.addEventListener('click', (e) => {
             const header = e.target.closest('.param-header');
             if (header) {
@@ -419,6 +421,13 @@ function registerEventListeners() {
                 if (param) {
                     showQuickExplanation(param);
                 }
+            }
+        });
+        parameterGrid.addEventListener('keydown', (e) => {
+            const header = e.target.closest('.param-header');
+            if (header && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                toggleParamCard(header.closest('.param-card'), e);
             }
         });
     }
@@ -469,7 +478,16 @@ function registerEventListeners() {
     // Parameter-Filter Toggle
     const paramFilterToggle = document.getElementById('paramFilterToggle');
     if (paramFilterToggle) {
+        paramFilterToggle.setAttribute('role', 'button');
+        paramFilterToggle.setAttribute('tabindex', '0');
+        paramFilterToggle.setAttribute('aria-expanded', 'false');
         paramFilterToggle.addEventListener('click', toggleParamFilter);
+        paramFilterToggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleParamFilter();
+            }
+        });
     }
 
     // Parameter-Filter Checkboxen
@@ -615,8 +633,7 @@ document.addEventListener('DOMContentLoaded', initApp);
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
-            .then((reg) => console.log('SW registered:', reg.scope))
-            .catch((err) => console.log('SW registration failed:', err));
+            .catch((err) => console.warn('Service Worker konnte nicht registriert werden:', err));
     });
 }
 

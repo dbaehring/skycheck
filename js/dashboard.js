@@ -5,35 +5,36 @@
  */
 
 import { assessThermalDay } from './thermal-aggregation.js';
+import { isHourInPeriod, localHourFromTimestamp } from './forecast-periods.js';
 
 export const DASHBOARD_LABELS = Object.freeze({
     safety: Object.freeze({
-        relaxed: 'Entspannt',
+        relaxed: 'Relaxed',
         sporty: 'Sportlich',
         demanding: 'Anspruchsvoll',
         critical: 'Kritisch',
-        unknown: 'Unbekannt'
+        unknown: 'Unklar'
     }),
     thermal: Object.freeze({
         weak: 'Schwach',
         usable: 'Brauchbar',
         good: 'Gut',
         excellent: 'Sehr gut',
-        unknown: 'Unbekannt'
+        unknown: 'Unklar'
     }),
     foehn: Object.freeze({
         low: 'Niedrig',
         elevated: 'Erhöht',
         high: 'Hoch',
         critical: 'Kritisch',
-        unknown: 'Unbekannt',
+        unknown: 'Unklar',
         notApplicable: 'Nicht anwendbar'
     }),
     confidence: Object.freeze({
         high: 'Hoch',
         medium: 'Mittel',
-        low: 'Gering',
-        unknown: 'Unbekannt'
+        low: 'Niedrig',
+        unknown: 'Unklar'
     })
 });
 
@@ -43,8 +44,7 @@ const FOEHN_RANK = Object.freeze({ notApplicable: 0, unknown: 0, low: 1, elevate
 const CONFIDENCE_RANK = Object.freeze({ unknown: 0, low: 1, medium: 2, high: 3 });
 
 function localHour(timestamp) {
-    const match = typeof timestamp === 'string' ? timestamp.match(/T(\d{2}):/) : null;
-    return match ? Number(match[1]) : null;
+    return localHourFromTimestamp(timestamp);
 }
 
 function formatTimeRange(start, end) {
@@ -91,7 +91,7 @@ function collectWindows(hours, assessments, dayStr, hourlyConfidence, mode) {
         const hour = hours[index];
         if (!hour?.time?.startsWith(dayStr)) continue;
         const value = localHour(hour.time);
-        if (value < 6 || value > 20) continue;
+        if (!isHourInPeriod(value)) continue;
         const assessment = assessments[index];
         const safety = assessment?.safety?.level || 'unknown';
         const thermal = assessment?.thermal?.level || 'unknown';
@@ -171,6 +171,20 @@ function dataQualityText(assessment) {
     return 'Nicht genügend belastbare Modelldaten.';
 }
 
+export function buildForecastFreshnessView(freshness = {}) {
+    if (!freshness.fromCache) return { visible: false, stale: false, text: '' };
+    const cachedAt = freshness.cachedAt
+        ? new Date(freshness.cachedAt).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
+        : 'unbekanntem Zeitpunkt';
+    return {
+        visible: true,
+        stale: Boolean(freshness.stale),
+        text: freshness.stale
+            ? `⚠ Veraltete Offline-Prognose – Cache vom ${cachedAt}.`
+            : `ℹ Offline-Prognose aus dem Cache vom ${cachedAt}.`
+    };
+}
+
 function selectHints(dayAssessments, safetyLevel, foehn, confidence, thermalDay) {
     const hints = [];
     const blocker = dayAssessments.flatMap(item => item?.safety?.blockers || item?.hardBlockers || [])[0];
@@ -195,7 +209,7 @@ export function buildDashboardDayView(hours, assessments, dayStr, dailyConfidenc
     const indices = [];
     for (let index = 0; index < (hours || []).length; index++) {
         const value = localHour(hours[index]?.time);
-        if (hours[index]?.time?.startsWith(dayStr) && value >= 6 && value <= 20) indices.push(index);
+        if (hours[index]?.time?.startsWith(dayStr) && isHourInPeriod(value)) indices.push(index);
     }
     const dayAssessments = indices.map(index => assessments[index]).filter(Boolean);
     const safetyLevel = worstKnown(dayAssessments, item => item.safety?.level, SAFETY_RANK);
@@ -223,12 +237,14 @@ export function buildDashboardDayView(hours, assessments, dayStr, dailyConfidenc
             label: bestWindow.type === 'thermal' ? 'Interessantes Wetterfenster' : 'Ruhiges Wetterfenster',
             description: bestWindow.type === 'thermal'
                 ? `${DASHBOARD_LABELS.safety[bestWindow.safetyLevel]} · Thermik ${DASHBOARD_LABELS.thermal[bestWindow.thermalLevel].toLowerCase()}`
-                : 'Entspannte Bedingungen bei schwacher bis brauchbarer Thermik'
+                : 'Relaxed bei schwacher bis brauchbarer Thermik'
         } : null,
         hasThermalConflict,
         hints: selectHints(dayAssessments, safetyLevel, foehn, confidence, thermalDay),
         dataQualityReason: safetyLevel === 'unknown'
-            ? dataQualityText(dayAssessments[0])
+            ? dataQualityText(dayAssessments.find(item =>
+                (item?.safety?.dataQuality?.criticalMissing?.length || item?.dataQuality?.criticalMissing?.length)
+            ) || dayAssessments[0])
             : null,
         thermalDay
     };
