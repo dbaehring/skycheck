@@ -179,6 +179,7 @@ export const PARAM_FILTER_CONFIG = {
 // UI-Konstanten
 export const UI_CONFIG = {
     mobileBreakpoint: 500,           // px - Ab hier Mobile-Layout
+    compactMapBreakpoint: 600,       // px - Standortkarte nach Auswahl einklappen
     toastDuration: 3000,             // ms - Toast-Anzeigedauer
     errorResetDelay: 8000,           // ms - Fehleranzeige zurücksetzen
     mapInvalidateDelay: 100,         // ms - Leaflet invalidateSize Verzögerung

@@ -33,6 +33,52 @@ let lockedScrollY = 0;
 let modalReturnFocus = null;
 
 /**
+ * Aktualisiert die kompakte Standortzeile und klappt die Karte auf kleinen
+ * Bildschirmen nach erfolgreicher Auswahl ein.
+ */
+export function updateMobileLocationSummary(location, collapse = true) {
+    const section = document.getElementById('mapSection');
+    const toggle = document.getElementById('mobileLocationToggle');
+    const name = document.getElementById('mobileLocationName');
+    const meta = document.getElementById('mobileLocationMeta');
+    if (!section || !toggle || !name || !meta || !location) return;
+
+    const hasCoordinates = Number.isFinite(location.lat) && Number.isFinite(location.lon);
+    section.classList.toggle('has-location', hasCoordinates);
+    if (!hasCoordinates) return;
+
+    name.textContent = location.name || `${location.lat.toFixed(3)}°N, ${location.lon.toFixed(3)}°E`;
+    meta.textContent = Number.isFinite(location.elevation)
+        ? `${Math.round(location.elevation)} m ü. M. · Karte und GPS`
+        : 'Karte und GPS';
+
+    if (collapse && window.matchMedia(`(max-width: ${UI_CONFIG.compactMapBreakpoint}px)`).matches) {
+        setLocationMapCollapsed(true);
+    }
+}
+
+export function setLocationMapCollapsed(collapsed) {
+    const section = document.getElementById('mapSection');
+    const toggle = document.getElementById('mobileLocationToggle');
+    const action = document.getElementById('mobileLocationAction');
+    if (!section || !toggle || !action) return;
+
+    section.classList.toggle('is-collapsed', collapsed);
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+    action.textContent = collapsed ? 'Standort ändern' : 'Karte schließen';
+
+    if (!collapsed && state.map) {
+        setTimeout(() => state.map.invalidateSize(), UI_CONFIG.mapInvalidateDelay);
+    }
+}
+
+export function toggleLocationMap() {
+    const section = document.getElementById('mapSection');
+    if (!section?.classList.contains('has-location')) return;
+    setLocationMapCollapsed(!section.classList.contains('is-collapsed'));
+}
+
+/**
  * Sperrt die Seite, ohne ihre aktuelle Scrollposition zu verlieren.
  * Der Dialog selbst bleibt der einzige Scrollcontainer.
  */
@@ -214,9 +260,10 @@ export function buildDayComparison() {
         card.dataset.dayIdx = i;
         card.setAttribute('role', 'tab');
         card.setAttribute('aria-selected', i === state.selectedDay ? 'true' : 'false');
+        card.setAttribute('aria-label', `${name} ${d.getDate()}.${d.getMonth() + 1}., Flugcharakter ${view.safety.label}, Thermik ${view.thermal.label}, ${view.bestWindow?.timeLabel || 'kein Flugwetterfenster'}`);
         card.innerHTML = `
             <div class="day-comparison-date">${name} ${d.getDate()}.${d.getMonth() + 1}.</div>
-            <span class="day-comparison-status ${view.safety.level}">Flugcharakter: ${view.safety.label}</span>
+            <span class="day-comparison-status ${view.safety.level}">Flug: ${view.safety.label}</span>
             <span class="day-comparison-thermal ${view.thermal.level}">Thermik: ${view.thermal.label}</span>
             <span class="day-comparison-window">${view.bestWindow?.timeLabel || 'Kein Fenster'}</span>`;
         grid.appendChild(card);
@@ -343,6 +390,27 @@ function formatDashboardDate(dayStr) {
     }).format(date);
 }
 
+export function isUnavailableDisplayValue(value) {
+    const normalized = String(value ?? '').trim().toLowerCase();
+    return normalized === '' ||
+        normalized === '-' ||
+        normalized === '—' ||
+        normalized === 'n/a' ||
+        normalized === 'n.v.' ||
+        normalized === 'n. v.' ||
+        /:\s*(?:n\/a|n\.\s?v\.)$/.test(normalized);
+}
+
+function hideUnavailableParameterRows() {
+    document.querySelectorAll('.params-grid .param-row, .params-grid .wind-table-row').forEach(row => {
+        const values = [...row.querySelectorAll('.param-value')];
+        const unavailable = values.length > 0 && values.every(value =>
+            isUnavailableDisplayValue(value.textContent)
+        );
+        row.classList.toggle('u-hidden', unavailable);
+    });
+}
+
 function renderDashboardDay(dayIdx = state.selectedDay) {
     const day = state.forecastDays?.[dayIdx];
     if (!day) return;
@@ -370,7 +438,9 @@ function renderDashboardDay(dayIdx = state.selectedDay) {
     document.getElementById('dashboardSafetyValue').textContent = visibleDashboardLabel(view.safety);
     document.getElementById('dashboardSafetyDetail').textContent = view.safety.level === 'unknown'
         ? view.dataQualityReason
-        : `Schwerste Ausprägung zwischen ${FORECAST_PERIODS.pilotDay.label}.`;
+        : view.dominantSafetyWindow
+            ? `Vor allem ${view.dominantSafetyWindow.timeLabel}${view.dominantSafetyWindow.reason ? `: ${view.dominantSafetyWindow.reason}` : '.'}`
+            : `Schwerste Ausprägung zwischen ${FORECAST_PERIODS.pilotDay.label}.`;
     document.getElementById('dashboardThermalValue').textContent = visibleDashboardLabel(view.thermal);
     document.getElementById('dashboardThermalDetail').textContent = view.thermalDay.reasons?.[0] || 'Keine Thermikangabe.';
     document.getElementById('dashboardFoehnValue').textContent = visibleDashboardLabel(view.foehn);
@@ -447,18 +517,29 @@ function renderDashboardHour(index) {
     }));
     const renderList = (id, entries) => {
         const list = document.getElementById(id);
-        list.replaceChildren(...entries.map(text => {
+        const visibleEntries = entries.filter(text => !isUnavailableDisplayValue(text));
+        list.parentElement?.classList.toggle('u-hidden', visibleEntries.length === 0);
+        list.replaceChildren(...visibleEntries.map(text => {
             const item = document.createElement('li');
             item.textContent = text;
             return item;
         }));
     };
+    const flightBand = document.getElementById('hourFlightBand');
+    flightBand.classList.toggle('reliable', view.flightBand.reliable);
+    flightBand.classList.toggle('unknown', !view.flightBand.reliable);
+    document.getElementById('hourFlightBandRange').textContent = view.flightBand.range;
+    document.getElementById('hourFlightBandWind').textContent = view.flightBand.within;
+    const aboveBandWind = document.getElementById('hourAboveBandWind');
+    aboveBandWind.textContent = view.flightBand.above || '';
+    aboveBandWind.classList.toggle('u-hidden', !view.flightBand.above);
     renderList('hourWindSummary', Object.values(view.wind));
     renderList('hourThermalSummary', Object.values(view.thermalSummary));
     document.getElementById('flightCharacterLevel').textContent = visibleDashboardLabel(view.safety);
     document.getElementById('flightCharacterReason').textContent = view.dataQualityReason || view.limitingFactor;
     document.getElementById('thermalXcLevel').textContent = visibleDashboardLabel(view.thermal);
-    document.getElementById('thermalXcReason').textContent = Object.values(view.thermalSummary).join(' · ');
+    const thermalDetails = Object.values(view.thermalSummary).filter(text => !isUnavailableDisplayValue(text));
+    document.getElementById('thermalXcReason').textContent = thermalDetails.join(' · ') || 'Keine belastbare Thermikangabe.';
     document.getElementById('foehnDetailLevel').textContent = visibleDashboardLabel(view.foehn);
     const foehnReasons = assessment.foehn?.reasons || [];
     document.getElementById('foehnDetailReason').textContent = foehnReasons[0]?.text || foehnReasons[0] ||
@@ -753,6 +834,7 @@ export function updateDisplay(i) {
     document.getElementById('thunderRisk').className = 'param-value ' + thunderRisk.cls;
     document.getElementById('precipStatus').className = 'param-status ' + scoreToColor(precSc);
 
+    hideUnavailableParameterRows();
     autoExpandRedCards();
 
     if (hour.time) {

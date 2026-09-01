@@ -109,7 +109,14 @@ function deriveThermalWind(hour, common, thermalTopMslM, elevationM) {
     ].filter(level => Number.isFinite(level.speedKmh) && Number.isFinite(level.heightMslM));
 
     if (levels.length === 0 || !Number.isFinite(thermalTopMslM)) {
-        return { windAtThermalTopKmh: null, windAtThermalTopSource: null, boundaryLayerWindKmh: null };
+        return {
+            windAtThermalTopKmh: null,
+            windAtThermalTopSource: null,
+            windAtThermalTopLevel: null,
+            boundaryLayerWindKmh: null,
+            strongestWindWithinThermalLayer: null,
+            strongestWindAboveThermalLayer: null
+        };
     }
 
     const topLevel = levels.reduce((closest, level) =>
@@ -117,16 +124,25 @@ function deriveThermalWind(hour, common, thermalTopMslM, elevationM) {
             ? level
             : closest
     );
-    const withinLayer = levels.filter(level => level.heightMslM <= thermalTopMslM + 100);
+    const withinLayer = levels.filter(level =>
+        (!Number.isFinite(elevationM) || level.heightMslM >= elevationM - 50) &&
+        level.heightMslM <= thermalTopMslM + 100
+    );
+    const aboveLayer = levels.filter(level => level.heightMslM > thermalTopMslM + 100);
     const boundaryLayerWindKmh = withinLayer.length > 0
         ? withinLayer.reduce((sum, level) => sum + level.speedKmh, 0) / withinLayer.length
         : null;
+    const strongestWind = candidates => candidates.reduce((strongest, level) =>
+        !strongest || level.speedKmh > strongest.speedKmh ? level : strongest
+    , null);
 
     return {
         windAtThermalTopKmh: topLevel.speedKmh,
         windAtThermalTopSource: topLevel.heightSource,
         windAtThermalTopLevel: topLevel.label,
-        boundaryLayerWindKmh
+        boundaryLayerWindKmh,
+        strongestWindWithinThermalLayer: strongestWind(withinLayer),
+        strongestWindAboveThermalLayer: strongestWind(aboveLayer)
     };
 }
 

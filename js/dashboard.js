@@ -218,6 +218,53 @@ function selectHints(dayAssessments, safetyLevel, foehn, confidence, thermalDay)
     return hints.slice(0, 2);
 }
 
+function safetyReason(assessment) {
+    return assessment?.safety?.blockers?.[0]?.text ||
+        assessment?.hardBlockers?.[0]?.text ||
+        assessment?.safety?.limitingFactor?.text ||
+        null;
+}
+
+function findDominantSafetyWindow(hours, assessments, indices, safetyLevel) {
+    if (safetyLevel === 'unknown') return null;
+    const windows = [];
+    let current = null;
+
+    for (const index of indices) {
+        const assessment = assessments[index];
+        if (assessment?.safety?.level !== safetyLevel) {
+            if (current) windows.push(current);
+            current = null;
+            continue;
+        }
+        const hour = localHour(hours[index]?.time);
+        if (!Number.isInteger(hour)) continue;
+        if (!current || hour !== current.end + 1) {
+            if (current) windows.push(current);
+            current = { start: hour, end: hour, assessments: [assessment] };
+        } else {
+            current.end = hour;
+            current.assessments.push(assessment);
+        }
+    }
+    if (current) windows.push(current);
+    if (windows.length === 0) return null;
+
+    const selected = [...windows].sort((first, second) =>
+        (second.end - second.start) - (first.end - first.start) || first.start - second.start
+    )[0];
+    const reason = selected.assessments.map(safetyReason).find(Boolean) || null;
+    return {
+        start: selected.start,
+        end: selected.end,
+        level: safetyLevel,
+        timeLabel: selected.start === selected.end
+            ? `um ${String(selected.start).padStart(2, '0')}:00 Uhr`
+            : `${formatTimeRange(selected.start, selected.end)} Uhr`,
+        reason
+    };
+}
+
 export function buildDashboardDayView(hours, assessments, dayStr, dailyConfidence = null, hourlyConfidence = []) {
     const indices = [];
     for (let index = 0; index < (hours || []).length; index++) {
@@ -234,6 +281,7 @@ export function buildDashboardDayView(hours, assessments, dayStr, dailyConfidenc
     const representativeFoehn = applicableFoehn.find(item => item.foehn?.level === foehn)?.foehn || null;
     const confidence = dailyConfidence?.level || 'unknown';
     const bestWindow = findBestWeatherWindow(hours, assessments, dayStr, hourlyConfidence);
+    const dominantSafetyWindow = findDominantSafetyWindow(hours, assessments, indices, safetyLevel);
     const hasThermalConflict = !bestWindow && dayAssessments.some(item =>
         (item.thermal?.level === 'good' || item.thermal?.level === 'excellent') &&
         (item.safety?.level === 'critical' || (item.hardBlockers?.length || 0) > 0)
@@ -245,6 +293,7 @@ export function buildDashboardDayView(hours, assessments, dayStr, dailyConfidenc
         thermal: { level: thermalDay.level, label: DASHBOARD_LABELS.thermal[thermalDay.level] },
         foehn: buildFoehnView(representativeFoehn, foehn),
         confidence: { level: confidence, label: DASHBOARD_LABELS.confidence[confidence] },
+        dominantSafetyWindow,
         bestWindow: bestWindow ? {
             ...bestWindow,
             timeLabel: formatTimeRange(bestWindow.start, bestWindow.end),
@@ -273,6 +322,52 @@ function formatWind(level, fallbackLabel) {
     return `${fallbackLabel}: ${Math.round(level.speedKmh)} km/h${direction}${height}`;
 }
 
+function formatStability(category) {
+    const labels = {
+        supportive: 'thermikfördernd',
+        neutral: 'neutral',
+        suppressive: 'thermikhemmend',
+        inversion: 'Inversion'
+    };
+    return labels[category] || category;
+}
+
+function formatLayerWind(level, prefix) {
+    if (!level || !Number.isFinite(level.speedKmh)) return null;
+    const height = Number.isFinite(level.heightMslM)
+        ? ` auf ${Math.round(level.heightMslM)} m MSL`
+        : '';
+    const modelLevel = level.label && level.label !== 'Boden' ? ` (${level.label})` : '';
+    return `${prefix}: ${Math.round(level.speedKmh)} km/h${height}${modelLevel}`;
+}
+
+function buildFlightBandView(metrics) {
+    const reliable = metrics.hasReliableHeightLimit &&
+        Number.isFinite(metrics.elevationM) &&
+        Number.isFinite(metrics.thermalTopMslM) &&
+        Number.isFinite(metrics.usableThermalDepthM);
+    if (!reliable) {
+        return {
+            reliable: false,
+            range: 'Obergrenze nicht belastbar bestimmbar',
+            within: 'Höhenwind kann ohne belastbare Obergrenze nicht sicher einem nutzbaren Thermikbereich zugeordnet werden.',
+            above: null
+        };
+    }
+
+    const within = formatLayerWind(metrics.strongestWindWithinThermalLayer, 'Stärkster Modellwind darin') ||
+        'Kein Modellwindniveau im nutzbaren Bereich verfügbar.';
+    const above = formatLayerWind(metrics.strongestWindAboveThermalLayer, 'Darüber') || null;
+    return {
+        reliable: true,
+        range: `${Math.round(metrics.elevationM)}–${Math.round(metrics.thermalTopMslM)} m MSL · ca. ${Math.round(metrics.usableThermalDepthM)} m über Grund`,
+        within,
+        above: above
+            ? `${above} · oberhalb des nutzbaren Bereichs, aber als Scherungs- oder Föhnhinweis relevant.`
+            : null
+    };
+}
+
 export function buildDashboardHourView(hour, assessment, confidence = null) {
     const safety = assessment?.safety?.level || 'unknown';
     const thermal = assessment?.thermal?.level || 'unknown';
@@ -296,6 +391,7 @@ export function buildDashboardHourView(hour, assessment, confidence = null) {
         thermal: { level: thermal, label: DASHBOARD_LABELS.thermal[thermal] },
         foehn: buildFoehnView(assessment?.foehn, foehn),
         confidence: { level: consensus, label: DASHBOARD_LABELS.confidence[consensus] },
+        flightBand: buildFlightBandView(thermalMetrics),
         wind: {
             surface: Number.isFinite(surface.windSpeedKmh)
                 ? `Boden: ${Math.round(surface.windSpeedKmh)} km/h · Böen ${Number.isFinite(surface.gustsKmh) ? Math.round(surface.gustsKmh) : 'n. v.'} km/h`
@@ -315,7 +411,7 @@ export function buildDashboardHourView(hour, assessment, confidence = null) {
                 ? `Globalstrahlung: ${Math.round(thermalMetrics.shortwaveRadiationWm2)} W/m²`
                 : 'Globalstrahlung: n. v.',
             stability: thermalMetrics.stability?.category
-                ? `Schichtung: ${thermalMetrics.stability.category}`
+                ? `Schichtung: ${formatStability(thermalMetrics.stability.category)}`
                 : 'Schichtung: n. v.'
         },
         limitingFactor: assessment?.safety?.limitingFactor?.text || 'Kein dominanter Belastungsfaktor.',

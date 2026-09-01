@@ -184,7 +184,7 @@ function evaluateHardBlockers(metrics, reasons, blockers) {
             category: 'wind',
             value: metrics.gustFactor,
             threshold: hard.wind.gustFactor,
-            text: `Böenfaktor ${metrics.gustFactor.toFixed(1)}`
+            text: `Böen deutlich über Grundwind (${Math.round(metrics.ws)} → ${Math.round(metrics.wg)} km/h)`
         });
     }
 
@@ -308,7 +308,7 @@ function evaluateComfort(metrics, thresholds, filters, reasons, context) {
             level,
             value: metrics.gustFactor,
             thresholds: wind.gustFactor,
-            text: `Böenfaktor ${metrics.gustFactor.toFixed(1)}`
+            text: `Böen deutlich über Grundwind (${Math.round(metrics.ws)} → ${Math.round(metrics.wg)} km/h)`
         });
     }
 

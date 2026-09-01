@@ -42,12 +42,16 @@ function createSeries(overrides = {}) {
                 limitingFactor: null,
                 components: { thermalActivity: { precipitationPenalty: 0, cloudPenalty: 0 } },
                 metrics: {
+                    elevationM: 580,
                     usableThermalDepthM: thermalLevel === 'excellent' ? 2600 : thermalLevel === 'good' ? 1800 : 400,
+                    thermalTopMslM: thermalLevel === 'excellent' ? 3180 : thermalLevel === 'good' ? 2380 : 980,
                     hasReliableHeightLimit: true,
                     modelCloudBaseMslM: 2800,
                     estimatedLclMslM: 2600,
                     shortwaveRadiationWm2: 600,
                     windAtThermalTopKmh: 18,
+                    strongestWindWithinThermalLayer: { label: '800 hPa', speedKmh: 17, heightMslM: 2030 },
+                    strongestWindAboveThermalLayer: { label: '700 hPa', speedKmh: 36, heightMslM: 3100 },
                     stability: { category: 'supportive' }
                 },
                 confidence: { overall: 'high', activity: 'high', height: 'high' }
@@ -196,6 +200,56 @@ test('Dashboard N: das interessante Fenster bevorzugt Dauer vor späterem Einzel
     });
     const window = findBestWeatherWindow(series.hours, series.assessments, DAY, confidenceSeries());
     assert.deepEqual([window.start, window.end], [10, 12]);
+});
+
+test('Dashboard O: Wind wird dem nutzbaren Höhenbereich und dem Bereich darüber zugeordnet', () => {
+    const series = createSeries({ 12: { assessment: { thermal: {
+        ...thermal('good', 70, 1600),
+        metrics: {
+            elevationM: 580,
+            usableThermalDepthM: 1600,
+            thermalTopMslM: 2180,
+            hasReliableHeightLimit: true,
+            strongestWindWithinThermalLayer: { label: '800 hPa', speedKmh: 22, heightMslM: 2050 },
+            strongestWindAboveThermalLayer: { label: '700 hPa', speedKmh: 59, heightMslM: 3100 }
+        }
+    } } } });
+    const view = buildDashboardHourView(series.hours[6], series.assessments[6], { level: 'high' });
+    assert.equal(view.flightBand.reliable, true);
+    assert.match(view.flightBand.range, /580–2180 m MSL/);
+    assert.match(view.flightBand.within, /22 km\/h auf 2050 m MSL/);
+    assert.match(view.flightBand.above, /59 km\/h auf 3100 m MSL/);
+    assert.match(view.flightBand.above, /Scherungs- oder Föhnhinweis/);
+});
+
+test('Dashboard P: ohne belastbare Obergrenze wird Höhenwind keinem Flugbereich zugeordnet', () => {
+    const series = createSeries({ 12: { assessment: { thermal: {
+        ...thermal('good', 70, null),
+        metrics: {
+            usableThermalDepthM: null,
+            thermalTopMslM: null,
+            hasReliableHeightLimit: false,
+            strongestWindWithinThermalLayer: null,
+            strongestWindAboveThermalLayer: null
+        }
+    } } } });
+    const view = buildDashboardHourView(series.hours[6], series.assessments[6], { level: 'high' });
+    assert.equal(view.flightBand.reliable, false);
+    assert.match(view.flightBand.within, /nicht.*zugeordnet/i);
+    assert.equal(view.flightBand.above, null);
+});
+
+test('Dashboard Q: die schwerste zusammenhängende Phase erhält einen konkreten Zeitraum', () => {
+    const reason = { text: 'Starker Wind im Flugbereich' };
+    const series = createSeries({
+        11: { assessment: { safety: { level: 'demanding', blockers: [], limitingFactor: reason, dataQuality: { criticalMissing: [] } } } },
+        12: { assessment: { safety: { level: 'demanding', blockers: [], limitingFactor: reason, dataQuality: { criticalMissing: [] } } } },
+        17: { assessment: { safety: { level: 'demanding', blockers: [], limitingFactor: reason, dataQuality: { criticalMissing: [] } } } }
+    });
+    const view = buildDashboardDayView(series.hours, series.assessments, DAY, { level: 'high' }, confidenceSeries());
+    assert.deepEqual([view.dominantSafetyWindow.start, view.dominantSafetyWindow.end], [11, 12]);
+    assert.equal(view.dominantSafetyWindow.timeLabel, '11:00–12:00 Uhr');
+    assert.equal(view.dominantSafetyWindow.reason, reason.text);
 });
 
 function thermal(level, score, depth) {

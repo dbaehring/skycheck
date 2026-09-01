@@ -23,8 +23,12 @@
 - Mobile Scrollcontainer und Pull-to-Refresh nachgeschärft; ein Aktualisieren erhält den gewählten Prognosetag.
 - Tagesauswahl vor das Entscheidungs-Dashboard verschoben und Höhenwind-Hinweise um die tatsächliche Modellhöhe ergänzt.
 - Föhnrisiko berücksichtigt die lokale Nord-/Südseite relativ zu einem approximierten Alpenhauptkamm.
+- Mobile Standortkarte wird nach der Auswahl kompakt; doppelte Stundenbegründungen, Komfortfilter und Quellen sind in nachrangige aufklappbare Bereiche verschoben.
+- Fehlende Detailwerte werden ausgeblendet, Rohparameter starten geschlossen und Warnbereiche öffnen sich weiterhin automatisch.
+- Die Stundenansicht trennt Wind im modellierten nutzbaren Thermikbereich von Wind darüber und nennt jeweils die tatsächliche Höhe.
+- Die Tagesentscheidung nennt den zusammenhängenden Zeitraum der schwersten Ausprägung samt Hauptgrund.
 - Verwaiste Best-Window-Styles und Debug-Ausgaben entfernt; doppelte Dashboard-Renderings reduziert.
-- Service-Worker-Cache auf `skycheck-v39` angehoben.
+- Service-Worker-Cache auf `skycheck-v42` angehoben.
 - RC1-Szenarientests A–K für Datenlücken, Offline/Stale, Providerausfälle, Dimensionskonflikte, Zeitzonen und Legacy-Isolation ergänzt.
 
 ### Unverändert

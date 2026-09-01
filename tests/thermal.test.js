@@ -51,6 +51,10 @@ test('Thermal B: hohe Grenzschicht, gute Einstrahlung und moderate Bedingungen s
     assert.equal(result.metrics.usableThermalDepthM, 1800);
     assert.equal(result.metrics.cloudBaseSource, 'modelConvectiveCloudBase');
     assert.deepEqual(result.metrics.cloudBaseRangeMslM, { lowerMslM: 2600, upperMslM: 2800 });
+    assert.equal(result.metrics.strongestWindWithinThermalLayer.speedKmh, 11);
+    assert.equal(result.metrics.strongestWindWithinThermalLayer.heightMslM, 2050);
+    assert.equal(result.metrics.strongestWindAboveThermalLayer.speedKmh, 14);
+    assert.equal(result.metrics.strongestWindAboveThermalLayer.heightMslM, 3100);
 });
 
 test('Thermal C: mehrere exzellente Stunden ergeben einen excellent XC-Tag', () => {
@@ -160,6 +164,8 @@ test('Thermal J2: fehlende vertikale Obergrenze lässt belastbare Aktivität goo
     }), { context: SUNNY_CONTEXT });
     assert.equal(result.level, 'good');
     assert.equal(result.metrics.usableThermalDepthM, null);
+    assert.equal(result.metrics.strongestWindWithinThermalLayer, null);
+    assert.equal(result.metrics.strongestWindAboveThermalLayer, null);
     assert.equal(result.confidence.height, 'low');
 });
 

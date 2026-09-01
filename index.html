@@ -74,7 +74,14 @@
             </div>
         </header>
         <div class="main-layout">
-            <div class="map-section">
+            <div class="map-section" id="mapSection">
+                <button class="mobile-location-summary" id="mobileLocationToggle" type="button" aria-expanded="true" aria-controls="map">
+                    <span class="mobile-location-copy">
+                        <strong id="mobileLocationName">Standort wählen</strong>
+                        <small id="mobileLocationMeta">Karte und GPS öffnen</small>
+                    </span>
+                    <span class="mobile-location-action" id="mobileLocationAction">Standort ändern</span>
+                </button>
                 <div class="map-header">
                     <h2>Startplatz wählen</h2>
                     <div class="map-header-right">
@@ -177,81 +184,70 @@
                             <div class="weather-current" id="weatherCurrent"><span class="weather-icon-text" id="weatherDesc">-</span><span class="weather-temp" id="currentTemp">-</span></div>
                         </div>
                         <div class="hour-dimensions" id="hourDimensions"></div>
+                        <div class="hour-flight-band unknown" id="hourFlightBand">
+                            <h4>Nutzbarer Höhenbereich</h4>
+                            <strong id="hourFlightBandRange">Noch nicht bestimmbar</strong>
+                            <p id="hourFlightBandWind">Windzuordnung wird vorbereitet.</p>
+                            <p class="hour-flight-band-above u-hidden" id="hourAboveBandWind"></p>
+                        </div>
                         <div class="hour-summary-grid">
                             <div><h4>Windprofil</h4><ul id="hourWindSummary"></ul></div>
                             <div><h4>Thermikprofil</h4><ul id="hourThermalSummary"></ul></div>
                         </div>
+                        <details class="hour-decision-details">
+                            <summary>Warum diese Einordnung?</summary>
+                            <section class="dashboard-details" aria-label="Begründungen zur ausgewählten Stunde">
+                                <article class="dashboard-detail-card" id="flightCharacterDetails">
+                                    <h3>Flugcharakter</h3><strong id="flightCharacterLevel">Unklar</strong>
+                                    <p id="flightCharacterReason">Noch keine belastbare Bewertung.</p>
+                                </article>
+                                <article class="dashboard-detail-card" id="thermalXcDetails">
+                                    <h3>Thermik &amp; XC</h3><strong id="thermalXcLevel">Unklar</strong>
+                                    <p id="thermalXcReason">Noch kein Thermikprofil.</p>
+                                </article>
+                                <article class="dashboard-detail-card" id="foehnDetails">
+                                    <h3>Föhnrisiko</h3><strong id="foehnDetailLevel">Unklar</strong>
+                                    <p id="foehnDetailReason">Föhnindikatoren werden ausgewertet.</p>
+                                    <a href="https://wetter.provinz.bz.it/de/foehndiagramm" target="_blank" rel="noopener noreferrer">Reality Check: offizielles Föhndiagramm ↗</a>
+                                </article>
+                                <article class="dashboard-detail-card consensus-detail" id="consensusDetails">
+                                    <h3>Modellkonsens</h3>
+                                    <details class="forecast-confidence" id="forecastConfidence">
+                                        <summary><span>Diagnose</span><strong class="confidence-level unknown" id="confidenceLevel" aria-live="polite">Wird geladen…</strong></summary>
+                                        <div class="confidence-details">
+                                            <div class="confidence-components" aria-label="Konsens nach Parameter">
+                                                <div><span>Wind</span><strong id="confidenceWind">—</strong></div>
+                                                <div><span>Thermik/Höhe</span><strong id="confidenceThermal">—</strong></div>
+                                                <div><span>Wolken</span><strong id="confidenceClouds">—</strong></div>
+                                                <div><span>Niederschlag</span><strong id="confidencePrecipitation">—</strong></div>
+                                            </div>
+                                            <p class="confidence-models" id="confidenceModels">Modelle werden verglichen…</p>
+                                            <ul class="confidence-reasons" id="confidenceReasons"></ul>
+                                            <p class="confidence-meta" id="confidenceMeta"></p>
+                                        </div>
+                                    </details>
+                                </article>
+                            </section>
+                        </details>
                     </section>
 
-                    <section class="dashboard-details" aria-label="Entscheidungsdetails">
-                        <article class="dashboard-detail-card" id="flightCharacterDetails">
-                            <h3>Flugcharakter</h3><strong id="flightCharacterLevel">Unklar</strong>
-                            <p id="flightCharacterReason">Noch keine belastbare Bewertung.</p>
-                        </article>
-                        <article class="dashboard-detail-card" id="thermalXcDetails">
-                            <h3>Thermik &amp; XC</h3><strong id="thermalXcLevel">Unklar</strong>
-                            <p id="thermalXcReason">Noch kein Thermikprofil.</p>
-                        </article>
-                        <article class="dashboard-detail-card" id="foehnDetails">
-                            <h3>Föhnrisiko</h3><strong id="foehnDetailLevel">Unklar</strong>
-                            <p id="foehnDetailReason">Föhnindikatoren werden ausgewertet.</p>
-                            <a href="https://wetter.provinz.bz.it/de/foehndiagramm" target="_blank" rel="noopener noreferrer">Reality Check: offizielles Föhndiagramm ↗</a>
-                        </article>
-                        <article class="dashboard-detail-card consensus-detail" id="consensusDetails">
-                            <h3>Modellkonsens</h3>
-                            <details class="forecast-confidence" id="forecastConfidence">
-                                <summary><span>Diagnose</span><strong class="confidence-level unknown" id="confidenceLevel" aria-live="polite">Wird geladen…</strong></summary>
-                                <div class="confidence-details">
-                                    <div class="confidence-components" aria-label="Konsens nach Parameter">
-                                        <div><span>Wind</span><strong id="confidenceWind">—</strong></div>
-                                        <div><span>Thermik/Höhe</span><strong id="confidenceThermal">—</strong></div>
-                                        <div><span>Wolken</span><strong id="confidenceClouds">—</strong></div>
-                                        <div><span>Niederschlag</span><strong id="confidencePrecipitation">—</strong></div>
-                                    </div>
-                                    <p class="confidence-models" id="confidenceModels">Modelle werden verglichen…</p>
-                                    <ul class="confidence-reasons" id="confidenceReasons"></ul>
-                                    <p class="confidence-meta" id="confidenceMeta"></p>
-                                </div>
-                            </details>
-                        </article>
-                    </section>
-
-                    <section class="external-weather-links data-models" aria-labelledby="dataModelsTitle">
-                        <h3 id="dataModelsTitle">Daten &amp; Modelle</h3>
-                        <p><a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> liefert ICON-D2, ICON-EU und ECMWF IFS; GeoSphere AROME Austria ergänzt den Modellvergleich.</p>
-                        <p>Der Bozen–Innsbruck-Druckgradient ist eine modellierte ICON-Prognose via Open-Meteo, keine aktuelle Stationsmessung.</p>
-                        <h4>Externe Kontrollquellen</h4>
-                        <div>
-                            <a href="https://www.dhv.de/piloteninfos/wetter/" target="_blank" rel="noopener noreferrer">DHV Flugwetter ↗</a>
-                            <a href="https://wetter.provinz.bz.it/de/foehndiagramm" target="_blank" rel="noopener noreferrer">Föhndiagramm ↗</a>
-                            <a href="https://www.wetter.aero/" target="_blank" rel="noopener noreferrer">wetter.aero ↗</a>
-                            <a href="https://soaringmeteo.org/" target="_blank" rel="noopener noreferrer">Soaringmeteo ↗</a>
-                            <a href="https://www.windy.com/" target="_blank" rel="noopener noreferrer">Windy ↗</a>
-                            <a href="https://www.foto-webcam.eu/" target="_blank" rel="noopener noreferrer">Foto-Webcam ↗</a>
+                    <!-- Aktuelle Messwerte stehen bei der ausgewählten Stunde, nicht bei den Rohparametern. -->
+                    <div class="live-wind-card u-hidden" id="liveWindCard">
+                        <div class="live-wind-header">
+                            <span class="live-wind-icon">📡</span>
+                            <span class="live-wind-title">Live-Wind (Messstationen)<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Aktuelle Windmessungen von echten Stationen im Umkreis. Quellen: OpenWindMap/Pioupiou (OWM) + Lawinenwarndienste (LWD Tirol, Bayern, Salzburg, Südtirol). Hinweis: Messwerte können lokal von Modellprognosen abweichen!</span></span></span>
+                            <span class="live-wind-badge u-hidden" id="liveWindBadge">LIVE</span>
+                            <button class="live-wind-refresh u-hidden" id="liveWindRefresh" title="Aktualisieren">↻</button>
                         </div>
-                    </section>
-
-                    <div class="param-filter-card" role="region" aria-label="Persönliche Komfortfilter">
-                        <div class="param-filter-header" id="paramFilterToggle">
-                            <span class="param-filter-title">⚙️ Persönliche Komfortfilter</span>
-                            <span class="param-filter-summary" id="paramFilterSummary">Alle Parameter</span><span class="toggle-icon">▼</span>
-                        </div>
-                        <div class="param-filter-body" id="paramFilterBody">
-                            <p class="param-filter-hint">Persönliche Schwellen verändern Komfortbewertungen. Kritische Indikatoren bleiben davon unabhängig.</p>
-                            <div class="param-filter-options">
-                                <label class="param-filter-option"><input type="checkbox" id="filterWind" checked><span class="param-filter-icon">💨</span><span class="param-filter-label">Wind</span></label>
-                                <label class="param-filter-option"><input type="checkbox" id="filterThermik" checked><span class="param-filter-icon">🌡️</span><span class="param-filter-label">Thermik</span></label>
-                                <label class="param-filter-option"><input type="checkbox" id="filterClouds" checked><span class="param-filter-icon">☁️</span><span class="param-filter-label">Sicht</span></label>
-                                <label class="param-filter-option"><input type="checkbox" id="filterPrecip" checked><span class="param-filter-icon">🌧️</span><span class="param-filter-label">Niederschlag</span></label>
-                            </div>
-                            <button class="param-filter-reset" id="paramFilterReset">Alle aktivieren</button>
-                            <div class="expert-mode-section">
-                                <div class="expert-mode-toggle">
-                                    <label class="expert-toggle-label"><input type="checkbox" id="expertModeToggle"><span class="expert-toggle-switch"></span><span class="expert-toggle-text">Expertenmodus</span></label>
-                                    <button class="expert-settings-btn" id="expertSettingsBtn" disabled title="Komfortgrenzen anpassen">Anpassen</button>
-                                </div>
-                                <p class="expert-mode-hint" id="expertModeHint">Eigene Komfortgrenzen; kritische Indikatoren bleiben unabhängig.</p>
-                            </div>
+                        <button class="live-wind-load-btn" id="liveWindLoadBtn">
+                            <span class="load-btn-icon">📡</span>
+                            <span class="load-btn-text">Live-Windwerte laden</span>
+                            <span class="load-btn-hint">Stationen im Umkreis von 30 km</span>
+                        </button>
+                        <div class="live-wind-stations" id="liveWindStations"></div>
+                        <div class="live-wind-footer u-hidden" id="liveWindFooter">
+                            <span class="live-wind-source">Daten: <a href="https://www.openwindmap.org/" target="_blank" rel="noopener noreferrer">OpenWindMap</a> + <a href="https://avalanche.report/" target="_blank" rel="noopener noreferrer">Lawinenwarndienste</a></span>
+                            <span class="live-wind-note">⚠️ Messwerte können lokal abweichen</span>
                         </div>
                     </div>
 
@@ -299,35 +295,13 @@
                         </div>
                     </div>
 
-                    <!-- Live-Wind Stationen (OpenWindMap + Lawinenwarndienste) -->
-                    <div class="live-wind-card u-hidden" id="liveWindCard">
-                        <div class="live-wind-header">
-                            <span class="live-wind-icon">📡</span>
-                            <span class="live-wind-title">Live-Wind (Messstationen)<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Aktuelle Windmessungen von echten Stationen im Umkreis. Quellen: OpenWindMap/Pioupiou (OWM) + Lawinenwarndienste (LWD Tirol, Bayern, Salzburg, Südtirol). Hinweis: Messwerte können lokal von Modellprognosen abweichen!</span></span></span>
-                            <span class="live-wind-badge u-hidden" id="liveWindBadge">LIVE</span>
-                            <button class="live-wind-refresh u-hidden" id="liveWindRefresh" title="Aktualisieren">↻</button>
-                        </div>
-                        <button class="live-wind-load-btn" id="liveWindLoadBtn">
-                            <span class="load-btn-icon">📡</span>
-                            <span class="load-btn-text">Live-Windwerte laden</span>
-                            <span class="load-btn-hint">Stationen im Umkreis von 30 km</span>
-                        </button>
-                        <div class="live-wind-stations" id="liveWindStations">
-                            <!-- Wird dynamisch befüllt -->
-                        </div>
-                        <div class="live-wind-footer u-hidden" id="liveWindFooter">
-                            <span class="live-wind-source">Daten: <a href="https://www.openwindmap.org/" target="_blank" rel="noopener noreferrer">OpenWindMap</a> + <a href="https://avalanche.report/" target="_blank" rel="noopener noreferrer">Lawinenwarndienste</a></span>
-                            <span class="live-wind-note">⚠️ Messwerte können lokal abweichen</span>
-                        </div>
-                    </div>
-
                     <div class="params-controls">
                         <button class="params-control-btn" id="expandAllBtn">📂 Alle aufklappen</button>
                         <button class="params-control-btn" id="collapseAllBtn">📁 Alle zuklappen</button>
                     </div>
 
                     <div class="params-grid parameter-grid" role="region" aria-label="Wetterparameter">
-                        <div class="param-card full-width expanded" data-card="wind" role="region" aria-label="Windparameter">
+                        <div class="param-card full-width collapsed" data-card="wind" role="region" aria-label="Windparameter">
                             <div class="param-header"><span class="param-title">💨 Wind (Details)<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Detaillierte Windwerte für die ausgewählte Stunde. Starker Höhenwind und große Gradienten können turbulente Bedingungen begünstigen.</span></span></span><span class="param-time-hint" id="windTimeHint"></span><span class="param-status" id="windStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
                                 <div class="wind-table">
@@ -372,7 +346,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="param-card expanded" data-card="foehn" role="region" aria-label="Föhndiagnose">
+                        <div class="param-card collapsed" data-card="foehn" role="region" aria-label="Föhndiagnose">
                             <div class="param-header"><span class="param-title">🌬️ Föhnindikatoren<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Kombiniert die modellierte ICON-Prognose des Bozen–Innsbruck-Druckgradienten mit Richtung, Stärke und Konsistenz der Höhenströmung. Südföhn wird auf der Alpennordseite, Nordföhn auf der Alpensüdseite als Leeseiten-Signal eingeordnet. Ein einzelner Höhenwindwert beweist keinen Föhn.</span></span></span><span class="param-time-hint" id="foehnTimeHint"></span><span class="param-status" id="foehnStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
                                 <div class="param-row"><span class="param-label">Föhnrisiko</span><span class="param-value" id="foehnRisk">-</span></div>
@@ -380,11 +354,11 @@
                                 <div class="param-row"><span class="param-label">ICON-Prognose Bozen–Innsbruck</span><span class="param-value" id="foehnPressure">-</span></div>
                                 <div class="param-row"><span class="param-label">850–700 hPa</span><span class="param-value" id="foehnFlow">-</span></div>
                                 <div class="param-row"><span class="param-label">Trend</span><span class="param-value" id="foehnTrend">-</span></div>
-                                <div class="param-row"><span class="param-label">Confidence</span><span class="param-value" id="foehnConfidence">-</span></div>
+                                <div class="param-row"><span class="param-label">Signalqualität</span><span class="param-value" id="foehnConfidence">-</span></div>
                                 <p class="u-text-xs u-text-muted u-mt-sm">Nord-/Südseite folgen einem approximierten Alpenhauptkamm; keine lokale Lee-/Rotorprognose. <a href="https://wetter.provinz.bz.it/de/foehndiagramm" target="_blank" rel="noopener noreferrer">Reality Check: offizielles Föhndiagramm</a></p>
                             </div>
                         </div>
-                        <div class="param-card expanded" data-card="thermik" role="region" aria-label="Thermikparameter">
+                        <div class="param-card collapsed" data-card="thermik" role="region" aria-label="Thermikparameter">
                             <div class="param-header"><span class="param-title">🌡️ Thermik<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">CAPE zeigt Thermik-Energie. >1000 J/kg = Gewittergefahr! Lifted Index negativ = labile Luft.</span></span></span><span class="param-time-hint" id="thermikTimeHint"></span><span class="param-status" id="thermikStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
                                 <div class="param-row"><span class="param-label">Temperatur</span><span class="param-value" id="temp2m">-</span></div>
@@ -396,7 +370,7 @@
                                 <div class="param-row thermik-height-row"><span class="param-label">📈 Grenzschicht<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Atmosphärische Grenzschichthöhe - Obergrenze der bodennahen Luftmasse. Bei Thermikflügen relevant für maximale Steighöhe.</span></span></span><span class="param-value" id="boundaryLayer">-</span></div>
                             </div>
                         </div>
-                        <div class="param-card expanded" data-card="clouds" role="region" aria-label="Wolken und Sicht">
+                        <div class="param-card collapsed" data-card="clouds" role="region" aria-label="Wolken und Sicht">
                             <div class="param-header"><span class="param-title">☁️ Wolken & Sicht<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Tiefe Wolken (&lt;2000m) sind kritisch - dämpfen Thermik und können Start eindecken.</span></span></span><span class="param-time-hint" id="cloudTimeHint"></span><span class="param-status" id="cloudStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
                                 <div class="param-row"><span class="param-label">Gesamt</span><span class="param-value" id="cloudTotal">-</span></div>
@@ -407,7 +381,7 @@
                                 <div class="param-row fog-risk-row"><span class="param-label">Nebelrisiko<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Basiert auf Spread (Temp-Taupunkt), Wind und Sichtweite. Bei wenig Wind und niedrigem Spread kann sich Bodennebel bilden.</span></span></span><span class="param-value" id="fogRisk">-</span></div>
                             </div>
                         </div>
-                        <div class="param-card expanded" data-card="precip" role="region" aria-label="Niederschlag">
+                        <div class="param-card collapsed" data-card="precip" role="region" aria-label="Niederschlag">
                             <div class="param-header"><span class="param-title">🌧️ Niederschlag<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Jeder Niederschlag ist problematisch - nasser Schirm hat schlechtere Flugeigenschaften!</span></span></span><span class="param-time-hint" id="precipTimeHint"></span><span class="param-status" id="precipStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
                                 <div class="param-row"><span class="param-label">Menge (gesamt)</span><span class="param-value" id="precip">-</span></div>
@@ -417,6 +391,49 @@
                             </div>
                         </div>
                     </div>
+
+                    <section class="secondary-controls" aria-label="Einstellungen und Quellen">
+                        <div class="param-filter-card" role="region" aria-label="Persönliche Komfortfilter">
+                            <div class="param-filter-header" id="paramFilterToggle">
+                                <span class="param-filter-title">⚙️ Persönliche Komfortfilter</span>
+                                <span class="param-filter-summary" id="paramFilterSummary">Alle Parameter</span><span class="toggle-icon">▼</span>
+                            </div>
+                            <div class="param-filter-body" id="paramFilterBody">
+                                <p class="param-filter-hint">Persönliche Schwellen verändern Komfortbewertungen. Kritische Indikatoren bleiben davon unabhängig.</p>
+                                <div class="param-filter-options">
+                                    <label class="param-filter-option"><input type="checkbox" id="filterWind" checked><span class="param-filter-icon">💨</span><span class="param-filter-label">Wind</span></label>
+                                    <label class="param-filter-option"><input type="checkbox" id="filterThermik" checked><span class="param-filter-icon">🌡️</span><span class="param-filter-label">Thermik</span></label>
+                                    <label class="param-filter-option"><input type="checkbox" id="filterClouds" checked><span class="param-filter-icon">☁️</span><span class="param-filter-label">Sicht</span></label>
+                                    <label class="param-filter-option"><input type="checkbox" id="filterPrecip" checked><span class="param-filter-icon">🌧️</span><span class="param-filter-label">Niederschlag</span></label>
+                                </div>
+                                <button class="param-filter-reset" id="paramFilterReset">Alle aktivieren</button>
+                                <div class="expert-mode-section">
+                                    <div class="expert-mode-toggle">
+                                        <label class="expert-toggle-label"><input type="checkbox" id="expertModeToggle"><span class="expert-toggle-switch"></span><span class="expert-toggle-text">Expertenmodus</span></label>
+                                        <button class="expert-settings-btn" id="expertSettingsBtn" disabled title="Komfortgrenzen anpassen">Anpassen</button>
+                                    </div>
+                                    <p class="expert-mode-hint" id="expertModeHint">Eigene Komfortgrenzen; kritische Indikatoren bleiben unabhängig.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <details class="external-weather-links data-models">
+                            <summary id="dataModelsTitle">Daten, Modelle &amp; Kontrollquellen</summary>
+                            <div class="data-models-body">
+                                <p><a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a> liefert ICON-D2, ICON-EU und ECMWF IFS; GeoSphere AROME Austria ergänzt den Modellvergleich.</p>
+                                <p>Der Bozen–Innsbruck-Druckgradient ist eine modellierte ICON-Prognose via Open-Meteo, keine aktuelle Stationsmessung.</p>
+                                <h4>Externe Kontrollquellen</h4>
+                                <div>
+                                    <a href="https://www.dhv.de/piloteninfos/wetter/" target="_blank" rel="noopener noreferrer">DHV Flugwetter ↗</a>
+                                    <a href="https://wetter.provinz.bz.it/de/foehndiagramm" target="_blank" rel="noopener noreferrer">Föhndiagramm ↗</a>
+                                    <a href="https://www.wetter.aero/" target="_blank" rel="noopener noreferrer">wetter.aero ↗</a>
+                                    <a href="https://soaringmeteo.org/" target="_blank" rel="noopener noreferrer">Soaringmeteo ↗</a>
+                                    <a href="https://www.windy.com/" target="_blank" rel="noopener noreferrer">Windy ↗</a>
+                                    <a href="https://www.foto-webcam.eu/" target="_blank" rel="noopener noreferrer">Foto-Webcam ↗</a>
+                                </div>
+                            </div>
+                        </details>
+                    </section>
                 </div>
             </div>
         </div>

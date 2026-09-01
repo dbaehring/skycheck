@@ -64,6 +64,8 @@ import {
     handleFilterChange,
     resetParamFilter,
     toggleParamFilter,
+    toggleLocationMap,
+    updateMobileLocationSummary,
     openAboutModal,
     closeAboutModal,
     switchAboutTab,
@@ -180,6 +182,7 @@ async function initApp() {
  */
 function onWeatherLoaded() {
     setupDays();
+    updateMobileLocationSummary(state.currentLocation);
     state.forecastConfidence = {
         status: 'loading',
         hourly: [],
@@ -406,6 +409,11 @@ function registerEventListeners() {
     const collapseAllBtn = document.getElementById('collapseAllBtn');
     if (collapseAllBtn) {
         collapseAllBtn.addEventListener('click', collapseAllCards);
+    }
+
+    const mobileLocationToggle = document.getElementById('mobileLocationToggle');
+    if (mobileLocationToggle) {
+        mobileLocationToggle.addEventListener('click', toggleLocationMap);
     }
 
     // Parameter-Karten (Event-Delegation)
