@@ -47,14 +47,14 @@ test('Service Worker markiert alten API-Cache beim Offline-Fallback als stale', 
 
     const response = await context.networkFirstWithCache(
         { url: 'https://api.open-meteo.com/v1/forecast?latitude=47' },
-        'skycheck-api-v36'
+        'skycheck-api-v39'
     );
     assert.equal(response.headers.get('sw-cache-fallback'), 'true');
     assert.equal(response.headers.get('sw-cache-stale'), 'true');
     assert.equal(response.headers.get('sw-cached-at'), String(cachedAt));
 });
 
-test('Service Worker cached alle neuen RC1-Module unter einer einzigen v36-Version', async () => {
+test('Service Worker cached alle neuen RC1-Module unter einer einzigen v39-Version', async () => {
     const { source } = await loadServiceWorker({
         fetch: async () => new Response('', { status: 200 }),
         caches: {
@@ -63,8 +63,8 @@ test('Service Worker cached alle neuen RC1-Module unter einer einzigen v36-Versi
             keys: async () => []
         }
     });
-    assert.match(source, /skycheck-static-v36/);
-    assert.match(source, /skycheck-api-v36/);
+    assert.match(source, /skycheck-static-v39/);
+    assert.match(source, /skycheck-api-v39/);
     assert.match(source, /\.\/js\/forecast-periods\.js/);
     assert.doesNotMatch(source, /skycheck-(?:static-|api-)?v32/);
 });

@@ -20,8 +20,11 @@
 - Kleine Displays bis 320 px, lange Ortsnamen und Touch-Ziele nachgeschärft.
 - Welcome-Dialog scrollt auf Trackpad und Touch als eigener Container; Hintergrundposition und Fokus bleiben beim Schließen erhalten.
 - Legacy-v10-Auswertung ist in der normalen Oberfläche entfernt und nur noch mit `?debug=legacy` sichtbar.
+- Mobile Scrollcontainer und Pull-to-Refresh nachgeschärft; ein Aktualisieren erhält den gewählten Prognosetag.
+- Tagesauswahl vor das Entscheidungs-Dashboard verschoben und Höhenwind-Hinweise um die tatsächliche Modellhöhe ergänzt.
+- Föhnrisiko berücksichtigt die lokale Nord-/Südseite relativ zu einem approximierten Alpenhauptkamm.
 - Verwaiste Best-Window-Styles und Debug-Ausgaben entfernt; doppelte Dashboard-Renderings reduziert.
-- Service-Worker-Cache auf `skycheck-v36` angehoben.
+- Service-Worker-Cache auf `skycheck-v39` angehoben.
 - RC1-Szenarientests A–K für Datenlücken, Offline/Stale, Providerausfälle, Dimensionskonflikte, Zeitzonen und Legacy-Isolation ergänzt.
 
 ### Unverändert

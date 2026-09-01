@@ -167,7 +167,7 @@ test('Dashboard I: ein Consensus-Providerfehler lässt die übrigen Dimensionen 
 
 test('Dashboard J: 390-px-Regeln begrenzen die Seite und lassen die Timeline scrollen', async () => {
     const css = await readFile(new URL('../css/styles.css', import.meta.url), 'utf8');
-    assert.match(css, /html\s*\{\s*overflow-x:\s*hidden/);
+    assert.match(css, /html\s*\{\s*overflow-x:\s*clip/);
     assert.match(css, /\.timeline\s*\{[\s\S]*?overflow-x:\s*auto/);
     assert.match(css, /@media \(max-width: 430px\)/);
 });

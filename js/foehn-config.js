@@ -13,6 +13,23 @@ export const FOEHN_REGION = Object.freeze({
     bozenInnsbruckIndicator: Object.freeze({ minLat: 45.2, maxLat: 48.2, minLon: 8.5, maxLon: 14.5 })
 });
 
+// Grobe Linie des Alpenhauptkamms für eine lokale Luv-/Lee-Einordnung.
+// Die Toleranz hält Standorte nahe am Kamm bewusst neutral.
+export const FOEHN_SITE_CONTEXT = Object.freeze({
+    divideToleranceLat: 0.18,
+    alpineDivide: Object.freeze([
+        Object.freeze({ lon: 5.5, lat: 45.9 }),
+        Object.freeze({ lon: 7.0, lat: 46.2 }),
+        Object.freeze({ lon: 8.0, lat: 46.5 }),
+        Object.freeze({ lon: 9.0, lat: 46.7 }),
+        Object.freeze({ lon: 10.0, lat: 46.85 }),
+        Object.freeze({ lon: 11.4, lat: 46.95 }),
+        Object.freeze({ lon: 12.5, lat: 47.05 }),
+        Object.freeze({ lon: 14.5, lat: 47.1 }),
+        Object.freeze({ lon: 16.8, lat: 47.0 })
+    ])
+});
+
 export const FOEHN_REFERENCE_POINTS = Object.freeze({
     bozen: Object.freeze({ name: 'Bozen', lat: 46.4983, lon: 11.3548 }),
     innsbruck: Object.freeze({ name: 'Innsbruck', lat: 47.2692, lon: 11.4041 })
@@ -56,4 +73,3 @@ export const FOEHN_THRESHOLDS = Object.freeze({
         criticalPoints: 60
     })
 });
-

@@ -104,6 +104,10 @@
                     <p>Wetterdaten werden abgerufen...</p>
                 </div>
                 <div id="resultsContainer" class="u-hidden">
+                    <nav class="day-comparison" id="dayComparison" role="navigation" aria-label="Tagesauswahl">
+                        <h3>📅 Tag wählen</h3>
+                        <div class="day-comparison-grid" id="dayComparisonGrid" role="tablist"></div>
+                    </nav>
                     <section class="location-card decision-dashboard" aria-labelledby="dashboardTitle">
                         <div class="dashboard-heading">
                             <div>
@@ -161,10 +165,6 @@
                             </div>
                         </details>
                     </section>
-                    <nav class="day-comparison" id="dayComparison" role="navigation" aria-label="Tagesauswahl">
-                        <h3>📅 Tag wählen</h3>
-                        <div class="day-comparison-grid" id="dayComparisonGrid" role="tablist"></div>
-                    </nav>
                     <div class="timeline-card dashboard-timeline" role="region" aria-label="Stündlicher Tagesverlauf">
                         <h3>Tagesverlauf <span>06–20 Uhr</span></h3>
                         <p class="timeline-legend"><span>● Flugcharakter</span><span>◆ Thermik</span><span>▲ Föhnrisiko</span><span>≋ niedriger Konsens</span></p>
@@ -373,7 +373,7 @@
                             </div>
                         </div>
                         <div class="param-card expanded" data-card="foehn" role="region" aria-label="Föhndiagnose">
-                            <div class="param-header"><span class="param-title">🌬️ Föhnindikatoren<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Kombiniert die modellierte ICON-Prognose des Bozen–Innsbruck-Druckgradienten mit Richtung, Stärke und Konsistenz der Höhenströmung. Ein einzelner Höhenwindwert beweist keinen Föhn.</span></span></span><span class="param-time-hint" id="foehnTimeHint"></span><span class="param-status" id="foehnStatus"></span><span class="toggle-icon">▼</span></div>
+                            <div class="param-header"><span class="param-title">🌬️ Föhnindikatoren<span class="tooltip-container"><span class="info-icon">?</span><span class="tooltip-content">Kombiniert die modellierte ICON-Prognose des Bozen–Innsbruck-Druckgradienten mit Richtung, Stärke und Konsistenz der Höhenströmung. Südföhn wird auf der Alpennordseite, Nordföhn auf der Alpensüdseite als Leeseiten-Signal eingeordnet. Ein einzelner Höhenwindwert beweist keinen Föhn.</span></span></span><span class="param-time-hint" id="foehnTimeHint"></span><span class="param-status" id="foehnStatus"></span><span class="toggle-icon">▼</span></div>
                             <div class="param-body">
                                 <div class="param-row"><span class="param-label">Föhnrisiko</span><span class="param-value" id="foehnRisk">-</span></div>
                                 <div class="param-row"><span class="param-label">Typ</span><span class="param-value" id="foehnType">-</span></div>
@@ -381,7 +381,7 @@
                                 <div class="param-row"><span class="param-label">850–700 hPa</span><span class="param-value" id="foehnFlow">-</span></div>
                                 <div class="param-row"><span class="param-label">Trend</span><span class="param-value" id="foehnTrend">-</span></div>
                                 <div class="param-row"><span class="param-label">Confidence</span><span class="param-value" id="foehnConfidence">-</span></div>
-                                <p class="u-text-xs u-text-muted u-mt-sm">Keine Lee-/Rotorprognose. <a href="https://wetter.provinz.bz.it/de/foehndiagramm" target="_blank" rel="noopener noreferrer">Reality Check: offizielles Föhndiagramm</a></p>
+                                <p class="u-text-xs u-text-muted u-mt-sm">Nord-/Südseite folgen einem approximierten Alpenhauptkamm; keine lokale Lee-/Rotorprognose. <a href="https://wetter.provinz.bz.it/de/foehndiagramm" target="_blank" rel="noopener noreferrer">Reality Check: offizielles Föhndiagramm</a></p>
                             </div>
                         </div>
                         <div class="param-card expanded" data-card="thermik" role="region" aria-label="Thermikparameter">

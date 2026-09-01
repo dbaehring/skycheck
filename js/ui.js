@@ -415,6 +415,8 @@ function renderDashboardDay(dayIdx = state.selectedDay) {
     document.getElementById('foehnDetailLevel').textContent = visibleDashboardLabel(view.foehn);
     document.getElementById('foehnDetailReason').textContent = view.foehn.level === 'notApplicable'
         ? 'Standort liegt außerhalb des anwendbaren Alpenraums.'
+        : view.foehn.detail
+            ? view.foehn.detail
         : view.foehn.level === 'high' || view.foehn.level === 'critical'
             ? 'Mehrere Föhnindikatoren verlangen besondere Aufmerksamkeit.'
             : 'Föhnindikatoren werden unabhängig vom Flugcharakter gezeigt.';
@@ -1660,8 +1662,21 @@ export function showToast(message, type = '', duration = 3000) {
 
 // === Pull-to-Refresh ===
 let pullStartY = 0;
+let pullStartX = 0;
 let isPulling = false;
 let pullRefreshCallback = null;
+
+export function shouldStartPullToRefresh(scrollTop, modalOpen = false) {
+    return Number.isFinite(scrollTop) && scrollTop <= 1 && !modalOpen;
+}
+
+function getPageScrollTop() {
+    return Math.max(
+        window.scrollY || 0,
+        document.documentElement?.scrollTop || 0,
+        document.body?.scrollTop || 0
+    );
+}
 
 export function initPullToRefresh(onRefresh) {
     pullRefreshCallback = onRefresh;
@@ -1674,15 +1689,30 @@ export function initPullToRefresh(onRefresh) {
     container.insertBefore(indicator, container.firstChild);
 
     container.addEventListener('touchstart', (e) => {
-        if (container.scrollTop === 0) {
+        if (shouldStartPullToRefresh(
+            getPageScrollTop(),
+            document.body.classList.contains('modal-open')
+        )) {
             pullStartY = e.touches[0].clientY;
+            pullStartX = e.touches[0].clientX;
             isPulling = true;
+        } else {
+            isPulling = false;
         }
     }, { passive: true });
 
     container.addEventListener('touchmove', (e) => {
         if (!isPulling) return;
         const pullDistance = e.touches[0].clientY - pullStartY;
+        const horizontalDistance = Math.abs(e.touches[0].clientX - pullStartX);
+
+        if (getPageScrollTop() > 1 || horizontalDistance > Math.abs(pullDistance)) {
+            isPulling = false;
+            indicator.classList.remove('ready');
+            indicator.style.transform = '';
+            indicator.style.opacity = '0';
+            return;
+        }
 
         if (pullDistance > 0 && pullDistance < 150) {
             indicator.style.transform = `translateY(${Math.min(pullDistance - 50, 20)}px)`;
@@ -1695,6 +1725,10 @@ export function initPullToRefresh(onRefresh) {
                 indicator.classList.remove('ready');
                 indicator.querySelector('.pull-refresh-text').textContent = 'Ziehen zum Aktualisieren';
             }
+        } else if (pullDistance <= 0) {
+            indicator.classList.remove('ready');
+            indicator.style.transform = '';
+            indicator.style.opacity = '0';
         }
     }, { passive: true });
 
@@ -1718,6 +1752,13 @@ export function initPullToRefresh(onRefresh) {
             indicator.style.transform = '';
             indicator.style.opacity = '0';
         }
+    }, { passive: true });
+
+    container.addEventListener('touchcancel', () => {
+        isPulling = false;
+        indicator.classList.remove('ready', 'refreshing');
+        indicator.style.transform = '';
+        indicator.style.opacity = '0';
     }, { passive: true });
 }
 

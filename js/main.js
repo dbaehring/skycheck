@@ -186,7 +186,8 @@ function onWeatherLoaded() {
         daily: [],
         models: []
     };
-    selectDay(0);
+    const availableLastDay = Math.max(0, state.forecastDays.length - 1);
+    selectDay(Math.min(state.selectedDay, availableLastDay));
     loadForecastConfidence();
 
     // Letzte Position speichern

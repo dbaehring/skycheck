@@ -78,6 +78,19 @@ function foehnLevel(foehn) {
     return foehn?.level || 'unknown';
 }
 
+function buildFoehnView(foehn, fallbackLevel = 'unknown') {
+    const level = foehn ? foehnLevel(foehn) : fallbackLevel;
+    const baseLabel = DASHBOARD_LABELS.foehn[level] || DASHBOARD_LABELS.foehn.unknown;
+    const typeLabel = foehn?.type === 'north' ? 'Nordföhn' : foehn?.type === 'south' ? 'Südföhn' : null;
+    const label = typeLabel
+        ? foehn?.metrics?.siteExposure === 'windward'
+            ? `${typeLabel} · lokal reduziert`
+            : `${typeLabel} · ${baseLabel}`
+        : baseLabel;
+    const detail = foehn?.reasons?.find(reason => reason?.code === 'site-exposure')?.text || null;
+    return { level, label, detail, type: foehn?.type || 'none' };
+}
+
 function isWithoutHardBlocker(assessment) {
     return (assessment?.hardBlockers?.length || assessment?.safety?.blockers?.length || 0) === 0;
 }
@@ -218,6 +231,7 @@ export function buildDashboardDayView(hours, assessments, dayStr, dailyConfidenc
     const foehn = applicableFoehn.length === 0
         ? 'notApplicable'
         : worstKnown(applicableFoehn, item => item.foehn?.level, FOEHN_RANK);
+    const representativeFoehn = applicableFoehn.find(item => item.foehn?.level === foehn)?.foehn || null;
     const confidence = dailyConfidence?.level || 'unknown';
     const bestWindow = findBestWeatherWindow(hours, assessments, dayStr, hourlyConfidence);
     const hasThermalConflict = !bestWindow && dayAssessments.some(item =>
@@ -229,7 +243,7 @@ export function buildDashboardDayView(hours, assessments, dayStr, dailyConfidenc
         date: dayStr,
         safety: { level: safetyLevel, label: DASHBOARD_LABELS.safety[safetyLevel] },
         thermal: { level: thermalDay.level, label: DASHBOARD_LABELS.thermal[thermalDay.level] },
-        foehn: { level: foehn, label: DASHBOARD_LABELS.foehn[foehn] },
+        foehn: buildFoehnView(representativeFoehn, foehn),
         confidence: { level: confidence, label: DASHBOARD_LABELS.confidence[confidence] },
         bestWindow: bestWindow ? {
             ...bestWindow,
@@ -280,7 +294,7 @@ export function buildDashboardHourView(hour, assessment, confidence = null) {
         timeLabel: Number.isInteger(time) ? `${String(time).padStart(2, '0')}:00` : '—',
         safety: { level: safety, label: DASHBOARD_LABELS.safety[safety] },
         thermal: { level: thermal, label: DASHBOARD_LABELS.thermal[thermal] },
-        foehn: { level: foehn, label: DASHBOARD_LABELS.foehn[foehn] },
+        foehn: buildFoehnView(assessment?.foehn, foehn),
         confidence: { level: consensus, label: DASHBOARD_LABELS.confidence[consensus] },
         wind: {
             surface: Number.isFinite(surface.windSpeedKmh)

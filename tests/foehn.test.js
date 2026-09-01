@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { assessNormalizedHour, resolveEffectiveLimits } from '../js/assessment.js';
 import { buildCustomLimits, EXPERT_PRESETS } from '../js/expert-profiles.js';
-import { assessFoehn, assessFoehnHours } from '../js/foehn-engine.js';
+import { assessFoehn, assessFoehnHours, classifyAlpineSide } from '../js/foehn-engine.js';
 import { fetchFoehnPressureSeries } from '../js/foehn-pressure-provider.js';
 import { assessSafety } from '../js/safety-engine.js';
 import { createHour } from './helpers.js';
@@ -38,6 +38,11 @@ function removeFoehnFlow(hour) {
         level.directionDeg = null;
         level.speedKmh = null;
     }
+    return hour;
+}
+
+function setLocation(hour, location) {
+    hour.location = { ...hour.location, ...location };
     return hour;
 }
 
@@ -139,13 +144,44 @@ test('Föhn: ohne Druck und relevantes Windprofil ist die Diagnose unknown', () 
 });
 
 test('Föhn: Nordföhn wird mit umgekehrtem Vorzeichen symmetrisch erkannt', () => {
-    const previous = setFoehnFlow(hourAt(12), 330, 35);
-    const current = setFoehnFlow(hourAt(13), 330, 35);
+    const bozen = { lat: 46.4983, lon: 11.3548, name: 'Bozen' };
+    const previous = setLocation(setFoehnFlow(hourAt(12), 330, 35), bozen);
+    const current = setLocation(setFoehnFlow(hourAt(13), 330, 35), bozen);
     const results = assessFoehnHours([previous, current], {
         pressureSeries: [pressure(previous.time, -4), pressure(current.time, -4)]
     });
     assert.equal(results[1].type, 'north');
     assert.equal(results[1].level, 'high');
+    assert.equal(results[1].metrics.siteExposure, 'lee');
+});
+
+test('Föhn berücksichtigt Nord-/Südseite des Standorts', () => {
+    assert.equal(classifyAlpineSide({ lat: 47.2692, lon: 11.4041 }), 'north');
+    assert.equal(classifyAlpineSide({ lat: 46.4983, lon: 11.3548 }), 'south');
+
+    const previous = setFoehnFlow(hourAt(12), 330, 35);
+    const current = setFoehnFlow(hourAt(13), 330, 35);
+    const result = assessFoehnHours([previous, current], {
+        pressureSeries: [pressure(previous.time, -4), pressure(current.time, -4)]
+    })[1];
+
+    assert.equal(result.type, 'north');
+    assert.equal(result.metrics.rawLevel, 'high');
+    assert.equal(result.metrics.siteExposure, 'windward');
+    assert.equal(result.level, 'elevated');
+    assert.match(result.reasons[0].text, /Luvseite/);
+
+    const bozen = { lat: 46.4983, lon: 11.3548, name: 'Bozen' };
+    const southPrevious = setLocation(setFoehnFlow(hourAt(12), 195, 35), bozen);
+    const southCurrent = setLocation(setFoehnFlow(hourAt(13), 195, 35), bozen);
+    const southResult = assessFoehnHours([southPrevious, southCurrent], {
+        pressureSeries: [pressure(southPrevious.time, 4), pressure(southCurrent.time, 4)]
+    })[1];
+
+    assert.equal(southResult.type, 'south');
+    assert.equal(southResult.metrics.rawLevel, 'high');
+    assert.equal(southResult.metrics.siteExposure, 'windward');
+    assert.equal(southResult.level, 'elevated');
 });
 
 test('Föhn J: critical bleibt in allen Expertenprofilen Safety-critical', () => {

@@ -6,7 +6,12 @@
  * Es findet keine Gelände-, Lee- oder Rotorberechnung statt.
  */
 
-import { FOEHN_LINKS, FOEHN_REGION, FOEHN_THRESHOLDS } from './foehn-config.js';
+import {
+    FOEHN_LINKS,
+    FOEHN_REGION,
+    FOEHN_SITE_CONTEXT,
+    FOEHN_THRESHOLDS
+} from './foehn-config.js';
 import { circularDirectionDifference } from './weather-metrics.js';
 
 const LEVEL_LABELS = Object.freeze({
@@ -31,6 +36,39 @@ export function isFoehnRegionApplicable(location) {
 
 export function isBozenInnsbruckIndicatorApplicable(location) {
     return inBounds(location, FOEHN_REGION.bozenInnsbruckIndicator);
+}
+
+function divideLatitudeAtLongitude(lon) {
+    const points = FOEHN_SITE_CONTEXT.alpineDivide;
+    if (!Number.isFinite(lon) || points.length === 0) return null;
+    if (lon <= points[0].lon) return points[0].lat;
+    if (lon >= points[points.length - 1].lon) return points[points.length - 1].lat;
+
+    for (let index = 1; index < points.length; index++) {
+        const previous = points[index - 1];
+        const next = points[index];
+        if (lon > next.lon) continue;
+        const share = (lon - previous.lon) / (next.lon - previous.lon);
+        return previous.lat + share * (next.lat - previous.lat);
+    }
+    return null;
+}
+
+export function classifyAlpineSide(location) {
+    if (!isFoehnRegionApplicable(location)) return 'outsideAlps';
+    const divideLatitude = divideLatitudeAtLongitude(location.lon);
+    if (!Number.isFinite(divideLatitude)) return 'unknown';
+    const distanceFromDivide = location.lat - divideLatitude;
+    if (Math.abs(distanceFromDivide) <= FOEHN_SITE_CONTEXT.divideToleranceLat) return 'mainRidge';
+    return distanceFromDivide > 0 ? 'north' : 'south';
+}
+
+function resolveSiteExposure(type, siteSide) {
+    if (type !== 'south' && type !== 'north') return 'unknown';
+    if (siteSide === 'mainRidge') return 'mainRidge';
+    if (siteSide === 'north') return type === 'south' ? 'lee' : 'windward';
+    if (siteSide === 'south') return type === 'north' ? 'lee' : 'windward';
+    return 'unknown';
 }
 
 function directionInSector(directionDeg, sector) {
@@ -195,6 +233,27 @@ function resolveType(flowType, pressureType) {
 
 function buildReasons(metrics) {
     const reasons = [];
+    const typeLabel = metrics.type === 'north' ? 'Nordföhn' : metrics.type === 'south' ? 'Südföhn' : 'Föhnsignal';
+    const sideLabel = metrics.siteSide === 'north' ? 'Alpennordseite' : metrics.siteSide === 'south' ? 'Alpensüdseite' : 'Alpenhauptkamm';
+    if (metrics.siteExposure === 'lee') {
+        reasons.push({
+            code: 'site-exposure',
+            signal: 1,
+            text: `${typeLabel}: Standort auf der Leeseite (${sideLabel})`
+        });
+    } else if (metrics.siteExposure === 'windward') {
+        reasons.push({
+            code: 'site-exposure',
+            signal: 0,
+            text: `${typeLabel}: Standort auf der Luvseite (${sideLabel}); lokale Föhnrelevanz reduziert`
+        });
+    } else if (metrics.siteExposure === 'mainRidge') {
+        reasons.push({
+            code: 'site-exposure',
+            signal: 1,
+            text: `${typeLabel}: Standort nahe dem Alpenhauptkamm; beidseitige Effekte möglich`
+        });
+    }
     if (metrics.pressure.deltaHpa !== null) {
         reasons.push({
             code: 'pressure-gradient',
@@ -244,6 +303,7 @@ export function assessFoehn(hour, options = {}) {
         };
     }
 
+    const siteSide = classifyAlpineSide(location);
     const pressureApplicable = isBozenInnsbruckIndicatorApplicable(location);
     const pressure = pressureApplicable ? pressureSignal(options.pressure) : pressureSignal(null);
     const flow = deriveFlow(hour);
@@ -257,6 +317,8 @@ export function assessFoehn(hour, options = {}) {
             reasons: [{ code: 'insufficient-foehn-data', signal: null, text: 'Druckgradient und relevantes Höhenwindprofil fehlen' }],
             metrics: {
                 region: 'alps',
+                siteSide,
+                siteExposure: 'unknown',
                 pressureIndicatorApplicable: pressureApplicable,
                 pressure,
                 flow,
@@ -296,19 +358,26 @@ export function assessFoehn(hour, options = {}) {
     const strongFlow = flow.selected.averageSpeedKmh >= FOEHN_THRESHOLDS.strength.strongKmh;
     const criticalFlow = flow.selected.averageSpeedKmh >= FOEHN_THRESHOLDS.strength.criticalKmh;
 
-    let level = 'low';
-    if (score >= FOEHN_THRESHOLDS.levels.elevatedPoints) level = 'elevated';
+    let rawLevel = 'low';
+    if (score >= FOEHN_THRESHOLDS.levels.elevatedPoints) rawLevel = 'elevated';
     if (score >= FOEHN_THRESHOLDS.levels.highPoints && alignment === 'aligned' &&
         supportedPressure && consistentFlow && strongFlow) {
-        level = 'high';
+        rawLevel = 'high';
     }
     if (score >= FOEHN_THRESHOLDS.levels.criticalPoints && alignment === 'aligned' &&
         strongPressure && flow.selected.matchingLevelCount === 3 && criticalFlow &&
         flow.selected.consistency === 'strong' && trend === 'increasing') {
-        level = 'critical';
+        rawLevel = 'critical';
     }
-    if (alignment === 'conflicting' || type === 'uncertain') level = score >= FOEHN_THRESHOLDS.levels.elevatedPoints ? 'elevated' : 'low';
-    if (pressure.deltaHpa === null || flow.availableLevelCount < 2) level = level === 'high' || level === 'critical' ? 'elevated' : level;
+    if (alignment === 'conflicting' || type === 'uncertain') rawLevel = score >= FOEHN_THRESHOLDS.levels.elevatedPoints ? 'elevated' : 'low';
+    if (pressure.deltaHpa === null || flow.availableLevelCount < 2) {
+        rawLevel = rawLevel === 'high' || rawLevel === 'critical' ? 'elevated' : rawLevel;
+    }
+
+    const siteExposure = resolveSiteExposure(type, siteSide);
+    const level = siteExposure === 'windward' && (rawLevel === 'high' || rawLevel === 'critical')
+        ? 'elevated'
+        : rawLevel;
 
     const consistentLowSignal = pressure.type === 'none' && flow.type === 'none';
     const confidence = pressure.deltaHpa !== null && flow.availableLevelCount >= 2 &&
@@ -319,6 +388,9 @@ export function assessFoehn(hour, options = {}) {
             : 'low';
     const metrics = {
         region: 'alps',
+        siteSide,
+        siteExposure,
+        rawLevel,
         pressureIndicatorApplicable: pressureApplicable,
         pressure,
         pressureDefinition: 'bozenPressureMslHpa - innsbruckPressureMslHpa',
@@ -329,7 +401,7 @@ export function assessFoehn(hour, options = {}) {
         components,
         trend,
         officialDiagramUrl: FOEHN_LINKS.officialDiagram,
-        terrainCaveat: 'Alpenquerende Strömung kann in komplexem Gelände lokal deutlich stärker wirken als das Modellmittel.'
+        terrainCaveat: 'Die Alpenhauptkamm-Linie ist approximiert; lokale Pässe, Täler, Lee und Rotoren werden nicht aufgelöst.'
     };
 
     return {

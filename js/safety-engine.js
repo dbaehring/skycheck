@@ -133,13 +133,37 @@ function addComfortReason(reasons, enabled, code, category, label, value, thresh
     });
 }
 
+function formatAloftLevel(level, fallbackPressureHpa = null) {
+    const pressureHpa = level?.pressureHpa ?? fallbackPressureHpa;
+    const heightMslM = Number.isFinite(level?.geopotentialHeightMslM)
+        ? Math.round(level.geopotentialHeightMslM)
+        : Number.isFinite(level?.approximateAltitudeM)
+            ? Math.round(level.approximateAltitudeM)
+            : null;
+    if (heightMslM !== null && pressureHpa !== null) return `${heightMslM} m MSL (${pressureHpa} hPa)`;
+    if (heightMslM !== null) return `${heightMslM} m MSL`;
+    return pressureHpa !== null ? `${pressureHpa} hPa` : 'unbekannter Höhe';
+}
+
+function windLevelLabel(metrics, pressureHpa) {
+    const level = metrics.flightLevels.find(item => item.pressureHpa === pressureHpa);
+    return `Wind ${formatAloftLevel(level, pressureHpa)}`;
+}
+
 function evaluateHardBlockers(metrics, reasons, blockers) {
     const hard = HARD_SAFETY_THRESHOLDS;
     const windChecks = [
         ['surface-wind', 'wind', 'Bodenwind', metrics.ws, hard.wind.surfaceKmh, ' km/h'],
         ['gusts', 'wind', 'Böen', metrics.wg, hard.wind.gustsKmh, ' km/h'],
         ['gust-spread', 'wind', 'Böendifferenz', metrics.gustSpread, hard.wind.gustSpreadKmh, ' km/h'],
-        ['aloft-extreme-wind', 'wind', 'Stärkster Höhenwind', metrics.strongestAloftWindKmh, hard.wind.aloftExtremeKmh, ' km/h']
+        [
+            'aloft-extreme-wind',
+            'wind',
+            'Stärkster Höhenwind',
+            metrics.strongestAloftWindKmh,
+            hard.wind.aloftExtremeKmh,
+            ` km/h auf ${formatAloftLevel(metrics.strongestAloftWindLevel)}`
+        ]
     ];
 
     for (const [code, category, label, value, threshold, unit] of windChecks) {
@@ -171,7 +195,7 @@ function evaluateHardBlockers(metrics, reasons, blockers) {
             category: 'wind',
             value: metrics.maxAdjacentSpeedShearKmh,
             threshold: hard.wind.adjacentSpeedShearKmh,
-            text: `Starke benachbarte Geschwindigkeitsscherung ${metrics.maxAdjacentSpeedShearKmh.toFixed(1)} km/h bei starkem Höhenwind`
+            text: `Starke benachbarte Geschwindigkeitsscherung ${metrics.maxAdjacentSpeedShearKmh.toFixed(1)} km/h bei stärkstem Höhenwind auf ${formatAloftLevel(metrics.strongestAloftWindLevel)}`
         });
     }
 
@@ -186,7 +210,7 @@ function evaluateHardBlockers(metrics, reasons, blockers) {
             category: 'wind',
             value: directionShear,
             threshold: hard.wind.directionCombinationDeg,
-            text: `Ausgeprägte Richtungsscherung ${Math.round(directionShear)}° bei starkem Höhenwind`
+            text: `Ausgeprägte Richtungsscherung ${Math.round(directionShear)}° bei stärkstem Höhenwind auf ${formatAloftLevel(metrics.strongestAloftWindLevel)}`
         });
     }
 
@@ -263,10 +287,10 @@ function evaluateComfort(metrics, thresholds, filters, reasons, context) {
         ['surface-wind', 'Bodenwind', metrics.ws, wind.surface],
         ['gusts', 'Böen', metrics.wg, wind.gusts],
         ['gust-spread', 'Böendifferenz', metrics.gustSpread, wind.gustSpread],
-        ['wind-900', 'Wind 900 hPa', metrics.w900, wind.w900],
-        ['wind-850', 'Wind 850 hPa', metrics.w850, wind.w850],
-        ['wind-800', 'Wind 800 hPa', metrics.w800, wind.w800],
-        ['wind-700', 'Wind 700 hPa', metrics.w700, wind.w700],
+        ['wind-900', windLevelLabel(metrics, 900), metrics.w900, wind.w900],
+        ['wind-850', windLevelLabel(metrics, 850), metrics.w850, wind.w850],
+        ['wind-800', windLevelLabel(metrics, 800), metrics.w800, wind.w800],
+        ['wind-700', windLevelLabel(metrics, 700), metrics.w700, wind.w700],
         ['speed-shear-adjacent', 'Geschwindigkeitsscherung', metrics.maxAdjacentSpeedShearKmh, wind.adjacentSpeedShear],
         ['speed-shear-total', 'Windzunahme Boden–3000 m', metrics.gradient3000, wind.surfaceTo3000]
     ];

@@ -55,7 +55,9 @@ export function deriveHourMetrics(hour) {
             label: `${level?.pressureHpa ?? '?'} hPa`,
             pressureHpa: level?.pressureHpa ?? null,
             speedKmh: level?.speedKmh ?? null,
-            directionDeg: level?.directionDeg ?? null
+            directionDeg: level?.directionDeg ?? null,
+            geopotentialHeightMslM: level?.geopotentialHeightMslM ?? null,
+            approximateAltitudeM: level?.approximateAltitudeM ?? null
         }))
     ];
     const ws = flightLevels[0].speedKmh;
@@ -74,7 +76,11 @@ export function deriveHourMetrics(hour) {
         'directionDeg',
         circularDirectionDifference
     );
-    const aloftSpeeds = pressureLevels.map(level => level?.speedKmh ?? null).filter(value => value !== null);
+    const availableAloftLevels = pressureLevels.filter(level => Number.isFinite(level?.speedKmh));
+    const aloftSpeeds = availableAloftLevels.map(level => level.speedKmh);
+    const strongestAloftWindLevel = availableAloftLevels.reduce((strongest, level) =>
+        !strongest || level.speedKmh > strongest.speedKmh ? level : strongest
+    , null);
     const elevation = hour?.location?.elevation;
 
     return {
@@ -86,6 +92,13 @@ export function deriveHourMetrics(hour) {
         w700,
         flightLevels,
         strongestAloftWindKmh: aloftSpeeds.length > 0 ? Math.max(...aloftSpeeds) : null,
+        strongestAloftWindLevel: strongestAloftWindLevel ? {
+            pressureHpa: strongestAloftWindLevel.pressureHpa,
+            speedKmh: strongestAloftWindLevel.speedKmh,
+            directionDeg: strongestAloftWindLevel.directionDeg ?? null,
+            geopotentialHeightMslM: strongestAloftWindLevel.geopotentialHeightMslM ?? null,
+            approximateAltitudeM: strongestAloftWindLevel.approximateAltitudeM ?? null
+        } : null,
         availableAloftWindLevels: aloftSpeeds.length,
         gustSpread: ws !== null && wg !== null ? wg - ws : null,
         gustFactor: ws !== null && wg !== null && ws >= 5 ? (wg - ws) / ws : 0,

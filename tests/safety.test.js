@@ -60,6 +60,17 @@ test('Safety D: Extremwind ist profilunabhängig critical', () => {
     assert.equal(assessSafety(hour, { limits: overlyPermissive }).level, 'critical');
 });
 
+test('Stärkster Höhenwind nennt die tatsächliche Modellhöhe und Druckfläche', () => {
+    const hour = setLevel(createHour(), 700, { speedKmh: 59, geopotentialHeightMslM: 3125 });
+    const result = assessSafety(hour);
+    const blocker = result.blockers.find(item => item.code === 'aloft-extreme-wind');
+
+    assert.ok(blocker);
+    assert.match(blocker.text, /59 km\/h/);
+    assert.match(blocker.text, /3125 m MSL \(700 hPa\)/);
+    assert.equal(result.metrics.strongestAloftWindLevel.pressureHpa, 700);
+});
+
 test('Safety E: starke benachbarte Geschwindigkeitsscherung wird demanding', () => {
     const hour = createHour({ surface: { windSpeedKmh: 5, gustsKmh: 8 } });
     setLevel(hour, 900, { speedKmh: 7 });
